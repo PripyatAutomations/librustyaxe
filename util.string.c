@@ -129,8 +129,14 @@ int split_args(char *line, char ***argv_out) {
       }
       if (argc >= cap) {
          cap *= 2;
-         if ( (cap <= 0) || (argv = realloc( argv, cap * sizeof(char *) ) ) == NULL) {
-            abort();
+
+         if ((cap <= 0)) {
+            argv = realloc( argv, cap * sizeof(char *));
+
+            if (argv == NULL) {
+               // OOM ;(
+               abort();
+            }
          }
       }
       argv[argc++] = p;

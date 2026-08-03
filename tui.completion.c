@@ -31,6 +31,10 @@ char *tui_completion_generator(const char*text, int state) {
    static int list_index, len;
 
    // XXX: replace this with nicks/channels available
+   // if (text[0] == '@') {
+   // } else if (text[0] == '#') {
+   // }
+   //
    // XXX: Use the active window's userlist (if a channel target)
    static const char*my_options[] = {
 //        "apple", "banana", "grape", "orange", "peach", NULL

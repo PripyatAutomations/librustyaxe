@@ -1,5 +1,10 @@
 /*
  * A reusable implementation of a ring buffer with timestamps for FIFO usage
+ *
+ * This is mostly intended for servicing media buffers which need to be kept strictly bounded
+ * in maximum size.
+ *
+ * It would be beneficial to keep 
  */
 #include <string.h>
 #include <stdlib.h>

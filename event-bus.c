@@ -1,5 +1,8 @@
 //
 // event-bus.c: Here we implement a way to hook various events by name
+//
+// A module will register it's interest in an event by calling event_on()
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,9 +22,11 @@ void event_on(const char *event, event_cb_t cb, void *user) {
    if (!event_store || !event) {
       return;
    }
+
    kv_list_t *list = kv_lookup(event_store, event);
    if (!list) {
       list = calloc( 1, sizeof(*list) );
+
       // XXX: Make this more graceful
       if (!list) {
          abort();
@@ -29,6 +34,7 @@ void event_on(const char *event, event_cb_t cb, void *user) {
       list->type = KV_ARRAY;
       kv_insert(event_store, event, list);
    }
+
    event_listener_t *l = calloc( 1, sizeof(*l) );
    // XXX: make this more graceful
    if (!l) {

@@ -120,6 +120,8 @@ bool rr_load_module(const char *name) {
    rr_module_event_t *mep = dlsym(mp->dlptr, "modexports");
    if (mep) {
       mp->mod_events = mep;
+      // XXX: We need to hook events here
+      // extern void event_on(const char *event, event_cb_t cb, void *user);
    } else {
       Log(LOG_WARN, "module", "rr_load_module: No exports found for module %s", mod_path);
    }
