@@ -34,7 +34,7 @@ typedef struct {
     uint8_t min_args;
     uint8_t max_args;
     void (*rr_cat_yaesu_r)(const char *args);
-} CATCommandTable;
+} CATcmdTable;
 
 // User callback signature
 typedef void (*CATCallback)(const char *args);
@@ -54,11 +54,11 @@ typedef struct CATCallbackNode {
 } CATCallbackNode;
 
 // Linked list of commands
-typedef struct CATCommand {
+typedef struct CATcmd {
    char *cmd;
    CATCallbackNode *callbacks;
-   struct CATCommand *next;
-} CATCommand;
+   struct CATcmd *next;
+} CATcmd;
 
 extern int32_t rr_cat_printf(char *str, ...);
 extern int32_t rr_cat_parse_line(char *line);

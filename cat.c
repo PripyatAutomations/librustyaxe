@@ -36,10 +36,10 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-static CATCommand *cat_commands = NULL;
+static CATcmd *cat_commands = NULL;
 
-static CATCommand *find_or_create_command(const char *cmd) {
-   CATCommand *c = cat_commands;
+static CATcmd *cat_find_or_create_cmd(const char *cmd) {
+   CATcmd *c = cat_commands;
 
    while (c) {
       if (strcmp(c->cmd, cmd) == 0) {
@@ -48,7 +48,7 @@ static CATCommand *find_or_create_command(const char *cmd) {
       c = c->next;
    }
 
-   CATCommand *newc = calloc(1, sizeof(*newc));
+   CATcmd *newc = calloc(1, sizeof(*newc));
    if (!newc) {
       return NULL;
    }
@@ -62,7 +62,7 @@ static CATCommand *find_or_create_command(const char *cmd) {
 }
 
 bool cat_register_callback(const char *cmd, CATCallback cb) {
-   CATCommand *c = find_or_create_command(cmd);
+   CATcmd *c = cat_find_or_create_cmd(cmd);
    if (!c) {
       return false;
    }
@@ -82,7 +82,7 @@ bool cat_register_callback(const char *cmd, CATCallback cb) {
 }
 
 bool cat_invoke_callbacks(const char *cmd, const char *args) {
-   CATCommand *c = cat_commands;
+   CATcmd *c = cat_commands;
    while (c) {
       if (strcmp(c->cmd, cmd) == 0) {
          CATCallbackNode *n = c->callbacks;
