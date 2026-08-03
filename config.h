@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <librustyaxe/dict.h>
+#include "build_config.h"
 
 // Maximum length of an expanded string, XXX: Move to header file
 // librustyaxe/config.h
