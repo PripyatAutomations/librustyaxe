@@ -1,24 +1,26 @@
-//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//      This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#if	!defined(__librustyaxe_tui_window_h)
-#define	__librustyaxe_tui_window_h
+#if     !defined(__librustyaxe_tui_window_h)
+#define __librustyaxe_tui_window_h
 
-#define	TUI_INPUTLEN	512
+#define TUI_INPUTLEN 512
 
 typedef struct tui_window {
    ansi_entry_t    *default_bg, *default_fg;
    char            *buffer[LOG_LINES];
-   int              log_head;
-   int              scroll_offset;
-   int              log_count;
-   char             title[64];
-   char             input_buf[TUI_INPUTLEN];
-   char             status_line[128];
-   void		   *cptr;		// associated irc client connection, if any
+   int log_head;
+   int scroll_offset;
+   int log_count;
+   char title[64];
+   char input_buf[TUI_INPUTLEN];
+   char status_line[128];
+   void            *cptr;                // associated irc client connection, if
+                                         // any
 } tui_window_t;
 
 extern tui_window_t *tui_window_find(const char *title);
@@ -36,4 +38,4 @@ extern int handle_alt_right(int c, int key);
 extern void tui_window_update_topline(const char *line);
 extern bool tui_clear_scrollback(tui_window_t *w);
 
-#endif	// !defined(__librustyaxe_tui_window_h)
+#endif // !defined(__librustyaxe_tui_window_h)

@@ -1,13 +1,14 @@
 //
 // posix.h
-// 	This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//    This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#if	!defined(__rr_posix_h)
-#define	__rr_posix_h
+#if     !defined(__rr_posix_h)
+#define __rr_posix_h
 #include <stdbool.h>
 
 extern void host_cleanup(void);
@@ -23,4 +24,4 @@ extern char *strndup(const char *s, size_t n);
 extern char *strcasestr(const char *haystack, const char *needle);
 #endif
 
-#endif	// !defined(__rr_posix_h)
+#endif // !defined(__rr_posix_h)

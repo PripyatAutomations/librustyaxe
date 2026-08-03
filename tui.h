@@ -1,18 +1,19 @@
-//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//      This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#if	!defined(__librustyaxe_tui_h)
+#if     !defined(__librustyaxe_tui_h)
 #define __librustyaxe_tui_h
 
-#define	TUI_STRING_LEN	1024
-#define LOG_LINES 	300
-#define STATUS_LINES 	1
-#define STATUS_LEN 	256
-#define	TUI_MAX_WINDOWS	32
-#define	HISTORY_LINES	50
+#define TUI_STRING_LEN 1024
+#define LOG_LINES 300
+#define STATUS_LINES 1
+#define STATUS_LEN 256
+#define TUI_MAX_WINDOWS 32
+#define HISTORY_LINES 50
 
 #include <librustyaxe/tui.theme.h>
 #include <librustyaxe/tui.window.h>
@@ -20,14 +21,14 @@
 extern bool tui_enabled;
 
 extern bool tui_init(void);
-extern bool tui_set_rl_cb(bool (*cb)(int argc, char **argv));
+extern bool tui_set_rl_cb( bool (*cb) (int argc, char **argv) );
 
 // These force redrawing of an area of the screen
 extern bool tui_update_status(tui_window_t *win, const char *fmt, ...);
 extern void tui_redraw_screen(void);
 extern void tui_redraw_clock(void);
 
-extern char **tui_completion_cb(const char* text, int start, int end);
+extern char **tui_completion_cb(const char*text, int start, int end);
 extern int tui_rows(void);
 extern int tui_cols(void);
 extern void tui_draw_input(tui_window_t *w, int term_rows);
@@ -45,4 +46,4 @@ extern const char *history_prev(void);
 extern const char *history_next(void);
 extern void history_add(const char *line);
 
-#endif	// !defined(__librustyaxe_tui_h)
+#endif // !defined(__librustyaxe_tui_h)

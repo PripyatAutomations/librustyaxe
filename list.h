@@ -1,10 +1,11 @@
-//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//      This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#if	!defined(__librustyaxe_list_h)
+#if     !defined(__librustyaxe_list_h)
 #define __librustyaxe_list_h
 
 #include <stdbool.h>
@@ -25,4 +26,4 @@ extern rrlist_t *rrlist_add(rrlist_t **list, void *ptr, enum rrlist_direction di
 extern rrlist_t *rrlist_remove(rrlist_t **list, rrlist_t *lp);
 extern bool rrlist_destroy(rrlist_t **list);
 
-#endif	// !defined(__librustyaxe_list_h)
+#endif // !defined(__librustyaxe_list_h)

@@ -1,6 +1,7 @@
 //
 // util.math.c
-// 	This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//    This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
@@ -23,50 +24,41 @@
 #include <librrprotocol/rrprotocol.h>
 
 float safe_atof(const char *s) {
-    if (!s || !*s) {
-       return NAN;
-    }
-
-    errno = 0;
-    char *end;
-    float val = strtof(s, &end);
-
-    if (errno != 0) {
-       return NAN;            // overflow/underflow
-    }
-
-    while (*end && isspace((unsigned char)*end)) {
-       end++;
-    }
-
-    if (*end != '\0') {
-       return NAN;          // junk at end
-    }
-
-    return val;
+   if (!s || !*s) {
+      return NAN;
+   }
+   errno = 0;
+   char *end;
+   float val = strtof(s, &end);
+   if (errno != 0) {
+      return NAN;              // overflow/underflow
+   }
+   while (*end && isspace( (unsigned char)*end ) ) {
+      end++;
+   }
+   if (*end != '\0') {
+      return NAN;            // junk at end
+   }
+   return val;
 }
 
 double safe_atod(const char *s) {
-    if (!s || !*s) {
-       return NAN;
-    }
-    errno = 0;
-    char *end;
-    double val = strtod(s, &end);
-
-    if (errno != 0) {
-       return NAN;
-    }
-
-    while (*end && isspace((unsigned char)*end)) {
-       end++;
-    }
-
-    if (*end != '\0') {
-       return NAN;
-    }
-
-    return val;
+   if (!s || !*s) {
+      return NAN;
+   }
+   errno = 0;
+   char *end;
+   double val = strtod(s, &end);
+   if (errno != 0) {
+      return NAN;
+   }
+   while (*end && isspace( (unsigned char)*end ) ) {
+      end++;
+   }
+   if (*end != '\0') {
+      return NAN;
+   }
+   return val;
 }
 
 /* Return long, or 0 on error */
@@ -74,15 +66,12 @@ long safe_atol(const char *s) {
    if (!s) {
       return 0;
    }
-
    char *end;
    errno = 0;
    long v = strtol(s, &end, 10);
-
    if (end == s || errno != 0) {
       return 0;
    }
-
    return v;
 }
 
@@ -91,11 +80,9 @@ long long safe_atoll(const char *s) {
    if (!s) {
       return 0;
    }
-
    char *end;
    errno = 0;
    long long v = strtoll(s, &end, 10);
-
    if (end == s || errno != 0) {
       return 0;
    }

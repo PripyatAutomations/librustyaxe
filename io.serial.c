@@ -1,6 +1,7 @@
 //
 // io.serial.c
-// 	This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//    This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
@@ -19,11 +20,11 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-#if	defined(HOST_POSIX)
+#if     defined(HOST_POSIX)
 #include <sys/socket.h>
 #endif
 
 // Here we need to abstract between the following bits:
-//	CAT interpreters
-//	CLI mode
-//	Debug Tool
+// CAT interpreters
+// CLI mode
+// Debug Tool

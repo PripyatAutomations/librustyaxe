@@ -1,5 +1,6 @@
 // tui.window.c
-// 	This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//    This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
@@ -34,21 +35,19 @@ tui_window_t *tui_active_window(void) {
       tui_window_t *tw = tui_window_create("status");
       tui_active_win = 0;
    }
-
    if (tui_active_win < 0 || tui_active_win >= tui_num_windows) {
-      tui_active_win = tui_num_windows - 1; // fallback to last window
+      tui_active_win = tui_num_windows - 1;  // fallback to last window
    }
-
    return tui_windows[tui_active_win];
 }
 
 tui_window_t *tui_window_find(const char *title) {
    if (!title || !*title) {
       Log(LOG_CRIT, "tui.window", "no window title given in call to %s", __FUNCTION__);
+
       return NULL;
    }
-
-   for (int i = 0; i < tui_num_windows; i++) {
+   for (int i = 0 ; i < tui_num_windows ; i++) {
       if (tui_windows[i] && strcasecmp(tui_windows[i]->title, title) == 0) {
          return tui_windows[i];
       }
@@ -62,23 +61,22 @@ tui_window_t *tui_window_create(const char *title) {
    if (w) {
       return w;
    }
-
    // Not found, create new
    if (tui_num_windows >= TUI_MAX_WINDOWS) {
-      tui_print_win(tui_active_window(),
-                    "No more windows available: TUI_MAX_WINDOWS: %d", TUI_MAX_WINDOWS);
+      tui_print_win(tui_active_window(), "No more windows available: TUI_MAX_WINDOWS: %d",
+         TUI_MAX_WINDOWS);
+
       return NULL;
    }
-
    // Nope, lets create it
-   w = calloc(1, sizeof(*w));
+   w = calloc( 1, sizeof(*w) );
    if (!w) {
       fprintf(stderr, "OOM in tui_window_create!\n");
+
       return NULL;
    }
-
    strncpy(w->title, title, sizeof(w->title) - 1);
-   memset(w->status_line, 0, sizeof(w->status_line));
+   memset( w->status_line, 0, sizeof(w->status_line) );
    snprintf(w->status_line, sizeof(w->status_line), "%s", title);
    w->title[sizeof(w->title) - 1] = '\0';
 
@@ -92,37 +90,37 @@ bool tui_window_destroy(tui_window_t *w) {
    if (!w) {
       return true;
    }
-
    if (strcasecmp(w->title, "status") == 0) {
-      tui_print_win(tui_active_window(), "{red}*** {bright-red}Can't destroy status window! {red}***{reset}.");
+      tui_print_win(tui_active_window(),
+         "{red}*** {bright-red}Can't destroy status window! {red}***{reset}.");
+
       return false;
    }
-
    int destroyed_index = -1;
 
    // Find and remove from global list
-   for (int i = 0; i < tui_num_windows; i++) {
+   for (int i = 0 ; i < tui_num_windows ; i++) {
       if (tui_windows[i] == w) {
          tui_print_win(tui_window_find("status"), "* Closed window %d (%s)", i, w->title);
          destroyed_index = i;
-         for (int j = i; j < tui_num_windows - 1; j++) {
+         for (int j = i ; j < tui_num_windows - 1 ; j++) {
             tui_windows[j] = tui_windows[j + 1];
          }
          tui_windows[--tui_num_windows] = NULL;
          break;
       }
    }
-
    if (destroyed_index == -1) {
       free(w);
+
       return true;
    }
-
    // Pick a new active window if needed
    if (tui_num_windows < 0) {
-      tui_active_win = 0;  // no windows left
+      tui_active_win = 0;   // no windows left
    } else {
-      // if the destroyed window was active, or active index is now invalid, pick previous or first
+      // if the destroyed window was active, or active index is now invalid,
+      // pick previous or first
       if (tui_active_win >= tui_num_windows || tui_active_win == destroyed_index) {
          if (destroyed_index > 0) {
             tui_active_win = destroyed_index - 1;
@@ -130,11 +128,10 @@ bool tui_window_destroy(tui_window_t *w) {
             tui_active_win = 0;
          }
       } else if (tui_active_win > destroyed_index) {
-         tui_active_win--;  // shift left because of removed slot
+         tui_active_win--;   // shift left because of removed slot
       }
    }
    free(w);
-
    if (tui_active_win >= 0 && tui_windows[tui_active_win]) {
       tui_window_focus(tui_windows[tui_active_win]->title);
    } else {
@@ -147,9 +144,9 @@ bool tui_window_destroy_id(int id) {
    if (id < 1 || id > tui_num_windows) {
       tui_print_win(tui_active_window(),
          "{bright-red}Invalid window %d, must be between 2 and %d{reset}.", id, tui_num_windows);
+
       return true;
    }
-
    // shift down to zero-based index
    tui_window_t *tw = tui_windows[id - 1];
    if (tw) {
@@ -157,22 +154,21 @@ bool tui_window_destroy_id(int id) {
    } else {
       return true;
    }
-
    // we shouldnt make it here, so return error
    return true;
 }
 
 const char *tui_window_get_active_title(void) {
-    tui_window_t *w = tui_active_window();
-    return w ? w->title : NULL;
+   tui_window_t *w = tui_active_window();
+
+   return w ? w->title : NULL;
 }
 
 tui_window_t *tui_window_focus(const char *title) {
    if (!title) {
       return NULL;
    }
-
-   for (int i = 0; i < tui_num_windows; i++) {
+   for (int i = 0 ; i < tui_num_windows ; i++) {
       if (strcmp(tui_windows[i]->title, title) == 0) {
          tui_window_t *tw = tui_windows[i];
          tui_active_win = i;
@@ -189,12 +185,14 @@ tui_window_t *tui_window_focus(const char *title) {
          if (tw->title[0] == '&' || tw->title[0] == '#') {
             win_color = "{bright-magenta}";
          }
-         tui_update_status(tui_active_window(), "{bright-black}[{bright-green}online{bright-black}] [{green}%s{bright-black}] [%s%s{bright-black}]{reset}", network, win_color, tw->title);
+         tui_update_status(tui_active_window(),
+            "{bright-black}[{bright-green}online{bright-black}] [{green}%s{bright-black}] [%s%s{bright-black}]{reset}",
+            network, win_color, tw->title);
          tui_update_input_line();
+
          return tui_windows[i];
       }
    }
-
    return NULL;
 }
 
@@ -202,9 +200,9 @@ tui_window_t *tui_window_focus_id(int id) {
    if (id < 1 || id > tui_num_windows) {
       tui_print_win(tui_active_window(),
          "{bright-red}Invalid window %d, must be between 1 and %d{reset}.", id, tui_num_windows);
+
       return NULL;
    }
-
    // shift down to zero-based index
    tui_window_t *tw = tui_windows[id - 1];
    if (tw) {
@@ -219,7 +217,7 @@ void tui_window_init(void) {
    if (tui_num_windows == 0) {
       tui_windows[0] = tui_window_create("status");
       char *sl = tui_windows[0]->status_line;
-      memset(sl, 0, sizeof(tui_windows[0]->status_line));
+      memset( sl, 0, sizeof(tui_windows[0]->status_line) );
       snprintf(sl, sizeof(sl), "%s", " status window");
       tui_num_windows = 1;
       tui_active_win = 0;
@@ -227,12 +225,10 @@ void tui_window_init(void) {
 }
 
 int tui_window_swap(int c, int key) {
-   int num = key - '1';         // Alt-1 = window 0
-
+   int num = key - '1';          // Alt-1 = window 0
    if (key == '0') {
-      num = 9;                  // Alt-0 -> window 9
+      num = 9;                   // Alt-0 -> window 9
    }
-
    if (num >= 0 && num < tui_num_windows) {
       tui_window_focus(tui_windows[num]->title);
       tui_redraw_screen();
@@ -263,18 +259,17 @@ bool tui_clear_scrollback(tui_window_t *w) {
    if (!w) {
       return true;
    }
-
-   for (int i = 0; i < LOG_LINES; i++) {
+   for (int i = 0 ; i < LOG_LINES ; i++) {
       if (w->buffer[i]) {
          free(w->buffer[i]);
          w->buffer[i] = NULL;
       }
    }
-
    w->log_head = 0;
    w->log_count = 0;
    w->scroll_offset = 0;
 
    tui_redraw_screen();
+
    return false;
 }

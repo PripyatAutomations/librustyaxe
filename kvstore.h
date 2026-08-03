@@ -1,13 +1,16 @@
-//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//      This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#if	!defined(__librustyaxe_kvstore_h)
+#if     !defined(__librustyaxe_kvstore_h)
 #define __librustyaxe_kvstore_h
 
-typedef enum { KV_ARRAY=0, KV_BST } kv_type_t;
+typedef enum {
+   KV_ARRAY = 0, KV_BST
+} kv_type_t;
 
 typedef struct kv_node {
    char *key;
@@ -17,7 +20,7 @@ typedef struct kv_node {
 } kv_node_t;
 
 typedef struct {
-   void *ptr;        // array or BST root
+   void *ptr;         // array or BST root
    size_t count;
    size_t cap;
    kv_type_t type;
@@ -38,4 +41,4 @@ extern void *kv_lookup(kv_store_t *store, const char *key);
 extern int kv_remove(kv_store_t *store, const char *key);
 extern kv_store_t *kv_create_and_load(kv_type_t type, size_t prefix_size, ...);
 
-#endif	// !defined(__librustyaxe_kvstore_h)
+#endif // !defined(__librustyaxe_kvstore_h)

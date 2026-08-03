@@ -1,10 +1,11 @@
-//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//      This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#if	!defined(__util_time_h)
+#if     !defined(__util_time_h)
 #define __util_time_h
 #include <time.h>
 #include <stdbool.h>
@@ -14,4 +15,4 @@ extern time_t dhms2time_t(const char *str);
 extern char *time_t2dhms(time_t seconds);
 extern void format_timestamp(time_t t, char *buf, size_t buflen);
 
-#endif	// !defined(__util_time_h)
+#endif // !defined(__util_time_h)

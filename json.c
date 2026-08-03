@@ -1,6 +1,7 @@
 //
 // librustyaxe/json.c
-// 	This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//    This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
@@ -24,20 +25,23 @@ static const char *json_parse_value(const char *s, const char *path, dict *d);
 
 // helper: append to path dynamically
 static char *path_append(const char *base, const char *suffix) {
-   size_t len = strlen(base) + strlen(suffix) + 2; // +1 for dot or brackets, +1 for \0
+   size_t len = strlen(base) + strlen(suffix) + 2;  // +1 for dot or brackets,
+                                                    // +1
+                                                    // for \0
    char *newpath = malloc(len);
    if (!newpath) {
       return NULL;
    }
-
-   if (suffix[0] == '[') {  // array index
+   if (suffix[0] == '[') {
+      // array index
       snprintf(newpath, len, "%s%s", base, suffix);
-   } else if (base[0] != '\0') { // normal object key
+   } else if (base[0] != '\0') {
+      // normal object key
       snprintf(newpath, len, "%s.%s", base, suffix);
-   } else { // root key
+   } else {
+      // root key
       snprintf(newpath, len, "%s", suffix);
    }
-
    return newpath;
 }
 
@@ -45,7 +49,7 @@ static char *path_append(const char *base, const char *suffix) {
 
 // helper: skip whitespace
 static const char *skip_ws(const char *s) {
-   while (*s && isspace((unsigned char)*s)) {
+   while (*s && isspace( (unsigned char)*s ) ) {
       s++;
    }
    return s;
@@ -63,22 +67,19 @@ static const char *json_parse_str(const char *s, char **out) {
 
    while (*s && *s != '"') {
       if (*s == '\\') {
-         s++;  // skip escaped char
+         s++;   // skip escaped char
       }
       s++; len++;
    }
-
    if (*s != '"') {
       return NULL;
    }
-
    *out = malloc(len + 1);
    if (!*out) {
       return NULL;
    }
-
    size_t j = 0;
-   for (const char *p = start; p < s; p++, j++) {
+   for (const char *p = start ; p < s ; p++, j++) {
       if (*p == '\\') {
          p++;
       }
@@ -92,7 +93,9 @@ static const char *json_parse_str(const char *s, char **out) {
 // parse primitive (number, true, false, null)
 static const char *json_parse_primitive(const char *s, char **out) {
    const char *start = s;
-   while (*s && !strchr(",]} \t\r\n", *s)) s++;
+   while (*s && !strchr(",]} \t\r\n", *s) ) {
+      s++;
+   }
    size_t len = s - start;
    *out = malloc(len + 1);
    if (!*out) {
@@ -100,6 +103,7 @@ static const char *json_parse_primitive(const char *s, char **out) {
    }
    memcpy(*out, start, len);
    (*out)[len] = '\0';
+
    return s;
 }
 
@@ -117,32 +121,28 @@ static const char *json_parse_obj(const char *s, const char *path, dict *d) {
       if (!s) {
          return NULL;
       }
-
       s = skip_ws(s);
       if (*s++ != ':') {
          free(key);
+
          return NULL;
       }
-
       char *newpath = path_append(path, key);
       free(key);
       if (!newpath) {
          return NULL;
       }
-
       s = skip_ws(s);
       s = json_parse_value(s, newpath, d);
       free(newpath);
       if (!s) {
          return NULL;
       }
-
       s = skip_ws(s);
       if (*s == ',') {
          s++;
       }
    }
-
    return (*s == '}') ? s + 1 : NULL;
 }
 
@@ -162,20 +162,17 @@ static const char *json_parse_array(const char *s, const char *path, dict *d) {
       if (!newpath) {
          return NULL;
       }
-
       s = skip_ws(s);
       s = json_parse_value(s, newpath, d);
       free(newpath);
       if (!s) {
          return NULL;
       }
-
       s = skip_ws(s);
       if (*s == ',') {
          s++;
       }
    }
-
    return (*s == ']') ? s + 1 : NULL;
 }
 
@@ -185,66 +182,67 @@ char *json_escape(const char *s) {
    if (!s) {
       return strdup("\"\"");
    }
-
    size_t len = strlen(s);
    // worst case every char becomes \uXXXX (6 bytes) + quotes
    char *out = malloc(len * 6 + 3);
-
    if (!out) {
       fprintf(stderr, "OOM in json_escape\n");
+
       return NULL;
    }
    char *p = out;
    *p++ = '"';
 
-   for (size_t i = 0; i < len; i++) {
+   for (size_t i = 0 ; i < len ; i++) {
       unsigned char c = (unsigned char)s[i];
       switch (c) {
          case '\"': {
-            *p++='\\';
-            *p++='\"';
+            *p++ = '\\';
+            *p++ = '\"';
             break;
          }
          case '\\': {
-            *p++='\\';
-            *p++='\\';
+            *p++ = '\\';
+            *p++ = '\\';
             break;
          }
          case '\b': {
-            *p++='\\';
-            *p++='b';
+            *p++ = '\\';
+            *p++ = 'b';
             break;
          }
          case '\f': {
-            *p++='\\';
-            *p++='f';
+            *p++ = '\\';
+            *p++ = 'f';
             break;
          }
          case '\n': {
-            *p++='\\';
-            *p++='n';
+            *p++ = '\\';
+            *p++ = 'n';
             break;
          }
          case '\r': {
-            *p++='\\';
-            *p++='r'; 
+            *p++ = '\\';
+            *p++ = 'r';
             break;
          }
          case '\t': {
-            *p++='\\';
-            *p++='t';
+            *p++ = '\\';
+            *p++ = 't';
             break;
          }
-         default:
+         default: {
             if (c < 0x20) {
                p += sprintf(p, "\\u%04x", c);
             } else {
                *p++ = c;
             }
+         }
       }
    }
    *p++ = '"';
    *p = '\0';
+
    return out;
 }
 
@@ -253,22 +251,21 @@ char *json_unescape(const char *s) {
    if (!s) {
       return NULL;
    }
-
    size_t len = strlen(s);
-   if (len < 2 || s[0] != '"' || s[len-1] != '"') {
+   if (len < 2 || s[0] != '"' || s[len - 1] != '"') {
       fprintf(stderr, "Invalid JSON string: %s\n", s);
+
       return NULL;
    }
-
    // worst case: input shrinks, so allocate len+1
    char *out = malloc(len);
    if (!out) {
       fprintf(stderr, "OOM in json_unescape\n");
+
       return NULL;
    }
-
-   const char *p = s + 1;        // skip opening quote
-   const char *end = s + len - 1; // before closing quote
+   const char *p = s + 1;         // skip opening quote
+   const char *end = s + len - 1;  // before closing quote
    char *q = out;
 
    while (p < end) {
@@ -277,30 +274,47 @@ char *json_unescape(const char *s) {
          if (p >= end) {
             break;
          }
-
          switch (*p) {
-            case '\"': *q++ = '\"'; break;
-            case '\\': *q++ = '\\'; break;
-            case '/':  *q++ = '/';  break;
-            case 'b':  *q++ = '\b'; break;
-            case 'f':  *q++ = '\f'; break;
-            case 'n':  *q++ = '\n'; break;
-            case 'r':  *q++ = '\r'; break;
-            case 't':  *q++ = '\t'; break;
+            case '\"': {
+               *q++ = '\"'; break;
+            }
+            case '\\': {
+               *q++ = '\\'; break;
+            }
+            case '/': {
+               *q++ = '/';  break;
+            }
+            case 'b': {
+               *q++ = '\b'; break;
+            }
+            case 'f': {
+               *q++ = '\f'; break;
+            }
+            case 'n': {
+               *q++ = '\n'; break;
+            }
+            case 'r': {
+               *q++ = '\r'; break;
+            }
+            case 't': {
+               *q++ = '\t'; break;
+            }
             case 'u': {
-               if (end - p < 4) { // not enough chars
+               if (end - p < 4) {
+                  // not enough chars
                   fprintf(stderr, "Invalid \\u escape\n");
                   free(out);
+
                   return NULL;
                }
                unsigned code = 0;
-               for (int i = 0; i < 4; i++) {
+               for (int i = 0 ; i < 4 ; i++) {
                   p++;
                   if (p >= end) {
                      free(out);
+
                      return NULL;
                   }
-
                   char c = *p;
                   code <<= 4;
                   if (c >= '0' && c <= '9') {
@@ -311,6 +325,7 @@ char *json_unescape(const char *s) {
                      code |= c - 'A' + 10;
                   } else {
                      free(out);
+
                      return NULL;
                   }
                }
@@ -321,14 +336,15 @@ char *json_unescape(const char *s) {
                   *q++ = 0x80 | (code & 0x3F);
                } else {
                   *q++ = 0xE0 | (code >> 12);
-                  *q++ = 0x80 | ((code >> 6) & 0x3F);
+                  *q++ = 0x80 | ( (code >> 6) & 0x3F);
                   *q++ = 0x80 | (code & 0x3F);
                }
                break;
             }
-            default:
-               *q++ = *p; // unknown escape, just copy
+            default: {
+               *q++ = *p;  // unknown escape, just copy
                break;
+            }
          }
       } else {
          *q++ = *p;
@@ -336,26 +352,29 @@ char *json_unescape(const char *s) {
       p++;
    }
    *q = '\0';
+
    return out;
 }
 
 static json_node *json_make_node(const char *key) {
-   json_node *n = calloc(1, sizeof(*n));
+   json_node *n = calloc( 1, sizeof(*n) );
    if (!n) {
       fprintf(stderr, "OOM in json_make_node\n");
+
       return NULL;
    }
    n->key = strdup(key);
    if (!n->key) {
       fprintf(stderr, "OOM in json_make_node strdup\n");
       free(n);
+
       return NULL;
    }
    return n;
 }
 
 static json_node *find_child(json_node *parent, const char *key) {
-   for (json_node *c = parent->child; c; c = c->next) {
+   for (json_node *c = parent->child ; c ; c = c->next) {
       if (strcmp(c->key, key) == 0) {
          return c;
       }
@@ -366,6 +385,7 @@ static json_node *find_child(json_node *parent, const char *key) {
    }
    n->next = parent->child;
    parent->child = n;
+
    return n;
 }
 
@@ -373,9 +393,9 @@ static void json_insert(json_node *root, const char *fullkey, const char *val) {
    char *tmp = strdup(fullkey);
    if (!tmp) {
       fprintf(stderr, "OOM in json_insert\n");
-       return;
-   }
 
+      return;
+   }
    char *tok = strtok(tmp, ".");
    json_node *cur = root;
 
@@ -387,12 +407,10 @@ static void json_insert(json_node *root, const char *fullkey, const char *val) {
       free(cur->value);
    }
    cur->value = strdup(val ? val : "UNDEF");
-
    if (!cur->value) {
       // XXX: deal with this fault
       fprintf(stderr, "OOM in json_insert strdup\n");
    }
-
    free(tmp);
 }
 
@@ -420,7 +438,6 @@ static void sbuf_putc(sbuf *b, char c) {
 
 static void sbuf_puts(sbuf *b, const char *s) {
    size_t slen = strlen(s);
-
    if (b->len + slen + 1 > b->cap) {
       while (b->len + slen + 1 > b->cap) {
          b->cap *= 2;
@@ -434,11 +451,10 @@ static void sbuf_puts(sbuf *b, const char *s) {
 
 static void dump_json(json_node *n, sbuf *out) {
    sbuf_putc(out, '{');
-   for (json_node *c = n->child; c; c = c->next) {
+   for (json_node *c = n->child ; c ; c = c->next) {
       sbuf_putc(out, '"');
       sbuf_puts(out, c->key);
       sbuf_puts(out, "\":");
-
       if (c->value && !c->child) {
          char *esc = json_escape(c->value);
          sbuf_puts(out, esc);
@@ -446,7 +462,6 @@ static void dump_json(json_node *n, sbuf *out) {
       } else {
          dump_json(c, out);
       }
-
       if (c->next) {
          sbuf_putc(out, ',');
       }
@@ -455,7 +470,7 @@ static void dump_json(json_node *n, sbuf *out) {
 }
 
 static void free_json(json_node *n) {
-   for (json_node *c = n->child; c;) {
+   for (json_node *c = n->child ; c ; ) {
       json_node *next = c->next;
       free_json(c);
       c = next;
@@ -470,12 +485,13 @@ char *dict2json(dict *d) {
    const char *key;
    char *val;
    int rank = 0;
-   json_node root = {0};
+   json_node root = {
+      0
+   };
 
-   while ((rank = dict_enumerate(d, rank, &key, &val)) >= 0) {
+   while ( (rank = dict_enumerate(d, rank, &key, &val) ) >= 0) {
       json_insert(&root, key, val);
    }
-
    sbuf out;
    sbuf_init(&out);
    dump_json(&root, &out);
@@ -498,7 +514,9 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
          }
          case VAL_CHAR: {
             int val = va_arg(ap, int);
-            char buf[2] = {0};
+            char buf[2] = {
+               0
+            };
             snprintf(buf, sizeof(buf), "%c", val);
             dict_add(d, key, buf);
             break;
@@ -525,7 +543,7 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
             break;
          }
          case VAL_FLOAT: {
-            double v = va_arg(ap, double);  // floats promote to double
+            double v = va_arg(ap, double);   // floats promote to double
             char buf[32];
             snprintf(buf, sizeof(buf), "%f", (float)v);
             dict_add(d, key, buf);
@@ -539,13 +557,13 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
             break;
          }
          case VAL_BOOL: {
-            int val = va_arg(ap, int); // promoted
+            int val = va_arg(ap, int);  // promoted
             dict_add(d, key, val ? "true" : "false");
             break;
          }
          case VAL_FLOATP: {
             double v = va_arg(ap, double);
-            int prec = va_arg(ap, int); // next arg is precision
+            int prec = va_arg(ap, int);  // next arg is precision
             char buf[64];
             snprintf(buf, sizeof(buf), "%.*f", prec, (float)v);
             dict_add(d, key, buf);
@@ -553,7 +571,7 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
          }
          case VAL_DOUBLEP: {
             double val = va_arg(ap, double);
-            int prec = va_arg(ap, int);   // precision follows the double
+            int prec = va_arg(ap, int);    // precision follows the double
             char buf[64];
             snprintf(buf, sizeof(buf), "%.*f", prec, val);
             dict_add(d, key, buf);
@@ -599,7 +617,6 @@ static const char *json_parse_value(const char *s, const char *path, dict *d) {
    if (!*s) {
       return NULL;
    }
-
    if (*s == '"') {
       char *val = NULL;
       s = json_parse_str(s, &val);
@@ -608,6 +625,7 @@ static const char *json_parse_value(const char *s, const char *path, dict *d) {
       }
       dict_add(d, path, val);
       free(val);
+
       return s;
    } else if (*s == '{') {
       return json_parse_obj(s, path, d);
@@ -621,6 +639,7 @@ static const char *json_parse_value(const char *s, const char *path, dict *d) {
       }
       dict_add(d, path, val);
       free(val);
+
       return s;
    }
 }
@@ -631,10 +650,11 @@ dict *json2dict(const char *json) {
    if (!d) {
       return NULL;
    }
-
-   const char *res = json_parse_value(json, "", d); // start with empty root path
+   const char *res = json_parse_value(json, "", d);  // start with empty root
+                                                     // path
    if (!res) {
       dict_free(d);
+
       return NULL;
    }
    return d;
