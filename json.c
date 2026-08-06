@@ -46,7 +46,6 @@ static char *path_append(const char *base, const char *suffix) {
 }
 
 /////////////////////////////////
-
 // helper: skip whitespace
 static const char *skip_ws(const char *s) {
    while (*s && isspace( (unsigned char)*s ) ) {
