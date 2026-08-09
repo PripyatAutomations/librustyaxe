@@ -9,17 +9,22 @@
 #define __librustyaxe_core_h
 #include <stdbool.h>
 #include <stdint.h>
+#include "build_config.h"
+#if	defined(USE_MONGOOSE)
+#include <ext/libmongoose/mongoose.h>
+#endif
 #include <librustyaxe/cat.h>
 #include <librustyaxe/subproc.h>
 #include <librustyaxe/config.h>
 #include <librustyaxe/daemon.h>
 #include <librustyaxe/dict.h>
+#include <librustyaxe/struct.h>
+#include <librustyaxe/event-bus.h>
 #include <librustyaxe/eeprom.h>
 #include <librustyaxe/io.h>
 #include <librustyaxe/io.serial.h>
 #include <librustyaxe/io.socket.h>
 #include <librrprotocol/irc.h>
-#include <librustyaxe/event-bus.h>
 #include <librustyaxe/kvstore.h>
 #include <librustyaxe/json.h>
 #include <librustyaxe/list.h>

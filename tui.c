@@ -20,6 +20,7 @@
 #include <stdbool.h>
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
+#include <ev.h>
 
 ev_io stdin_watcher;
 void stdin_ev_cb(EV_P_ ev_io *w, int revents);

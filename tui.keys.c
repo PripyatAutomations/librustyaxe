@@ -22,6 +22,8 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 #include <librustyaxe/termkey.h>
+#include <ev.h>
+
 extern int tui_window_swap(int c, int key);
 extern int handle_alt_left(int c, int key);
 extern int handle_alt_right(int c, int key);

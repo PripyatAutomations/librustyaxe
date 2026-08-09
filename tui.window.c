@@ -176,10 +176,13 @@ tui_window_t *tui_window_focus(const char *title) {
          // try to determine the network name to show
          const char *network = "unknown";
          if (tw->cptr) {
+// XXX: fix this
+#if	0
             irc_conn_t *cptr = tw->cptr;
             if (cptr && cptr->server && cptr->server->network) {
                network = cptr->server->network;
             }
+#endif
          }
          char *win_color = "{bright-cyan}";
          if (tw->title[0] == '&' || tw->title[0] == '#') {
