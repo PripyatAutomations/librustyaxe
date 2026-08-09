@@ -73,7 +73,7 @@ typedef struct irc_callback {
 } irc_callback_t;
 
 
-typedef void (*event_cb_t)(const char *event, void *data, rrconn_t *cptr, void *user);
+typedef void (*event_cb_t)(const char *event, const char *data, rrconn_t *cptr, void *user);
 
 struct irc_command_t {
    const char    *name;

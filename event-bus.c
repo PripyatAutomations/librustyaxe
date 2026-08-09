@@ -55,7 +55,7 @@ void event_on(const char *event, event_cb_t cb, void *user) {
 }
 
 /* emit */
-void event_emit(const char *event, rrconn_t *cptr, void *data) {
+void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    if (!event_store || !event) {
       return;
    }
@@ -71,6 +71,18 @@ void event_emit(const char *event, rrconn_t *cptr, void *data) {
          l->user);
       l->cb(event, data, cptr, l->user);
    }
+}
+
+void event_emit_dict(const char *event, rrconn_t *cptr, dict *data) {
+    const char *jp = NULL;
+    if (data) {
+       jp = dict2json(data);
+    }
+    event_emit(event, cptr, jp);
+
+    if (jp) {
+       free( (void *)jp );
+    }
 }
 
 /* unsubscribe */

@@ -389,15 +389,10 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
          lp = lp->next;
       }
    }
-   struct log_event_data *led = malloc( sizeof(*led) );
-
-   if (led) {
-      led->priority = priority;
-      strncpy(led->subsys, subsys, sizeof(led->subsys) - 1);
-      snprintf(led->message, sizeof(led->message), "%s", log_msg);
-      event_emit("log.message", NULL, led);
-      free(led);
-   }
+// XXX: readd this
+//   const char *jp = dict2json_mkstr(VAL_STR, "log.subsys", subsys, VAL_STR, "log.prio", priority, VAL_STR, "log.data", log_msg);
+//   event_emit("log.message", NULL, jp);
+//   free( (void *)jp);
    va_end(ap_c1);
 }
 
