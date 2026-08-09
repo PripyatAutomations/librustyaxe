@@ -1,5 +1,5 @@
 //
-// librustyaxe/json.c
+// librustyaxe/json.c: My ugly json handling mess.
 //    This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
@@ -594,7 +594,8 @@ void dict_import_real(dict *d, int first_type, ...) {
    va_end(ap);
 }
 
-// Higher-level: build a dict from varargs, send it, free it
+// Higher-level: build a dict from varargs, turn it into a json string, free the dict and return string
+// You *must* free the string when done
 const char *dict2json_mkstr_real(int first_type, ...) {
    dict *d = dict_new();
 
