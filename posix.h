@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__rr_posix_h)
-#define __rr_posix_h
+#define	__rr_posix_h
 #include <stdbool.h>
 
 extern void host_cleanup(void);

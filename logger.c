@@ -88,24 +88,26 @@ static struct log_priority log_priorities[] = {
 FILE    *logfp = NULL;
 
 enum LogPriority log_priority_from_str(const char *priority) {
-   int log_levels = (sizeof(log_priorities) / sizeof(struct log_priority) );
+   int log_levels = ( sizeof(log_priorities) / sizeof(struct log_priority) );
 
    for (int i = 0 ; i < log_levels ; i++) {
       if (strcasecmp(log_priorities[i].msg, priority) == 0) {
          return log_priorities[i].prio;
       }
    }
+
    return LOG_NONE;
 }
 
 const char *log_priority_to_str(logpriority_t priority) {
-   int log_levels = (sizeof(log_priorities) / sizeof(struct log_priority) );
+   int log_levels = ( sizeof(log_priorities) / sizeof(struct log_priority) );
 
    for (int i = 0 ; i < log_levels ; i++) {
       if (log_priorities[i].prio == priority) {
          return log_priorities[i].msg;
       }
    }
+
    return s_prio_none;
 }
 
@@ -119,12 +121,14 @@ static struct log_filter *log_filters = NULL;
 
 bool log_add_filter(const char *pattern, logpriority_t level) {
    struct log_filter *f = malloc( sizeof(*f) );
+
    if (f == NULL) {
       fprintf(stderr, "OOM in log_add_filter\n");
 
       return true;
    }
-   if ( (f->pattern = strdup(pattern) ) == NULL) {
+
+   if ( ( f->pattern = strdup(pattern) ) == NULL ) {
       free(f);
 
       return true;
@@ -150,10 +154,12 @@ void log_clear_log_filters(void) {
 // Load log_filters from config string
 void load_log_filters_from_config(void) {
    const char *cfg = cfg_get_exp("debug/loglevel");   // or "log.log_filters"
+
    if (!cfg) {
       return;
    }
    char *copy = strdup(cfg);
+
    // XXX: make this more graceful
    if (copy == NULL) {
       abort();
@@ -162,17 +168,19 @@ void load_log_filters_from_config(void) {
 
    char *tok = copy;
    while (*tok) {
-      while (isspace( (unsigned char)*tok ) ) {
+      while ( isspace( (unsigned char)*tok ) ) {
          tok++;
       }
       char *end = tok;
-      while (*end && *end != ',' && !isspace( (unsigned char)*end ) ) {
+      while ( *end && *end != ',' && !isspace( (unsigned char)*end ) ) {
          end++;
       }
+
       if (*end) {
          *end = '\0';
       }
       char *sep = strchr(tok, ':');
+
       if (sep) {
          *sep = '\0';
          const char *subsys = tok;
@@ -181,8 +189,10 @@ void load_log_filters_from_config(void) {
 
          // If pattern ends with ".*", also add plain version
          size_t len = strlen(subsys);
+
          if (len >= 2 && strcmp(subsys + len - 2, ".*") == 0) {
             char *plain = strdup(subsys);
+
             // XXX: make this fail more gracefully
             if (plain == NULL) {
                abort();
@@ -198,28 +208,32 @@ void load_log_filters_from_config(void) {
    free(copy);
 }
 
-#define DEFAULT_LOG_LEVEL LOG_DEBUG
+#define	DEFAULT_LOG_LEVEL LOG_DEBUG
 
 bool debug_filter(const char *subsys, logpriority_t msg_level) {
    struct log_filter *f = log_filters, *best = NULL;
+
    if (!f && msg_level > DEFAULT_LOG_LEVEL) {
 //      fprintf(stderr, "!f: %d > %d\n", msg_level, DEFAULT_LOG_LEVEL);
       return true;
    }
    while (f) {
       if (fnmatch(f->pattern, subsys, 0) == 0) {
-         if (!best || strlen(f->pattern) > strlen(best->pattern) ) {
+         if ( !best || strlen(f->pattern) > strlen(best->pattern) ) {
             best = f;
          }
       }
       f = f->next;
    }
+
    if (best) {
       fprintf(stderr, "msg: %d best: %d\n", msg_level, best->level);
+
       if (best->level <= msg_level) {
          return true;
       }
    }
+
    return false;
 }
 
@@ -245,8 +259,10 @@ void logger_init(const char *logfile) {
 #endif
 
    log_show_ts = eeprom_get_bool("debug/show-ts");
+
    if (!logfp) {
       logfp = fopen(logfile, "a+");
+
       if (!logfp) {
          fprintf(stderr, "Couldn't open log file %s, falling back to stdout\n", logfile);
          logfp = stdout;
@@ -260,7 +276,7 @@ void logger_init(const char *logfile) {
 }
 
 void logger_end(void) {
-   if (logfp && (logfp != stdout && logfp != stderr) ) {
+   if ( logfp && (logfp != stdout && logfp != stderr) ) {
       fclose(logfp);
    }
    logfp = NULL;
@@ -280,6 +296,7 @@ void logger_end(void) {
 
 int update_timestamp(void) {
    struct tm *tmp;
+
    // If we've already updated this second or have gone back in time, return
    // success, to save CPU
    if (last_ts_update >= now) {
@@ -287,7 +304,8 @@ int update_timestamp(void) {
    }
    last_ts_update = now;
    memset( latest_timestamp, 0, sizeof(latest_timestamp) );
-   if ( (tmp = localtime(&now) ) ) {
+
+   if ( ( tmp = localtime(&now) ) ) {
       /* success, proceed */
       if (strftime(latest_timestamp, sizeof(latest_timestamp), "%Y/%m/%d %H:%M:%S", tmp) == 0) {
          /* handle the error */
@@ -297,6 +315,7 @@ int update_timestamp(void) {
    } else {
       return 1;
    }
+
    return 0;
 }
 
@@ -305,16 +324,19 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    char ts_log_msg[1025];
    char log_msg[769];
    va_list ap, ap_c1;
+
    if (!subsys || !fmt) {
       fprintf(stderr, "Invalid Log request: No subsys/fmt\n");
 
       return;
    }
    va_start(ap, fmt);
-   if (debug_filter(subsys, priority) ) {
+
+   if ( debug_filter(subsys, priority) ) {
 //      fprintf(stderr, "skip %s:%d\n", subsys, priority);
       return;
    }
+
    // this is arranged so that it will return if called more than once a second
    if (log_show_ts) {
       update_timestamp();
@@ -330,6 +352,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    memset( log_msg, 0, sizeof(log_msg) );
    snprintf(log_msg, sizeof(log_msg), "<%s.%s> %s", subsys, log_priority_to_str(priority), msgbuf);
    va_end(ap);
+
    if (logfp) {
       if (log_show_ts) {
          fprintf(logfp, "[%s] %s\n", latest_timestamp, log_msg);
@@ -338,6 +361,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       }
       fflush(logfp);
    }
+
    if (!tui_enabled) {
       /* Only spew to the console if logfile is closed or log.stdout == true,
        * but avoid duplicating messages */
@@ -350,6 +374,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
          fflush(stdout);
       }
    }
+
    // if there are registered log callbacks, call them
    if (log_callbacks) {
       struct log_callback *lp = log_callbacks;
@@ -365,6 +390,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       }
    }
    struct log_event_data *led = malloc( sizeof(*led) );
+
    if (led) {
       led->priority = priority;
       strncpy(led->subsys, subsys, sizeof(led->subsys) - 1);
@@ -397,6 +423,7 @@ bool log_remove_callback(struct log_callback *log_callback) {
 bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *subsys,
    const char *fmt, va_list ap) ) {
    struct log_callback *newcb = malloc( sizeof(struct log_callback) );
+
    if (!newcb) {
       fprintf(stderr, "OOM in log_set_callback!\n");
 
@@ -404,6 +431,7 @@ bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *su
    }
    memset( newcb, 0, sizeof(struct log_callback) );
    newcb->callback = log_va_cb;
+
    if (log_callbacks) {
       // find the end
       struct log_callback *prev = NULL;
@@ -414,6 +442,7 @@ bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *su
          prev = i;
          i = i->next;
       }
+
       if (prev) {
          prev->next = newcb;
       }
@@ -421,5 +450,6 @@ bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *su
       // first entry, pop it at the top of the list
       log_callbacks = newcb;
    }
+
    return false;
 }

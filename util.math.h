@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__rr_util_math_h)
-#define __rr_util_math_h
+#define	__rr_util_math_h
 
 extern float safe_atof(const char *s);
 extern double safe_atod(const char *s);

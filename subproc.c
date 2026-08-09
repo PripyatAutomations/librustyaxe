@@ -45,12 +45,14 @@ static void subproc_cb(EV_P_ ev_child *w, int revents) {
       if (children[i] == NULL) {
          continue;
       }
+
       // is this our match?
       if (children[i]->pid == w->rpid) {
          p = children[i];
          break;
       }
    }
+
    // This setting will cause the periodic timer to restart the process soon...
    if (p != NULL) {
       p->restart_time = 0;
@@ -90,6 +92,7 @@ static void stderr_cb(EV_P_ ev_io *w, int revents) {
 
 bool subproc_start(int slot) {
    subproc_t *p = NULL;
+
    if (slot < 0 || slot > max_subprocess) {
       log_send(mainlog, LOG_CRIT,
          "subproc_start called with slot %d that isn't between 0 and max_subprocess (%d), cancelling!",
@@ -97,19 +100,23 @@ bool subproc_start(int slot) {
 
       return false;
    }
-   if ( (p = children[slot]) == NULL) {
+
+   if ( (p = children[slot]) == NULL ) {
       log_send(mainlog, LOG_CRIT, "subproc_start %d failed: no such subprocess in table main");
 
       return false;
    }
+
    // setup evloop pointer if not done yet
    if (loop == NULL) {
 //      loop = EV_DEFAULT;
    }
+
    // well look here! we have a commandline to execute!
    if ( (p->argc > 0) && (p->argv[0] != NULL) ) {
       int saved_errno = 0;
       int pid = -1;
+
       // XXX: we'll play with this a bit but if it doesn't work out, we'll teach
       // callsign-lookupd about sockets.
       // XXX: it shouldn't be too awful as we have libev to save us the dreadful
@@ -123,6 +130,7 @@ bool subproc_start(int slot) {
       }
       pid = fork();
       saved_errno = errno;
+
       // if it was successful, store it in the process
       if (pid < 0) {
          log_send( mainlog, LOG_CRIT, "error forking subprocess %d: %s - %d: %s", slot,
@@ -140,6 +148,7 @@ bool subproc_start(int slot) {
 
          close(p->_stderr[0]);           // close read end of stderr of child
          dup2(p->_stderr[1], STDERR_FILENO);
+
          // spawn the process
          if (execv(p->path, p->argv) == -1) {
             saved_errno = errno;
@@ -181,12 +190,14 @@ bool subproc_start(int slot) {
 #endif
       }
    }
+
    return true;
 }
 
 // Create a new subprocess, based on the details provided and start it
 int subproc_create(const char *name, const char *path, const char **argv, int argc) {
    subproc_t *sp = NULL;
+
    if (path == NULL || argv == NULL || argc <= 0) {
       log_send(mainlog, LOG_CRIT, "subproc_create: got invalid (NULL) (argc: %d) arguments.", argc);
 
@@ -194,7 +205,8 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
    }
    // figure out our subprocess slot...
    int myslot = -1;
-   if ( (sp = malloc( sizeof(subproc_t) ) ) == NULL) {
+
+   if ( ( sp = malloc( sizeof(subproc_t) ) ) == NULL ) {
       fprintf(stderr, "subproc_create: out of memory!\n");
       exit(ENOMEM);
    }
@@ -211,11 +223,13 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
 
    // and duplicate the arguments
    sp->argc = argc;
+
    for (int i = 0 ; i < sp->argc ; i++) {
       if (argv[i] != NULL) {
          sp->argv[i] = strdup(argv[i]);
       }
    }
+
    // insert it into a free slot...
    for (myslot = 0 ; myslot <= MAX_SUBPROC ; myslot++) {
       if (children[myslot] == NULL) {
@@ -231,6 +245,7 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
             children[myslot], name);
       }
    }
+
    // and start the process slot we created above!
    if (children[myslot] != NULL) {
       subproc_start(myslot);
@@ -238,6 +253,7 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
       log_send(mainlog, LOG_CRIT, "couldnt start subprocess, slot init failed. aborting!");
       abort();
    }
+
    return myslot;
 }
 
@@ -247,14 +263,17 @@ static void subproc_delete(int i) {
 // requested for deletion", i);
       return;
    }
+
    // if there's a commandline stored, free it
    for (int x = 0 ; x < children[i]->argc ; x++) {
       subproc_t *sp = children[i];
+
       if (sp->argv[x] != NULL) {
          free(sp->argv[x]);
       }
       free(sp);
       sp = NULL;
+
       if (max_subprocess > 0) {
          max_subprocess--;
       }
@@ -264,6 +283,7 @@ static void subproc_delete(int i) {
 int subproc_killall(int signum) {
    char *signame = NULL;
    int rv = 0;
+
    if (signum == SIGTERM) {
       signame = "SIGTERM";
    } else if (signum == SIGKILL) {
@@ -277,6 +297,7 @@ int subproc_killall(int signum) {
    } else {
       signame = "INVALID";
    }
+
    if (max_subprocess > MAX_SUBPROC) {
 //      ta_printf(msgbox, "$RED$subproc_killall: max_subprocess (%d) >
 // MAX_SUBPROC (%d), this is wrong!", max_subprocess, MAX_SUBPROC);
@@ -287,11 +308,14 @@ int subproc_killall(int signum) {
       exit(200);
    }
    int i = 0;
+
    for (i = 0 ; i <= MAX_SUBPROC ; i++) {
       subproc_t *sp = children[i - 1];
+
       if (sp == NULL) {
          continue;
       }
+
       // catch obvious errors (init is pid 1)
       if (sp->pid <= 1) {
          continue;
@@ -307,6 +331,7 @@ int subproc_killall(int signum) {
       sp->needs_restarted = 0;
       sp->watchdog_start = 0;
       sp->watchdog_events = 0;
+
       // if successfully sent signal, increment rv, so we'll sleep if called
       // from subproc_shutdown()
       if (kill(sp->pid, signum) == 0) {
@@ -316,6 +341,7 @@ int subproc_killall(int signum) {
       time_t wstart = time(NULL);
       int wstatus;
       int pid = waitpid(sp->pid, &wstatus, WNOHANG);
+
       // An error occured
       if (pid == -1) {
          continue;
@@ -332,6 +358,7 @@ int subproc_killall(int signum) {
          subproc_delete(i);
       }
    }
+
    // return > 0, if we sent any kill signals
    return rv;
 }
@@ -340,11 +367,13 @@ int subproc_killall(int signum) {
 // know what's happening
 void subproc_shutdown_all(void) {
    dying = true;
+
    if (subproc_killall(SIGTERM) > 0) {
       if (subproc_check_all() > 0) {
          sleep(2);
       }
    }
+
    if (subproc_killall(SIGKILL) > 0) {
       if (subproc_check_all() > 0) {
          sleep(1);
@@ -366,12 +395,15 @@ static time_t get_random_interval(int min, int max) {
 // needed...
 int subproc_check_all(void) {
    int rv = 0;
+
    if (dying) {
       return 0;
    }
+
    // scan the child process table and see if any have died
    for (int i = 0 ; i < MAX_SUBPROC ; i++) {
       subproc_t *sp = children[i];
+
       if (sp == NULL) {
          continue;
       }
@@ -379,6 +411,7 @@ int subproc_check_all(void) {
       time_t wstart = time(NULL);
       int wstatus;
       int pid = waitpid(sp->pid, &wstatus, WNOHANG);
+
       if (pid == -1) {
          // an error occured
          log_send( mainlog, LOG_DEBUG,
@@ -396,6 +429,7 @@ int subproc_check_all(void) {
          sp->needs_restarted = 1;
          int watchdog_expire = cfg_get_int(cfg, "supervisor/max-crash-time");
          int watchdog_max_events = cfg_get_int(cfg, "supervisor/max-crashes");
+
          // are we already performing watchdog on this subproc due to previous
          // crashes??
          if (sp->watchdog_start == 0) {
@@ -434,14 +468,16 @@ int subproc_check_all(void) {
          log_send(mainlog, LOG_DEBUG, "unexpected return value %d from waitpid(%d) for subproc %d",
             pid, sp->pid, i);
       }
+
       // schedule 3-15 seconds in the future, if not already set...
-      if (!dying && sp->needs_restarted && (sp->restart_time == 0) ) {
+      if ( !dying && sp->needs_restarted && (sp->restart_time == 0) ) {
          sp->restart_time = get_random_interval(3, 15) + now;
          log_send( mainlog, LOG_CRIT,
             "subprocess %d (%s) exited, registering it for restart in %lu seconds", i, sp->name,
             (sp->restart_time - now) );
       }
    }
+
    return rv;
 }
 

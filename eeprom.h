@@ -8,11 +8,11 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__rr_eeprom_h)
-#define __rr_eeprom_h
+#define	__rr_eeprom_h
 
 // This will prevent loading with a newer EEPROM version and someday will force
 // an upgrade if older
-#define MY_EEPROM_VER 1
+#define	MY_EEPROM_VER 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include "eeprom_types.h"
 
-#define PIN_LEN 8               // 8 byte pin
+#define	PIN_LEN 8              // 8 byte pin
 
 typedef enum mod_mode {
    MOD_NONE = 0,

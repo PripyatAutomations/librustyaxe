@@ -478,6 +478,7 @@ bool rr_cat_yaesu_parse(const char *msg) {
    if (!msg) {
       return true;
    }
+
    return false;
 }
 #endif

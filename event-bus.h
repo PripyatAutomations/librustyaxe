@@ -6,7 +6,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_event_bus_h)
-#define __librustyaxe_event_bus_h
+#define	__librustyaxe_event_bus_h
 
 typedef void (*event_cb_t)(const char *event, void *data, rrconn_t *cptr, void *user);
 

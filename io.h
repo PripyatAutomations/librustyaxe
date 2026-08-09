@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__rr_io_h)
-#define __rr_io_h
+#define	__rr_io_h
 //
 // IO abstraction layer for portability between hosts
 //

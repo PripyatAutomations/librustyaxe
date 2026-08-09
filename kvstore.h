@@ -6,7 +6,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_kvstore_h)
-#define __librustyaxe_kvstore_h
+#define	__librustyaxe_kvstore_h
 
 typedef enum {
    KV_ARRAY = 0, KV_BST
@@ -32,7 +32,7 @@ typedef struct {
    kv_type_t type;
 } kv_store_t;
 
-#define DEFAULT_PREFIX_SIZE 65536
+#define	DEFAULT_PREFIX_SIZE 65536
 
 extern kv_store_t *kv_create(size_t prefix_size, kv_type_t type);
 extern void kv_destroy(kv_store_t *store);

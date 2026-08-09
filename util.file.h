@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__rr_util_file_h)
-#define __rr_util_file_h
+#define	__rr_util_file_h
 
 extern bool file_exists(const char *path);
 extern bool is_dir(const char *path);

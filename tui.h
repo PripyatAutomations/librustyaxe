@@ -6,14 +6,14 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_tui_h)
-#define __librustyaxe_tui_h
+#define	__librustyaxe_tui_h
 
-#define TUI_STRING_LEN 1024
-#define LOG_LINES 300
-#define STATUS_LINES 1
-#define STATUS_LEN 256
-#define TUI_MAX_WINDOWS 32
-#define HISTORY_LINES 50
+#define	TUI_STRING_LEN 1024
+#define	LOG_LINES 300
+#define	STATUS_LINES 1
+#define	STATUS_LEN 256
+#define	TUI_MAX_WINDOWS 32
+#define	HISTORY_LINES 50
 
 #include <librustyaxe/tui.theme.h>
 #include <librustyaxe/tui.window.h>

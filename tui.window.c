@@ -35,9 +35,11 @@ tui_window_t *tui_active_window(void) {
       tui_window_t *tw = tui_window_create("status");
       tui_active_win = 0;
    }
+
    if (tui_active_win < 0 || tui_active_win >= tui_num_windows) {
       tui_active_win = tui_num_windows - 1;  // fallback to last window
    }
+
    return tui_windows[tui_active_win];
 }
 
@@ -47,20 +49,24 @@ tui_window_t *tui_window_find(const char *title) {
 
       return NULL;
    }
+
    for (int i = 0 ; i < tui_num_windows ; i++) {
       if (tui_windows[i] && strcasecmp(tui_windows[i]->title, title) == 0) {
          return tui_windows[i];
       }
    }
+
    return NULL;
 }
 
 tui_window_t *tui_window_create(const char *title) {
    // Check if a window with this title already exists
    tui_window_t *w = tui_window_find(title);
+
    if (w) {
       return w;
    }
+
    // Not found, create new
    if (tui_num_windows >= TUI_MAX_WINDOWS) {
       tui_print_win(tui_active_window(), "No more windows available: TUI_MAX_WINDOWS: %d",
@@ -70,6 +76,7 @@ tui_window_t *tui_window_create(const char *title) {
    }
    // Nope, lets create it
    w = calloc( 1, sizeof(*w) );
+
    if (!w) {
       fprintf(stderr, "OOM in tui_window_create!\n");
 
@@ -90,6 +97,7 @@ bool tui_window_destroy(tui_window_t *w) {
    if (!w) {
       return true;
    }
+
    if (strcasecmp(w->title, "status") == 0) {
       tui_print_win(tui_active_window(),
          "{red}*** {bright-red}Can't destroy status window! {red}***{reset}.");
@@ -103,18 +111,22 @@ bool tui_window_destroy(tui_window_t *w) {
       if (tui_windows[i] == w) {
          tui_print_win(tui_window_find("status"), "* Closed window %d (%s)", i, w->title);
          destroyed_index = i;
+
          for (int j = i ; j < tui_num_windows - 1 ; j++) {
             tui_windows[j] = tui_windows[j + 1];
          }
+
          tui_windows[--tui_num_windows] = NULL;
          break;
       }
    }
+
    if (destroyed_index == -1) {
       free(w);
 
       return true;
    }
+
    // Pick a new active window if needed
    if (tui_num_windows < 0) {
       tui_active_win = 0;   // no windows left
@@ -132,11 +144,13 @@ bool tui_window_destroy(tui_window_t *w) {
       }
    }
    free(w);
+
    if (tui_active_win >= 0 && tui_windows[tui_active_win]) {
       tui_window_focus(tui_windows[tui_active_win]->title);
    } else {
       tui_redraw_screen();
    }
+
    return false;
 }
 
@@ -149,11 +163,13 @@ bool tui_window_destroy_id(int id) {
    }
    // shift down to zero-based index
    tui_window_t *tw = tui_windows[id - 1];
+
    if (tw) {
       return tui_window_destroy(tw);
    } else {
       return true;
    }
+
    // we shouldnt make it here, so return error
    return true;
 }
@@ -168,6 +184,7 @@ tui_window_t *tui_window_focus(const char *title) {
    if (!title) {
       return NULL;
    }
+
    for (int i = 0 ; i < tui_num_windows ; i++) {
       if (strcmp(tui_windows[i]->title, title) == 0) {
          tui_window_t *tw = tui_windows[i];
@@ -175,16 +192,19 @@ tui_window_t *tui_window_focus(const char *title) {
 
          // try to determine the network name to show
          const char *network = "unknown";
+
          if (tw->cptr) {
 // XXX: fix this
-#if	0
+#if     0
             irc_conn_t *cptr = tw->cptr;
+
             if (cptr && cptr->server && cptr->server->network) {
                network = cptr->server->network;
             }
 #endif
          }
          char *win_color = "{bright-cyan}";
+
          if (tw->title[0] == '&' || tw->title[0] == '#') {
             win_color = "{bright-magenta}";
          }
@@ -196,6 +216,7 @@ tui_window_t *tui_window_focus(const char *title) {
          return tui_windows[i];
       }
    }
+
    return NULL;
 }
 
@@ -208,6 +229,7 @@ tui_window_t *tui_window_focus_id(int id) {
    }
    // shift down to zero-based index
    tui_window_t *tw = tui_windows[id - 1];
+
    if (tw) {
       return tui_window_focus(tw->title);
    } else {
@@ -229,13 +251,16 @@ void tui_window_init(void) {
 
 int tui_window_swap(int c, int key) {
    int num = key - '1';          // Alt-1 = window 0
+
    if (key == '0') {
       num = 9;                   // Alt-0 -> window 9
    }
+
    if (num >= 0 && num < tui_num_windows) {
       tui_window_focus(tui_windows[num]->title);
       tui_redraw_screen();
    }
+
 //   tui_print_win(tui_window_find("status"), "Swap to window %d", num + 1);
    return 0;
 }
@@ -246,6 +271,7 @@ int handle_alt_left(int c, int key) {
       tui_window_focus(tui_windows[next]->title);
       tui_redraw_screen();
    }
+
    return 0;
 }
 
@@ -255,6 +281,7 @@ int handle_alt_right(int c, int key) {
       tui_window_focus(tui_windows[next]->title);
       tui_redraw_screen();
    }
+
    return 0;
 }
 
@@ -262,12 +289,14 @@ bool tui_clear_scrollback(tui_window_t *w) {
    if (!w) {
       return true;
    }
+
    for (int i = 0 ; i < LOG_LINES ; i++) {
       if (w->buffer[i]) {
          free(w->buffer[i]);
          w->buffer[i] = NULL;
       }
    }
+
    w->log_head = 0;
    w->log_count = 0;
    w->scroll_offset = 0;

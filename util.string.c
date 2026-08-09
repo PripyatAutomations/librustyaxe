@@ -29,10 +29,12 @@ char *escape_html(const char *input) {
    size_t buf_size = len * 6 + 1;                // Worst case: every char
                                                  // becomes `&quot;` (6 bytes)
    char *output = malloc(buf_size);
+
    if (!output) {
       return NULL;
    }
    char *p = output;
+
    for (size_t i = 0 ; i < len ; i++) {
       switch (input[i]) {
          case '<': {
@@ -55,6 +57,7 @@ char *escape_html(const char *input) {
          }
       }
    }
+
    *p = '\0';
 
    return output;
@@ -67,15 +70,15 @@ void unescape_html(char *s) {
 
    while (*r) {
       if (*r == '&') {
-         if (!strncmp(r, "&lt;", 4) ) {
+         if ( !strncmp(r, "&lt;", 4) ) {
             *w++ = '<'; r += 4;
-         } else if (!strncmp(r, "&gt;", 4) ) {
+         } else if ( !strncmp(r, "&gt;", 4) ) {
             *w++ = '>'; r += 4;
-         } else if (!strncmp(r, "&amp;", 5) ) {
+         } else if ( !strncmp(r, "&amp;", 5) ) {
             *w++ = '&'; r += 5;
-         } else if (!strncmp(r, "&quot;", 6) ) {
+         } else if ( !strncmp(r, "&quot;", 6) ) {
             *w++ = '"'; r += 6;
-         } else if (!strncmp(r, "&#39;", 5) ) {
+         } else if ( !strncmp(r, "&#39;", 5) ) {
             *w++ = '\''; r += 5;
          } else {
             *w++ = *r++;  // unknown entity, copy literally
@@ -92,12 +95,15 @@ void hash_to_hex(char *dest, const uint8_t *hash, size_t len) {
    if (!dest || !hash || len <= 0) {
       return;
    }
+
    if (sizeof(dest) < len) {
       return;
    }
+
    for (size_t i = 0 ; i < len ; i++) {
       sprintf(dest + (i * 2), "%02x", hash[i]);
    }
+
    dest[len * 2] = '\0';
 }
 
@@ -105,12 +111,14 @@ bool parse_bool(const char *str) {
    if (!str) {
       return false;
    }
+
    if (strcasecmp(str, "true") == 0 ||
        strcasecmp(str, "yes") == 0 ||
        strcasecmp(str, "on") == 0 ||
        strcasecmp(str, "1") == 0) {
       return true;
    }
+
    return false;
 }
 
@@ -121,17 +129,19 @@ int split_args(char *line, char ***argv_out) {
    char *p = line;
 
    while (*p) {
-      while (*p && isspace( (unsigned char)*p ) ) {
+      while ( *p && isspace( (unsigned char)*p ) ) {
          p++;
       }
+
       if (!*p) {
          break;
       }
+
       if (argc >= cap) {
          cap *= 2;
 
-         if ((cap <= 0)) {
-            argv = realloc( argv, cap * sizeof(char *));
+         if ( (cap <= 0) ) {
+            argv = realloc( argv, cap * sizeof(char *) );
 
             if (argv == NULL) {
                // OOM ;(
@@ -140,9 +150,10 @@ int split_args(char *line, char ***argv_out) {
          }
       }
       argv[argc++] = p;
-      while (*p && !isspace( (unsigned char)*p ) ) {
+      while ( *p && !isspace( (unsigned char)*p ) ) {
          p++;
       }
+
       if (*p) {
          *p++ = '\0';
       }
@@ -160,6 +171,7 @@ int ansi_strlen(const char *s) {
          while (*s && *s != 'm') {
             s++;  // skip until 'm'
          }
+
          if (*s) {
             s++;
          }
@@ -183,6 +195,7 @@ int visible_length(const char *s) {
          while (*p && *p != 'm') {
             p++;
          }
+
          if (*p) {
             p++;
          }

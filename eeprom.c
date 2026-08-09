@@ -41,7 +41,7 @@
 //
 #endif
 
-#define EEPROM_C                // Let the header know we're in the C file
+#define	EEPROM_C               // Let the header know we're in the C file
 #include "eeprom_layout.h"              // in $builddir/ and contains
                                         // offset/size/type data
 
@@ -67,10 +67,12 @@ uint32_t eeprom_offset_index(const char *key) {
    }
    uint32_t max_entries = -1, idx = -1;
 
-   max_entries = (sizeof(eeprom_layout) / sizeof(eeprom_layout[0]) );
+   max_entries = ( sizeof(eeprom_layout) / sizeof(eeprom_layout[0]) );
+
    if (max_entries == 0) {
       return -1;
    }
+
    for (idx = 0 ; idx < max_entries ; idx++) {
       if (strncasecmp( key, eeprom_layout[idx].key, strlen(key) ) == 0) {
 #if     defined(NOISY_EEPROM)
@@ -81,6 +83,7 @@ uint32_t eeprom_offset_index(const char *key) {
          return idx;
       }
    }
+
    Log(LOG_DEBUG, "eeprom", "No match found for key %s in eeprom_layout", key);
 
    return -1;
@@ -111,6 +114,7 @@ uint32_t eeprom_init(void) {
    uint32_t fd = open(HOST_EEPROM_FILE, O_RDWR);
    Log(LOG_DEBUG, "eeprom", "EEPROM opened read-write on fd %d", fd);
 #endif
+
    if (fd == -1) {
       Log( LOG_CRIT, "eeprom", "EEPROM Initialization failed: %s: %d: %s", HOST_EEPROM_FILE, errno,
          strerror(errno) );
@@ -119,6 +123,7 @@ uint32_t eeprom_init(void) {
    }
 // we do not have fstat (or a file system at all) on the radio...
 #if     defined(HOST_POSIX)
+
    if (fstat(fd, &sb) == -1) {
       Log(LOG_CRIT, "eeprom", "EEPROM image %s does not exist, run 'make eeprom' and try again",
          HOST_EEPROM_FILE);
@@ -134,6 +139,7 @@ uint32_t eeprom_init(void) {
 #else
    eeprom_mmap = mmap(NULL, eeprom_len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 #endif
+
    if (eeprom_mmap == MAP_FAILED) {
       // Deal with failed mmap here
       Log( LOG_CRIT, "eeprom", "EEPROM mount failed: %d:%s!", errno, strerror(errno) );
@@ -153,9 +159,11 @@ uint32_t eeprom_read_block(uint8_t *buf, size_t offset, size_t len) {
    uint32_t res = 0;
    ssize_t myoff = 0;
    uint8_t *p = buf;
+
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return -1;
    }
+
    // Check for memory mapped style EEPROMs
    if (eeprom_mmap) {
       if (!buf || offset <= 0 || len <= 0) {
@@ -167,14 +175,17 @@ uint32_t eeprom_read_block(uint8_t *buf, size_t offset, size_t len) {
          myoff++;
       }
    }
+
    return res;
 }
 
 uint32_t eeprom_write(size_t offset, uint8_t data) {
    uint32_t res = 0;
+
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return -1;
    }
+
    // Check for memory-mapped EEPROM
    if (eeprom_mmap) {
       uint8_t *ptr = (uint8_t *)eeprom_mmap + offset;  // Correct pointer
@@ -183,36 +194,44 @@ uint32_t eeprom_write(size_t offset, uint8_t data) {
    } else {
       res = 1;  // Indicate failure (e.g., EEPROM not mapped)
    }
+
    return res;
 }
 
 void *eeprom_read(size_t offset) {
    void *res = NULL;
+
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return NULL;
    }
+
    if (offset <= 0) {
       errno = EADDRNOTAVAIL;
 
       return res;
    }
+
    // for host mode or other memory mapped
    if (eeprom_mmap) {
       res = (void *)(eeprom_mmap + offset);
    }
+
    return res;
 }
 
 uint32_t eeprom_write_block(void *buf, size_t offset, size_t len) {
    uint32_t res = -1;
+
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return -1;
    }
+
    return res;
 }
 
 uint32_t eeprom_checksum_generate(void) {
    uint32_t sum = 0;
+
    // Check for memory mapped style EEPROMs
    if (eeprom_mmap) {
 #if     defined(USE_MONGOOSE)
@@ -221,6 +240,7 @@ uint32_t eeprom_checksum_generate(void) {
       sum = crc32(0, (char *)eeprom_mmap, EEPROM_SIZE - 4);
 #endif
    }
+
    return sum;
 }
 
@@ -228,20 +248,24 @@ uint32_t eeprom_checksum_generate(void) {
 bool eeprom_validate_checksum(void) {
    uint32_t calc_sum = 0, curr_sum = 0;
    uint32_t *chksum_addr = (uint32_t *)(&eeprom_mmap[EEPROM_SIZE - 4]);
+
    // Check for memory mapped style EEPROMs
    if (eeprom_mmap) {
       curr_sum = *(uint32_t *)chksum_addr;
       calc_sum = eeprom_checksum_generate();
    }
+
    // return -1 if the checksums do not match
    if (calc_sum != curr_sum) {
       Log(LOG_CRIT, "eeprom", "* Verify checksum failed: calculated <%x> but read <%x> *", calc_sum,
          curr_sum);
+
       // if the eeprom is mmapped, free it
       if (eeprom_mmap) {
          munmap(eeprom_mmap, eeprom_size);
          eeprom_mmap = NULL;
       }
+
       //  if there's a file handle open for the eeprom.bin, close it
       if (eeprom_fd >= 0) {
          close(eeprom_fd);
@@ -257,6 +281,7 @@ bool eeprom_validate_checksum(void) {
    } else {
       Log(LOG_INFO, "eeprom", "EEPROM checkum <%x> is correct, loading settings...", calc_sum);
    }
+
    return false;
 }
 
@@ -284,6 +309,7 @@ uint32_t eeprom_load_config(void) {
       char mbuf[mb_sz];
       unsigned char *addr;
       memset( mbuf, 0, sizeof(mbuf) );
+
       switch (eeprom_layout[i].type) {
          case EE_BOOL: {
             snprintf( mbuf, mb_sz, "%s", (eeprom_get_bool_i(i) ? "true" : "false") );
@@ -358,6 +384,7 @@ uint32_t eeprom_load_config(void) {
          eeprom_layout[i].offset, mbuf);
 #endif // defined(NOISY_EEPROM)
    }
+
    Log(LOG_INFO, "eeprom", "Configuration successfully loaded from EEPROM");
 
    return 0;
@@ -366,10 +393,12 @@ uint32_t eeprom_load_config(void) {
 // Write the state structures out to EEPROM
 uint32_t eeprom_write_config(uint32_t force) {
    uint32_t sum = 0;
+
    // If we do not have any pending changes, don't bother
    if (eeprom_dirty == 0) {
       return 0;
    }
+
    // We are running defaults if we got here, so prompt the user first
    if (eeprom_corrupted && !force) {
       Log(LOG_WARN, "eeprom", "Not saving EEPROM since corrupt flag set");
@@ -400,6 +429,7 @@ bool check_pending_eeprom_changes(void) {
    if (eeprom_saved < eeprom_changed) {
       return true;
    }
+
    return false;
 }
 
@@ -410,13 +440,15 @@ uint32_t get_eeprom_change_age(void) {
 
 // Write the pending changes if any
 bool write_pending_eeprom_changes(void) {
-   if (check_pending_eeprom_changes() ) {
+   if ( check_pending_eeprom_changes() ) {
       // XXx: this should come from config
       int max_age = 60;
+
       if (get_eeprom_change_age() > max_age) {
          // Commit changes
       }
    }
+
    return false;
 }
 
@@ -425,6 +457,7 @@ uint32_t eeprom_get_int_i(uint32_t idx) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return -1;
    }
+
    if (idx == -1) {
       return -1;
    }
@@ -444,6 +477,7 @@ uint32_t eeprom_get_int(const char *key) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return -1;
    }
+
    return eeprom_get_int_i( eeprom_offset_index(key) );
 }
 
@@ -452,6 +486,7 @@ float eeprom_get_float_i(uint32_t idx) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return -1;
    }
+
    if (idx == -1) {
       return -1;
    }
@@ -471,6 +506,7 @@ float eeprom_get_float(const char *key) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return -1;
    }
+
    return eeprom_get_float_i( eeprom_offset_index(key) );
 }
 
@@ -478,11 +514,13 @@ const char *eeprom_get_str_i(uint32_t idx) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return NULL;
    }
+
    if (idx == -1) {
       return NULL;
    }
    static char buf[256];
    size_t len = eeprom_layout[idx].size;
+
    if (len == (size_t)-1) {
       len = 255;  // Arbitrary max size for flexible strings
    }
@@ -503,6 +541,7 @@ const char *eeprom_get_str(const char *key) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return NULL;
    }
+
    return eeprom_get_str_i( eeprom_offset_index(key) );
 }
 
@@ -515,6 +554,7 @@ struct in_addr *eeprom_get_ip4(const char *key, struct in_addr *sin) {
       0, 0, 0, 0
    };
    int idx = eeprom_offset_index(key);
+
    if (idx == -1) {
       Log(LOG_WARN, "eeprom", "error in eeprom_get_ipv4: invalid key %s", key);
 
@@ -534,6 +574,7 @@ bool eeprom_get_bool_i(uint32_t idx) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return NULL;
    }
+
    if (idx == UINT32_MAX) {
 //      errno = ERANGE;
       return false;
@@ -544,11 +585,13 @@ bool eeprom_get_bool_i(uint32_t idx) {
       eeprom_layout[idx].offset, myaddr, *myaddr, (*myaddr ? "true" : "false") );
 
 #endif
+
    if (*myaddr >= 1) {
       return true;
    } else {
       return false;
    }
+
    // Ooof, we really shouldnt return either here :P
    return false;
 }
@@ -557,6 +600,7 @@ bool eeprom_get_bool(const char *key) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return NULL;
    }
+
    return eeprom_get_bool_i( eeprom_offset_index(key) );
 }
 
@@ -566,6 +610,7 @@ void show_pin_info(void) {
       return;
    }
    int show = eeprom_get_int("pin/show");
+
    if (show) {
       char master_pin[PIN_LEN + 1];
       char reset_pin[PIN_LEN + 1];
@@ -585,17 +630,21 @@ uint32_t crc32(uint32_t crc, const void *data, size_t len) {
 
 #if     defined(DEBUG_EEPROM)
    printf("len=%zu ptr=%p\n", (size_t)(EEPROM_SIZE - 4), eeprom_mmap);
-   printf("%02x %02x %02x %02x\n", ( (uint8_t *)eeprom_mmap)[0], ( (uint8_t *)eeprom_mmap)[1],
-      ( (uint8_t *)eeprom_mmap)[2], ( (uint8_t *)eeprom_mmap)[3]);
+   printf("%02x %02x %02x %02x\n", ( (uint8_t *)eeprom_mmap )[0], ( (uint8_t *)eeprom_mmap )[1],
+      ( (uint8_t *)eeprom_mmap )[2], ( (uint8_t *)eeprom_mmap )[3]);
 #endif
+
    if (!init) {
       for (uint32_t i = 0 ; i < 256 ; i++) {
          uint32_t c = i;
+
          for (int j = 0 ; j < 8 ; j++) {
             c = (c & 1) ? (c >> 1) ^ 0xEDB88320U : (c >> 1);
          }
+
          table[i] = c;
       }
+
       init = 1;
    }
    crc ^= 0xFFFFFFFFU;

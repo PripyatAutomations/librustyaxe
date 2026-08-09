@@ -218,6 +218,7 @@ static const char *ansi_code(const char *tag) {
          return ansi_table[i].code;
       }
    }
+
    return NULL;
 }
 
@@ -227,6 +228,7 @@ char *tui_colorize_string(const char *in) {
    }
    size_t len = strlen(in);
    char *out = malloc(len * 8 + 64);  // enough for ANSI codes
+
    if (!out) {
       return NULL;
    }
@@ -236,21 +238,25 @@ char *tui_colorize_string(const char *in) {
    while (*p) {
       if (*p == '{') {
          const char *end = strchr(p, '}');
+
          if (!end) {
             *o++ = *p++;
             continue;
          }
          size_t key_len = end - (p + 1);
          char key[64];
-         if (key_len >= sizeof(key) ) {
+
+         if ( key_len >= sizeof(key) ) {
             key_len = sizeof(key) - 1;
          }
          memcpy(key, p + 1, key_len);
          key[key_len] = '\0';
+
          // if TUI colors are enabled, insert them
          if (tui_colors) {
             // look up ANSI escape
             const ansi_entry_t *ae;
+
             for (ae = ansi_table ; ae->tag ; ae++) {
                if (strcmp(ae->tag, key) == 0) {
                   o += sprintf(o, "%s", ae->code);
@@ -297,6 +303,7 @@ char *irc_to_tui_colors(const char *in) {
    };
 
    char *out = malloc(strlen(in) * 8 + 64);
+
    if (!out) {
       return NULL;
    }
@@ -308,31 +315,38 @@ char *irc_to_tui_colors(const char *in) {
          // ^C color
          p++;
          int fg = -1, bg = -1;
+
          // --- parse foreground (1–2 digits) ---
-         if (isdigit( (unsigned char)p[0] ) ) {
+         if ( isdigit( (unsigned char)p[0] ) ) {
             fg = p[0] - '0';
             p++;
-            if (isdigit( (unsigned char)p[0] ) ) {
+
+            if ( isdigit( (unsigned char)p[0] ) ) {
                fg = fg * 10 + (p[0] - '0');
                p++;
             }
          }
+
          // --- parse optional background ---
          if (*p == ',') {
             p++;
-            if (isdigit( (unsigned char)p[0] ) ) {
+
+            if ( isdigit( (unsigned char)p[0] ) ) {
                bg = p[0] - '0';
                p++;
-               if (isdigit( (unsigned char)p[0] ) ) {
+
+               if ( isdigit( (unsigned char)p[0] ) ) {
                   bg = bg * 10 + (p[0] - '0');
                   p++;
                }
             }
          }
+
          // clamp and output
          if (fg >= 0 && fg < 16) {
             o += sprintf(o, "{%s}", colors[fg]);
          }
+
          if (bg >= 0 && bg < 16) {
             o += sprintf(o, "{bg-%s}", colors[bg]);
          }
@@ -342,6 +356,7 @@ char *irc_to_tui_colors(const char *in) {
          }
          continue;
       }
+
       switch (*p) {
          case 0x02: {
             o += sprintf(o, "{bold}"); break;                 // ^B
@@ -380,15 +395,18 @@ void tui_print_win(tui_window_t *win, const char *fmt, ...) {
    va_end(ap);
 
    char *colored = tui_colorize_string(msgbuf);
+
    if (!colored) {
       return;
    }
    // Copy whole message as a single buffer entry
    char *line = strdup(colored);
    free(colored);
+
    if (!line) {
       return;
    }
+
    // Free old line safely
    if (win->buffer[win->log_head]) {
       free(win->buffer[win->log_head]);
@@ -396,6 +414,7 @@ void tui_print_win(tui_window_t *win, const char *fmt, ...) {
    }
    win->buffer[win->log_head] = line;
    win->log_head = (win->log_head + 1) % LOG_LINES;
+
    if (win->log_count < LOG_LINES) {
       win->log_count++;
    }
@@ -408,6 +427,7 @@ char *strip_mirc_formatting(const char *input) {
    }
    size_t len = strlen(input);
    char *out = malloc(len + 1);
+
    if (!out) {
       return NULL;
    }
@@ -416,6 +436,7 @@ char *strip_mirc_formatting(const char *input) {
 
    while (*p) {
       unsigned char c = *p;
+
       if (c == 0x02  // Bold
           || c == 0x1D // Italic
           || c == 0x1F // Underline
@@ -426,20 +447,25 @@ char *strip_mirc_formatting(const char *input) {
       }else if (c == 0x03) {
          // Color
          p++;
+
          // skip up to two digits for foreground
-         if (isdigit( (unsigned char)*p ) ) {
+         if ( isdigit( (unsigned char)*p ) ) {
             p++;
          }
-         if (isdigit( (unsigned char)*p ) ) {
+
+         if ( isdigit( (unsigned char)*p ) ) {
             p++;
          }
+
          // optionally skip comma and up to two digits for background
          if (*p == ',') {
             p++;
-            if (isdigit( (unsigned char)*p ) ) {
+
+            if ( isdigit( (unsigned char)*p ) ) {
                p++;
             }
-            if (isdigit( (unsigned char)*p ) ) {
+
+            if ( isdigit( (unsigned char)*p ) ) {
                p++;
             }
          }

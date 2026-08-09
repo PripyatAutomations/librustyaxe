@@ -20,25 +20,25 @@
 #include <librustyaxe/core.h>
 
 /** Minimum dictionary size to start with */
-#define DICT_MIN_SZ 8
+#define	DICT_MIN_SZ 8
 
 /** Dummy pointer to reference deleted keys */
-#define DUMMY_PTR ( (void*)-1)
+#define	DUMMY_PTR ( (void*)-1 )
 /** Used to hash further when handling collisions */
-#define PERTURB_SHIFT 5
+#define	PERTURB_SHIFT 5
 /** Beyond this size, a dictionary will not be grown by the same factor */
-#define DICT_BIGSZ 64000
+#define	DICT_BIGSZ 64000
 
 /** Define this to:
  *   0 for no debugging 1 for moderate debugging 2 for heavy debugging
  */
-#define DICT_DEBUG 0
+#define	DICT_DEBUG 0
 
 /*
  * Specify which hash function to use MurmurHash is fast but may not work on all
  * architectures Dobbs is a tad bit slower but not by much and works everywhere
  */
-#define dict_hash dict_hash_murmur
+#define	dict_hash dict_hash_murmur
 /* #define dict_hash   dict_hash_dobbs */
 
 /* Forward definitions */
@@ -54,11 +54,13 @@ static unsigned dict_hash_dobbs(const char *key) {
    int i;
 
    len = strlen(key);
+
    for (hash = 0, i = 0 ; i < len ; i++) {
       hash += (unsigned)key[i];
       hash += (hash << 10);
       hash ^= (hash >> 6);
    }
+
    hash += (hash << 3);
    hash ^= (hash >> 11);
    hash += (hash << 15);
@@ -93,6 +95,7 @@ static unsigned dict_hash_murmur(const char *key) {
       data += 4;
       len -= 4;
    }
+
    switch (len) {
       case 3: {
          h ^= data[2] << 16;
@@ -121,38 +124,46 @@ static keypair *dict_lookup(dict *d, const char *key, unsigned hash) {
    keypair *ep;
    unsigned i;
    unsigned perturb;
+
    if (!d || !key) {
       return NULL;
    }
    i = hash & (d->size - 1);
    /* Look for empty slot */
    ep = d->table + i;
+
    if (ep->key == NULL || ep->key == key) {
       return ep;
    }
+
    if (ep->key == DUMMY_PTR) {
       freeslot = ep;
    } else {
-      if (ep->hash == hash && !strcmp(key, ep->key) ) {
+      if ( ep->hash == hash && !strcmp(key, ep->key) ) {
          return ep;
       }
       freeslot = NULL;
    }
+
    for (perturb = hash ; ; perturb >>= PERTURB_SHIFT) {
       i = (i << 2) + i + perturb + 1;
       i &= (d->size - 1);
       ep = d->table + i;
+
       if (ep->key == NULL) {
          return freeslot == NULL ? ep : freeslot;
       }
-      if ( (ep->key == key) || (ep->hash == hash && ep->key != DUMMY_PTR && !strcmp(ep->key,
+
+      if ( (ep->key == key) || ( ep->hash == hash && ep->key != DUMMY_PTR && !strcmp(ep->key,
          key) ) ) {
          return ep;
       }
+
       if (ep->key == DUMMY_PTR && freeslot == NULL) {
          freeslot = ep;
       }
    }
+
    return NULL;
 }
 
@@ -162,6 +173,7 @@ static keypair *dict_lookup(dict *d, const char *key, unsigned hash) {
 static int dict_add_p(dict *d, const char *key, char *val) {
    unsigned hash;
    keypair *slot;
+
    if (!d || !key) {
       return -1;
    }
@@ -170,18 +182,21 @@ static int dict_add_p(dict *d, const char *key, char *val) {
 #endif
    hash = dict_hash(key);
    slot = dict_lookup(d, key, hash);
+
    if (slot) {
       slot->key = key;
       slot->val.s = val;
       slot->hash = hash;
       d->used++;
       d->fill++;
+
       if ( (3 * d->fill) >= (d->size * 2) ) {
          if (dict_resize(d) != 0) {
             return -1;
          }
       }
    }
+
    return 0;
 }
 
@@ -189,6 +204,7 @@ static int dict_add_p(dict *d, const char *key, char *val) {
 int dict_add(dict *d, const char *key, char *val) {
    unsigned hash;
    keypair *slot;
+
    if (!d || !key) {
       return -1;
    }
@@ -197,13 +213,16 @@ int dict_add(dict *d, const char *key, char *val) {
 #endif
    hash = dict_hash(key);
    slot = dict_lookup(d, key, hash);
+
    if (slot) {
       slot->key = strdup(key);
-      if (!(slot->key) ) {
+
+      if ( !(slot->key) ) {
          return -1;
       }
       slot->val.s = val ? strdup(val) : val;
-      if (val && !(slot->val.s) ) {
+
+      if ( val && !(slot->val.s) ) {
          free( (char *)slot->key );
 
          return -1;
@@ -211,12 +230,14 @@ int dict_add(dict *d, const char *key, char *val) {
       slot->hash = hash;
       d->used++;
       d->fill++;
+
       if ( (3 * d->fill) >= (d->size * 2) ) {
          if (dict_resize(d) != 0) {
             return -1;
          }
       }
    }
+
    return 0;
 }
 
@@ -234,9 +255,10 @@ static int dict_resize(dict *d) {
     * 4 times, bigger ones only 2 times
     */
    factor = (d->size > DICT_BIGSZ) ? 2 : 4;
-   while (newsize <= (factor * d->used) ) {
+   while ( newsize <= (factor * d->used) ) {
       newsize *= 2;
    }
+
    /* Exit early if no re-sizing needed */
    if (newsize == d->size) {
       return 0;
@@ -247,7 +269,8 @@ static int dict_resize(dict *d) {
    /* Shuffle pointers, re-allocate new table, re-insert data */
    oldtable = d->table;
    d->table = calloc( newsize, sizeof(keypair) );
-   if (!(d->table) ) {
+
+   if ( !(d->table) ) {
       /* Memory allocation failure */
       return -1;
    }
@@ -255,11 +278,13 @@ static int dict_resize(dict *d) {
    d->size = newsize;
    d->used = 0;
    d->fill = 0;
+
    for (i = 0 ; i < oldsize ; i++) {
-      if (oldtable[i].key && (oldtable[i].key != DUMMY_PTR) ) {
+      if ( oldtable[i].key && (oldtable[i].key != DUMMY_PTR) ) {
          dict_add_p(d, oldtable[i].key, oldtable[i].val.s);
       }
    }
+
    free(oldtable);
 
    return 0;
@@ -270,6 +295,7 @@ dict *dict_new(void) {
    dict *d;
 
    d = calloc( 1, sizeof(dict) );
+
    if (!d) {
       return NULL;
    }
@@ -284,17 +310,21 @@ dict *dict_new(void) {
 /** Public: deallocate a dict */
 void dict_free(dict *d) {
    int i;
+
    if (!d) {
       return;
    }
+
    for (i = 0 ; i < d->size ; i++) {
       if (d->table[i].key && d->table[i].key != DUMMY_PTR) {
          free( (char *)d->table[i].key );
+
          if (d->table[i].val.s) {
             free(d->table[i].val.s);
          }
       }
    }
+
    free(d->table);
    free(d);
 
@@ -305,14 +335,17 @@ void dict_free(dict *d) {
 char *dict_get(dict *d, const char *key, char *defval) {
    keypair *kp;
    unsigned hash;
+
    if (!d || !key) {
       return defval;
    }
    hash = dict_hash(key);
    kp = dict_lookup(d, key, hash);
+
    if (kp) {
       return kp->val.s;
    }
+
    return defval;
 }
 
@@ -320,18 +353,22 @@ char *dict_get(dict *d, const char *key, char *defval) {
 int dict_del(dict *d, const char *key) {
    unsigned hash;
    keypair    *kp;
+
    if (!d || !key) {
       return -1;
    }
    hash = dict_hash(key);
    kp = dict_lookup(d, key, hash);
+
    if (!kp) {
       return -1;
    }
+
    if (kp->key && kp->key != DUMMY_PTR) {
       free( (char *)kp->key );
    }
    kp->key = DUMMY_PTR;
+
    if (kp->val.s) {
       free(kp->val.s);
    }
@@ -343,12 +380,13 @@ int dict_del(dict *d, const char *key) {
 
 /** Public: enumerate a dictionary */
 int dict_enumerate(dict *d, int rank, const char **key, char **val) {
-   if (!d || !key || !val || (rank < 0) ) {
+   if ( !d || !key || !val || (rank < 0) ) {
       return -1;
    }
    while ( (d->table[rank].key == NULL || d->table[rank].key == DUMMY_PTR) && (rank < d->size) ) {
       rank++;
    }
+
    if (rank >= d->size) {
       *key = NULL;
       *val = NULL;
@@ -358,6 +396,7 @@ int dict_enumerate(dict *d, int rank, const char **key, char **val) {
       *val = d->table[rank].val.s;
       rank++;
    }
+
    return rank;
 }
 
@@ -366,11 +405,13 @@ void dict_dump(dict *d, FILE *out) {
    const char *key;
    char *val;
    int rank = 0;
+
    if (!d || !out) {
       return;
    }
    while (1) {
       rank = dict_enumerate(d, rank, &key, &val);
+
       if (rank < 0) {
          break;
       }
@@ -388,9 +429,11 @@ bool dict_get_bool(dict *d, const char *key, bool def) {
    }
    const char *s = dict_get_exp(d, key);
    bool rv = def;
+
    if (!s) {
       return rv;
    }
+
    if (strcasecmp(s, "true") == 0 ||
        strcasecmp(s, "yes") == 0 ||
        strcasecmp(s, "on") == 0 ||
@@ -412,12 +455,14 @@ int dict_get_int(dict *d, const char *key, int def) {
       return def;
    }
    const char *s = dict_get_exp(d, key);
+
    if (s) {
       int val = atoi(s);
       free( (void *)s );
 
       return val;
    }
+
    return def;
 }
 
@@ -426,10 +471,12 @@ unsigned int dict_get_uint(dict *d, const char *key, unsigned int def) {
       return def;
    }
    const char *s = dict_get_exp(d, key);
+
    if (s) {
       char *ep = NULL;
       unsigned int val = (uint32_t)strtoul(s, &ep, 10);
       free( (void *)s );
+
       // incomplete parse
       if (*ep != '\0') {
          return def;
@@ -437,6 +484,7 @@ unsigned int dict_get_uint(dict *d, const char *key, unsigned int def) {
          return val;
       }
    }
+
    return def;
 }
 
@@ -445,15 +493,17 @@ time_t dict_get_time_t(dict *d, const char *key, time_t def) {
       return def;
    }
    const char *s = dict_get_exp(d, key);
+
    if (s) {
       char *ep = NULL;
       errno = 0;
       long long val = strtoll(s, &ep, 10);
 
       // Skip trailing whitespace
-      while (*ep && isspace( (unsigned char)*ep ) ) {
+      while ( *ep && isspace( (unsigned char)*ep ) ) {
          ep++;
       }
+
       if (*ep != '\0' || errno == ERANGE) {
          fprintf(stderr, "dict_get_time_t: failed parse for key '%s', val='%s'\n", key, s);
          free( (void *)s );
@@ -464,6 +514,7 @@ time_t dict_get_time_t(dict *d, const char *key, time_t def) {
 
       return (time_t)val;
    }
+
    return def;
 }
 
@@ -472,13 +523,16 @@ double dict_get_double(dict *d, const char *key, double def) {
       return def;
    }
    const char *s = dict_get_exp(d, key);
+
    if (s) {
       double val = safe_atod(s);
       free( (void *)s );
+
       if (val == NAN) {
          return def;
       }
    }
+
    return def;
 }
 
@@ -487,13 +541,16 @@ float dict_get_float(dict *d, const char *key, float def) {
       return def;
    }
    const char *s = dict_get_exp(d, key);
+
    if (s) {
       float val = safe_atof(s);
       free( (void *)s );
+
       if (val == NAN) {
          return def;
       }
    }
+
    return def;
 }
 
@@ -502,13 +559,16 @@ long dict_get_long(dict *d, const char *key, long def) {
       return def;
    }
    const char *s = dict_get_exp(d, key);
+
    if (s) {
       long val = safe_atol(s);
       free( (void *)s );
+
       if (val == NAN) {
          return def;
       }
    }
+
    return def;
 }
 
@@ -517,13 +577,16 @@ long long dict_get_llong(dict *d, const char *key, long long def) {
       return def;
    }
    const char *s = dict_get_exp(d, key);
+
    if (s) {
       long long val = safe_atol(s);
       free( (void *)s );
+
       if (val == NAN) {
          return def;
       }
    }
+
    return def;
 }
 
@@ -532,16 +595,19 @@ const char *dict_get_exp(dict *d, const char *key) {
    if (!d) {
       return NULL;
    }
+
    if (!key) {
       Log(LOG_WARN, "config", "dict_get_exp: NULL key!");
 
       return NULL;
    }
    const char *p = dict_get(d, key, NULL);
+
    if (!p) {
       return NULL;
    }
    char *buf = malloc(MAX_CFG_EXP_STRLEN);
+
    if (!buf) {
       fprintf(stderr, "OOM in dict_get_exp!\n");
 
@@ -559,19 +625,23 @@ const char *dict_get_exp(dict *d, const char *key) {
       while (*src && (dst - tmp) < MAX_CFG_EXP_STRLEN - 1) {
          if (src[0] == '$' && src[1] == '{') {
             const char *end = strchr(src + 2, '}');
+
             if (end) {
                size_t klen = end - (src + 2);
                char keybuf[256];
-               if (klen >= sizeof(keybuf) ) {
+
+               if ( klen >= sizeof(keybuf) ) {
                   klen = sizeof(keybuf) - 1;
                }
                memcpy(keybuf, src + 2, klen);
                keybuf[klen] = '\0';
 
                const char *val = cfg_get(keybuf);
+
                if (val) {
                   size_t vlen = strlen(val);
-                  if ( (dst - tmp) + vlen >= MAX_CFG_EXP_STRLEN - 1) {
+
+                  if ( (dst - tmp) + vlen >= MAX_CFG_EXP_STRLEN - 1 ) {
                      vlen = MAX_CFG_EXP_STRLEN - 1 - (dst - tmp);
                   }
                   memcpy(dst, val, vlen);
@@ -585,18 +655,22 @@ const char *dict_get_exp(dict *d, const char *key) {
          *dst++ = *src++;
       }
       *dst = '\0';
+
       if (!changed) {
          break;  // No more expansions
       }
       strncpy(buf, tmp, MAX_CFG_EXP_STRLEN);
       buf[MAX_CFG_EXP_STRLEN - 1] = '\0';
    }
+
    // Shrink the allocation down to it's actual size
    size_t final_len = strlen(buf) + 1;
    char *shrunk = realloc(buf, final_len);
+
    if (shrunk) {
       buf = shrunk;
    }
+
 //   fprintf(stderr, "dict_get_exp: returning %lu bytes for key %s => %s\n",
 // (unsigned long)final_len, key, buf);
    return buf;

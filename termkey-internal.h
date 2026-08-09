@@ -6,9 +6,9 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #ifndef GUARD_TERMKEY_INTERNAL_H_
-#define GUARD_TERMKEY_INTERNAL_H_
+#define	GUARD_TERMKEY_INTERNAL_H_
 
-#define HAVE_TERMIOS
+#define	HAVE_TERMIOS
 
 #ifdef _WIN32
 # undef HAVE_TERMIOS
@@ -93,10 +93,11 @@ struct TermKey {
 static inline void termkey_key_get_linecol(const TermKeyKey *key, int *line, int *col)
 {
    if (col) {
-      *col = (unsigned char)key->code.mouse[1] | ( (unsigned char)key->code.mouse[3] & 0x0f) << 8;
+      *col = (unsigned char)key->code.mouse[1] | ( (unsigned char)key->code.mouse[3] & 0x0f ) << 8;
    }
+
    if (line) {
-      *line = (unsigned char)key->code.mouse[2] | ( (unsigned char)key->code.mouse[3] & 0x70) <<
+      *line = (unsigned char)key->code.mouse[2] | ( (unsigned char)key->code.mouse[3] & 0x70 ) <<
               4;
    }
 }
@@ -106,6 +107,7 @@ static inline void termkey_key_set_linecol(TermKeyKey *key, int line, int col)
    if (line > 0xfff) {
       line = 0xfff;
    }
+
    if (col > 0x7ff) {
       col = 0x7ff;
    }

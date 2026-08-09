@@ -6,11 +6,11 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_core_h)
-#define __librustyaxe_core_h
+#define	__librustyaxe_core_h
 #include <stdbool.h>
 #include <stdint.h>
 #include "build_config.h"
-#if	defined(USE_MONGOOSE)
+#if     defined(USE_MONGOOSE)
 #include <ext/libmongoose/mongoose.h>
 #endif
 #include <librustyaxe/cat.h>

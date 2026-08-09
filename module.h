@@ -6,7 +6,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_module_h)
-#define __librustyaxe_module_h
+#define	__librustyaxe_module_h
 
 typedef struct rr_module_event {
    const char             *evt_name;

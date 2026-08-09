@@ -6,13 +6,13 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(_subproc_h)
-#define _subproc_h
+#define	_subproc_h
 #include <limits.h>
 #include <stdlib.h>
 #if     defined(USE_EV)
 #include <ev.h>
 #endif
-#define MAX_SUBPROC 128                         // i doubt we'll ever reach this
+#define	MAX_SUBPROC 128                        // i doubt we'll ever reach this
                                                 // limit, but it'd be cool if we
                                                 // could (that's a lot of
                                                 // bands!)

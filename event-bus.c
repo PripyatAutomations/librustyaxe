@@ -24,6 +24,7 @@ void event_on(const char *event, event_cb_t cb, void *user) {
    }
 
    kv_list_t *list = kv_lookup(event_store, event);
+
    if (!list) {
       list = calloc( 1, sizeof(*list) );
 
@@ -36,6 +37,7 @@ void event_on(const char *event, event_cb_t cb, void *user) {
    }
 
    event_listener_t *l = calloc( 1, sizeof(*l) );
+
    // XXX: make this more graceful
    if (!l) {
       abort();
@@ -44,11 +46,12 @@ void event_on(const char *event, event_cb_t cb, void *user) {
    l->user = user;
 
    list->ptr = realloc( list->ptr, sizeof(void*) * (list->count + 1) );
+
    // XXX: make this more graceful
    if (!list->ptr) {
       abort();
    }
-   ( (void**)list->ptr)[list->count++] = l;
+   ( (void**)list->ptr )[list->count++] = l;
 }
 
 /* emit */
@@ -57,11 +60,13 @@ void event_emit(const char *event, rrconn_t *cptr, void *data) {
       return;
    }
    kv_list_t *list = kv_lookup(event_store, event);
+
    if (!list) {
       return;
    }
+
    for (size_t i = 0 ; i < list->count ; i++) {
-      event_listener_t *l = ( (void**)list->ptr)[i];
+      event_listener_t *l = ( (void**)list->ptr )[i];
       Log(LOG_CRAZY, "event", "Event %s from cptr:<%p> with data:<%p> user:<%p", event, cptr, data,
          l->user);
       l->cb(event, data, cptr, l->user);
@@ -74,20 +79,24 @@ void event_off(const char *event, event_cb_t cb, void *user) {
       return;
    }
    kv_list_t *list = kv_lookup(event_store, event);
+
    if (!list) {
       return;
    }
+
    for (size_t i = 0 ; i < list->count ; ) {
-      event_listener_t *l = ( (void**)list->ptr)[i];
+      event_listener_t *l = ( (void**)list->ptr )[i];
+
       if ( (!cb || l->cb == cb) && (!user || l->user == user) ) {
          free(l);
-         memmove( &( (void**)list->ptr)[i], &( (void**)list->ptr)[i + 1],
+         memmove( &( (void**)list->ptr )[i], &( (void**)list->ptr )[i + 1],
             (list->count - i - 1) * sizeof(void*) );
          list->count--;
          continue;
       }
       i++;
    }
+
    if (list->count == 0) {
       kv_remove(event_store, event);
       free(list->ptr);

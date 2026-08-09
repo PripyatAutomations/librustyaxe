@@ -40,12 +40,14 @@ char *tui_completion_generator(const char*text, int state) {
 //        "apple", "banana", "grape", "orange", "peach", NULL
       NULL
    };
+
    if (state == 0) {
       list_index = 0;
       len = strlen(text);
    }
    while (my_options[list_index]) {
       const char*name = my_options[list_index++];
+
       if (strncmp(name, text, len) == 0) {
          return strdup(name);   // Return a copy for readline to use
       }

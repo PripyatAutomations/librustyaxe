@@ -6,7 +6,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(_daemon_h)
-#define _daemon_h
+#define	_daemon_h
 
 extern int daemonize(void);
 

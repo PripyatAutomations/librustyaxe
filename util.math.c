@@ -30,15 +30,18 @@ float safe_atof(const char *s) {
    errno = 0;
    char *end;
    float val = strtof(s, &end);
+
    if (errno != 0) {
       return NAN;              // overflow/underflow
    }
-   while (*end && isspace( (unsigned char)*end ) ) {
+   while ( *end && isspace( (unsigned char)*end ) ) {
       end++;
    }
+
    if (*end != '\0') {
       return NAN;            // junk at end
    }
+
    return val;
 }
 
@@ -49,15 +52,18 @@ double safe_atod(const char *s) {
    errno = 0;
    char *end;
    double val = strtod(s, &end);
+
    if (errno != 0) {
       return NAN;
    }
-   while (*end && isspace( (unsigned char)*end ) ) {
+   while ( *end && isspace( (unsigned char)*end ) ) {
       end++;
    }
+
    if (*end != '\0') {
       return NAN;
    }
+
    return val;
 }
 
@@ -69,9 +75,11 @@ long safe_atol(const char *s) {
    char *end;
    errno = 0;
    long v = strtol(s, &end, 10);
+
    if (end == s || errno != 0) {
       return 0;
    }
+
    return v;
 }
 
@@ -83,8 +91,10 @@ long long safe_atoll(const char *s) {
    char *end;
    errno = 0;
    long long v = strtoll(s, &end, 10);
+
    if (end == s || errno != 0) {
       return 0;
    }
+
    return v;
 }

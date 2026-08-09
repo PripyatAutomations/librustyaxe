@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__inc_config_h)
-#define __inc_config_h
+#define	__inc_config_h
 #include <stdbool.h>
 #include <stdint.h>
 #include <librustyaxe/dict.h>
@@ -16,11 +16,11 @@
 
 // Maximum length of an expanded string, XXX: Move to header file
 // librustyaxe/config.h
-#define MAX_CFG_EXP_STRLEN 65535
+#define	MAX_CFG_EXP_STRLEN 65535
 // Maximum depth to recurse when expanding strings (cfg_get_exp)
-#define MAX_CFG_EXP_RECURSION 6
+#define	MAX_CFG_EXP_RECURSION 6
 // maximum supported section callbacks
-#define CONFIG_MAX_CALLBACKS 512
+#define	CONFIG_MAX_CALLBACKS 512
 
 // Used to store hard coded defaults for kv items
 struct defconfig {

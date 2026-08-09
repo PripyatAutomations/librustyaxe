@@ -1,10 +1,10 @@
 /*
  * A reusable implementation of a ring buffer with timestamps for FIFO usage
  *
- * This is mostly intended for servicing media buffers which need to be kept strictly bounded
- * in maximum size.
+ * This is mostly intended for servicing media buffers which need to be kept
+ * strictly bounded in maximum size.
  *
- * It would be beneficial to keep 
+ * It would be beneficial to keep
  */
 #include <string.h>
 #include <stdlib.h>
@@ -20,6 +20,7 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
                                                                  // null
                                                                  // terminator
    char *buffer_name = malloc(name_len);
+
    if (buffer == NULL || buffer_name == NULL) {
       fprintf(stderr, "rb_create: out of memory!\n");
       exit(ENOMEM);
@@ -44,6 +45,7 @@ void rb_destroy(rb_buffer_t *buffer) {
       rb_node_t *next = current->next;
       Log(LOG_DEBUG, "ringbuffer", "rb: Destroying entry rb:%p (%s) to %p, needs_freed: %d",
          current, buffer->name, current->data, current->needs_freed);
+
       if (current->needs_freed && current->data != NULL) {
          free(current->data);
       }
@@ -58,6 +60,7 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    clock_gettime(CLOCK_MONOTONIC, &timestamp);
 
    rb_node_t *node = malloc( sizeof(rb_node_t) );
+
    if (node == NULL) {
       fprintf(stderr, "rb_add: out of memory!\n");
       exit(ENOMEM);
@@ -69,6 +72,7 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
 
    Log(LOG_DEBUG, "Adding entry %p to rb:%p (%s), needs_freed: %d", data, buffer, buffer->name,
       needs_freed);
+
    if (buffer->current_size == 0) {
       buffer->head = node;
       buffer->tail = node;
@@ -76,8 +80,10 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
 
       return NULL;
    }
+
    if (buffer->current_size == buffer->max_size) {
       rb_node_t *next_head = buffer->head->next;
+
       // before freeing the buffer structure, make sure free it's allocated
       // memory
       if (buffer->head->needs_freed && buffer->head->data != NULL) {
@@ -103,6 +109,7 @@ rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
 
       return NULL;
    }
+
    if (buffer->current_size == 0) {
       Log(LOG_CRIT, "ringbuffer", "rb_get_most_recent: Ring buffer <%p> is empty.", buffer);
 
@@ -112,9 +119,9 @@ rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
    rb_node_t *latest_node = current;
 
    while (current != NULL) {
-      if (current->timestamp.tv_sec > latest_node->timestamp.tv_sec ||
-          (current->timestamp.tv_sec == latest_node->timestamp.tv_sec &&
-           current->timestamp.tv_nsec > latest_node->timestamp.tv_nsec) ) {
+      if ( current->timestamp.tv_sec > latest_node->timestamp.tv_sec ||
+           (current->timestamp.tv_sec == latest_node->timestamp.tv_sec &&
+            current->timestamp.tv_nsec > latest_node->timestamp.tv_nsec) ) {
          latest_node = current;
       }
       current = current->next;
@@ -128,18 +135,21 @@ void **rb_get_range(rb_buffer_t *buffer, int start, int count) {
 
       return NULL;
    }
+
    if (start < 0 || start >= buffer->current_size) {
       printf("Invalid start index.\n");
 
       return NULL;
    }
+
    if (count < 1 || start + count > buffer->current_size) {
       printf("Invalid count.\n");
 
       return NULL;
    }
    void **array = malloc( count * sizeof(void*) );
-   if ( (void *)array == NULL) {
+
+   if ( (void *)array == NULL ) {
       fprintf(stderr, "rb_get_range: out of memory!\n");
       exit(ENOMEM);
    }
@@ -151,9 +161,11 @@ void **rb_get_range(rb_buffer_t *buffer, int start, int count) {
       current = current->next;
       i++;
    }
+
    for (i = 0 ; i < count ; i++) {
       array[i] = current->data;
       current = current->next;
    }
+
    return array;
 }

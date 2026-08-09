@@ -40,11 +40,13 @@ const char *history_prev(void) {
    if (history_count == 0) {
       return NULL;
    }
+
    if (history_index < 0) {
       history_index = history_count - 1;
    } else if (history_index > 0) {
       history_index--;
    }
+
    return input_history[history_index];
 }
 
@@ -53,11 +55,13 @@ const char *history_next(void) {
       return NULL;
    }
    history_index++;
+
    if (history_index >= history_count) {
       history_index = -1;
 
       return "";
    }
+
    return input_history[history_index];
 }
 
@@ -65,6 +69,7 @@ void history_add(const char *line) {
    if (!line || !*line) {
       return;
    }
+
    if (history_count >= HISTORY_LINES) {
       memmove( input_history, input_history + 1, sizeof(input_history[0]) * (HISTORY_LINES - 1) );
       history_count--;
@@ -77,14 +82,17 @@ void history_add(const char *line) {
 // --- PgUp / PgDn handlers with partial last page support ---
 int handle_pgup(int count, int key) {
    tui_window_t *w = tui_active_window();
+
    if (!w) {
       return 0;
    }
    int page = tui_rows() - 4;  // screen minus status+input
+
    if (page < 1) {
       page = 1;
    }
    int max_scroll = (w->log_count > page) ? (w->log_count - page) : 0;
+
    if (w->scroll_offset + page > max_scroll) {
       w->scroll_offset = max_scroll;  // stop at top of buffer
    } else {
@@ -97,13 +105,16 @@ int handle_pgup(int count, int key) {
 
 int handle_pgdn(int count, int key) {
    tui_window_t *w = tui_active_window();
+
    if (!w) {
       return 0;
    }
    int page = tui_rows() - 4;
+
    if (page < 1) {
       page = 1;
    }
+
    if (w->scroll_offset - page < 0) {
       w->scroll_offset = 0;  // stop at bottom of buffer
    } else {
@@ -116,6 +127,7 @@ int handle_pgdn(int count, int key) {
 
 int handle_ptt_button(int count, int key) {
    tui_window_t *w = tui_active_window();
+
    if (!w) {
       return 0;
    }
@@ -151,8 +163,10 @@ void handle_enter_key(tui_window_t *win, int cursor) {
       return;
    }
    input_buf[input_len] = '\0';
+
    if (input_len > 0) {
       history_add(input_buf);
+
       if (tui_readline_cb) {
          tui_readline_cb(input_buf);
       } else {
@@ -191,14 +205,16 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
 
    termkey_advisereadable(tk);
 
-   while ( (res = termkey_getkey(tk, &key) ) != TERMKEY_RES_NONE) {
+   while ( ( res = termkey_getkey(tk, &key) ) != TERMKEY_RES_NONE ) {
       if (res == TERMKEY_RES_EOF) {
          break;
       }
+
       if (res == TERMKEY_RES_AGAIN) {
          return;
       }
       tui_window_t *win = tui_active_window();
+
       if (!win) {
          continue;
       }
@@ -206,6 +222,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
 
       // --- compute 'c' for debug / line editing ---
       int c = 0;
+
       if (key.type == TERMKEY_TYPE_UNICODE) {
          c = key.code.codepoint;
       } else if (key.type == TERMKEY_TYPE_KEYSYM) {
@@ -228,6 +245,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
             }
          }
       }
+
       // --- log the key for debugging ---
 //      Log(LOG_DEBUG, "tui.key", "key: type=%d code=%d mod=%d c=%d", key.type,
 // key.code.codepoint, key.modifiers, c);
@@ -310,6 +328,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
 
             case TERMKEY_SYM_UP: {
                const char *prev = history_prev();
+
                if (prev) {
                   strncpy(input_buf, prev, TUI_INPUTLEN - 1);
                   input_len = strlen(input_buf);
@@ -322,6 +341,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
 
             case TERMKEY_SYM_DOWN: {
                const char *next = history_next();
+
                if (next) {
                   strncpy(input_buf, next, TUI_INPUTLEN - 1);
                   input_len = strlen(next);
@@ -333,16 +353,18 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
             }
             default: {
                if ( (key.modifiers & TERMKEY_KEYMOD_ALT) &&
-                    key.code.sym >= '0' && key.code.sym <= '9') {
+                    key.code.sym >= '0' && key.code.sym <= '9' ) {
                   handled = tui_window_swap(1, key.code.sym - '0');
                }
                break;
             }
          }
       }
+
       // --- Ctrl line editing ---
-      if (!handled && (key.modifiers & TERMKEY_KEYMOD_CTRL) ) {
+      if ( !handled && (key.modifiers & TERMKEY_KEYMOD_CTRL) ) {
          char insert = 0;
+
          switch (c) {
             case '_': {
                insert = 0x1F;  // Underline (alternate)
@@ -428,6 +450,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
                break;
             }
          }
+
          if (insert && input_len < TUI_INPUTLEN - 1) {
             memmove(&input_buf[cursor_pos + 1], &input_buf[cursor_pos], input_len - cursor_pos + 1);
             input_buf[cursor_pos] = insert;
@@ -436,6 +459,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
             handled = 1;
          }
       }
+
       // --- Backspace / Delete / Enter ---
       if (!handled) {
          switch (c) {
@@ -475,6 +499,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
             }
          }
       }
+
       // --- Insert printable Unicode ---
       if (!handled && key.type == TERMKEY_TYPE_UNICODE && c >= 0x20) {
          if (input_len < TUI_INPUTLEN - 1) {
@@ -484,6 +509,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
          }
          handled = 1;
       }
+
       // --- Redraw after any modification ---
       if (handled) {
          tui_update_input_line();

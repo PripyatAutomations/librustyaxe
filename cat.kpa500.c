@@ -32,11 +32,14 @@
 // ALC Threshold: 0-210, per band
 static int32_t rr_cat_kpa500_alc(struct AmpState *amp, char *args) {
    uint32_t alc = amp->alc[amp->current_band];
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 210) {
          tmp = 210;
       }
@@ -49,11 +52,14 @@ static int32_t rr_cat_kpa500_alc(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_afr(struct AmpState *amp, char *args) {
    uint32_t afr = amp->afr;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 1400) {
          tmp = 1400;
       }
+
       if (tmp > 5000) {
          tmp = 5000;
       }
@@ -80,12 +86,15 @@ static int32_t rr_cat_kpa500_baud_tx(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_bcstandby(struct AmpState *amp, char *args) {
    uint32_t bc = rig.bc_standby;
+
    // SET request?
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 1) {
          tmp = 1;
       }
@@ -99,8 +108,10 @@ static int32_t rr_cat_kpa500_bcstandby(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_band(struct AmpState *amp, char *args) {
    uint32_t band = amp->current_band;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp <= 0 || tmp >= MAX_BANDS) {
          return -1;
       }
@@ -119,11 +130,14 @@ static int32_t rr_cat_kpa500_demo(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_fan(struct AmpState *amp, char *args) {
    uint32_t fc = rig.fan_speed;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 6) {
          tmp = 6;
       }
@@ -136,6 +150,7 @@ static int32_t rr_cat_kpa500_fan(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_faults(struct AmpState *amp, char *args) {
    uint32_t faults = rig.fault_code;
+
    if (args != NULL) {
       // clear requested?
       if (*args == 'C') {
@@ -153,11 +168,14 @@ static int32_t rr_cat_kpa500_faults(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_inhibit(struct AmpState *amp, char *args) {
    bool inhibit = amp->inhibit;
+
    if (args != NULL) {
       int tmp = atoi(args);
+
       if (tmp <= 0) {
          inhibit = false;
       }
+
       if (tmp >= 1) {
          inhibit = true;
       }
@@ -170,11 +188,14 @@ static int32_t rr_cat_kpa500_inhibit(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_power(struct AmpState *amp, char *args) {
    uint32_t power = amp->power;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 1) {
          tmp = 1;
       }
@@ -187,11 +208,14 @@ static int32_t rr_cat_kpa500_power(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_standby(struct AmpState *amp, char *args) {
    uint32_t standby = amp->standby;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 1) {
          tmp = 1;
       }
@@ -204,11 +228,14 @@ static int32_t rr_cat_kpa500_standby(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_powerlevel(struct AmpState *amp, char *args) {
    uint32_t power = amp->output_target[amp->current_band];
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 1) {
          tmp = 1;
       }
@@ -230,6 +257,7 @@ static int32_t rr_cat_kpa500_serial(struct AmpState *amp, char *args) {
    rr_cat_printf( "^SN%05d", get_serial_number() );
 #else
    const char *s = cfg_get("device.serial");
+
    if (s) {
       int serial = atoi(s);
       rr_cat_printf("^SN%05d", serial);
@@ -241,11 +269,14 @@ static int32_t rr_cat_kpa500_serial(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_get_temp(struct AmpState *amp, char *args) {
    uint32_t sensor = 0;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 5) {
          tmp = 5;
       }
@@ -258,11 +289,14 @@ static int32_t rr_cat_kpa500_get_temp(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_faultbeep(struct AmpState *amp, char *args) {
    uint32_t beep = rig.faultbeep;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 1) {
          tmp = 1;
       }
@@ -276,11 +310,14 @@ static int32_t rr_cat_kpa500_faultbeep(struct AmpState *amp, char *args) {
 
 static int32_t rr_cat_kpa500_trdelay(struct AmpState *amp, char *args) {
    uint32_t trdelay = rig.tr_delay;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 1) {
          tmp = 1;
       }
@@ -294,11 +331,14 @@ static int32_t rr_cat_kpa500_trdelay(struct AmpState *amp, char *args) {
 // 0: 12V, 1: 48V
 static int32_t rr_cat_kpa500_power_info(struct AmpState *amp, char *args) {
    float volts = 0.0, curr = 0.0;
+
    if (args != NULL) {
       uint32_t tmp = atoi(args);
+
       if (tmp < 0) {
          tmp = 0;
       }
+
       if (tmp > 1) {
          tmp = 1;
       }

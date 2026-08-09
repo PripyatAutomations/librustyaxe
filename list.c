@@ -5,11 +5,13 @@ rrlist_t *rrlist_find_by_ptr(rrlist_t *list, void *ptr) {
    if (!list || !ptr) {
       return NULL;
    }
+
    for (rrlist_t *p = list ; p ; p = p->next) {
       if (p->ptr == ptr) {
          return p;
       }
    }
+
    return NULL;
 }
 
@@ -18,17 +20,20 @@ rrlist_t *rrlist_add(rrlist_t **list, void *ptr, enum rrlist_direction direction
       return NULL;
    }
    rrlist_t *np = calloc( 1, sizeof(rrlist_t) );
+
    if (!np) {
       fprintf(stderr, "OOM in rrlist_add\n");
 
       return NULL;
    }
    np->ptr = ptr;
+
    if (*list == NULL) {
       *list = np;
 
       return np;
    }
+
    if (direction == LIST_HEAD) {
       np->next = *list;
       (*list)->prev = np;
@@ -46,6 +51,7 @@ rrlist_t *rrlist_add(rrlist_t **list, void *ptr, enum rrlist_direction direction
 
       return NULL;
    }
+
    return np;
 }
 
@@ -53,12 +59,15 @@ rrlist_t *rrlist_remove(rrlist_t **list, rrlist_t *lp) {
    if (!list || !*list || !lp) {
       return NULL;
    }
+
    if (lp->prev) {
       lp->prev->next = lp->next;
    }
+
    if (lp->next) {
       lp->next->prev = lp->prev;
    }
+
    if (lp == *list) {
       *list = lp->next;
    }

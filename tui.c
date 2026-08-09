@@ -41,6 +41,7 @@ static char status_line[STATUS_LEN];
 // Read the terminal size and update our size to match
 static void update_term_size(void) {
    struct winsize ws;
+
    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != -1) {
       term_rows = ws.ws_row;
       term_cols = ws.ws_col;
@@ -126,11 +127,13 @@ void tui_redraw_screen(void) {
    printf("\033[H\033[2J");  // clear screen
 
    tui_window_t *w = tui_active_window();
+
    if (!w) {
       return;
    }
    // --- Top status line ---
    printf("\033[1;1H");
+
    if (w->status_line) {
       char *colored = tui_colorize_string(w->status_line);
       printf(" %-*s", visible_length(colored), colored);
@@ -144,8 +147,10 @@ void tui_redraw_screen(void) {
    int start = (w->log_head + LOG_LINES - w->scroll_offset - filled) % LOG_LINES;
 
    int row = 2;  // first row for logs
+
    for (int i = 0 ; i < filled && row < term_rows - 1 ; i++) {
       int idx = (start + i) % LOG_LINES;
+
       if (!w->buffer[idx]) {
          continue;
       }
@@ -162,6 +167,7 @@ void tui_redraw_screen(void) {
                while (*p && *p != 'm') {
                   p++;
                }
+
                if (*p) {
                   p++;
                }
@@ -176,6 +182,7 @@ void tui_redraw_screen(void) {
          term_clrtoeol();
       }
    }
+
    // Fill remaining log space with blanks
    while (row < term_rows - 1) {
       printf("\033[%d;1H", row++);
@@ -203,6 +210,7 @@ void tui_redraw_clock(void) {
    // Move cursor to second-to-last row, far-right minus visible width + 1
    int clock_visible_len = 10;  // [HH:MM:SS]
    int col = width - clock_visible_len;   // 0-based index for the first char
+
    if (col > 0) {
       char clock_tagged[128];
       snprintf(clock_tagged, sizeof(clock_tagged),
@@ -222,6 +230,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
    if (!tui_enabled) {
       return true;
    }
+
    if (fmt) {
       char tmpbuf[513];
       va_list ap;
@@ -231,6 +240,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       va_end(ap);
 
       dict *vars = dict_new();
+
       if (win) {
          dict_add(vars, "win.title", win->title ? win->title : "status");
          char scroll_val[16];
@@ -259,6 +269,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
       return NULL;
    }
    char *processed = malloc(TUI_STRING_LEN);
+
    if (!processed) {
       fprintf(stderr, "OOM in tui_render_string\n");
 
@@ -272,6 +283,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
 
    // Step 2: expand ${var} and ${var:default} using dict
    char *expanded = malloc(TUI_STRING_LEN);
+
    if (!expanded) {
       free(processed);
       fprintf(stderr, "OOM in tui_render_string\n");
@@ -283,13 +295,15 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
    const char *src = processed;
    char *dst = expanded;
 
-   while (*src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
+   while ( *src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
       if (src[0] == '$' && src[1] == '{') {
          const char *end = strchr(src + 2, '}');
+
          if (end) {
             size_t varlen = end - (src + 2);
             char varspec[256];
-            if (varlen >= sizeof(varspec) ) {
+
+            if ( varlen >= sizeof(varspec) ) {
                varlen = sizeof(varspec) - 1;
             }
             strncpy(varspec, src + 2, varlen);
@@ -299,17 +313,21 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             char *colon = strchr(varspec, ':');
             const char *varname = varspec;
             const char *fallback = NULL;
+
             if (colon) {
                *colon = '\0';
                fallback = colon + 1;
             }
             const char *val = dict_get(data, varname, NULL);
+
             if (!val && fallback) {
                val = fallback;
             }
+
             if (val) {
                size_t vlen = strlen(val);
-               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1) {
+
+               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1 ) {
                   memcpy(dst, val, vlen);
                   dst += vlen;
                }
@@ -352,6 +370,7 @@ void tui_update_input_line(void) {
       return;
    }
    tui_window_t *win = tui_active_window();
+
    if (!win) {
       return;
    }
@@ -414,10 +433,12 @@ void tui_update_input_line(void) {
       cols++;              // each input char counts as 1 column
       screen_cols[i] = cols;
    }
+
    buf[buf_pos] = '\0';
 
    // --- determine cursor_screen_pos ---
    int cursor_screen_pos = 0;
+
    if (cursor_pos == 0) {
       cursor_screen_pos = 0;
    } else if (cursor_pos < input_len) {
@@ -431,6 +452,7 @@ void tui_update_input_line(void) {
    // --- compute visible slice ---
    int max_input_width = width - prompt_len - 1;
    int start_col = 0;
+
    if (cursor_screen_pos > max_input_width) {
       start_col = cursor_screen_pos - max_input_width;
    }
@@ -446,6 +468,7 @@ void tui_update_input_line(void) {
    // --- redraw line ---
    printf(" \033[%d;1H\033[2K", term_rows);
    printf("%s%s", color_prompt, slice);  // prompt includes space now
+
    // if there's nothing typed by the user, skip forward one character, to leave
    // a space
    if (strlen(slice) <= 0) {

@@ -6,7 +6,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_list_h)
-#define __librustyaxe_list_h
+#define	__librustyaxe_list_h
 
 #include <stdbool.h>
 

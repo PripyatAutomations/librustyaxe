@@ -8,6 +8,6 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__rr_serial_h)
-#define __rr_serial_h
+#define	__rr_serial_h
 
 #endif // !defined(__rr_serial_h)

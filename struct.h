@@ -1,19 +1,19 @@
-#if	!defined(__librustyaxe_struct_h)
+#if     !defined(__librustyaxe_struct_h)
 #define	__librustyaxe_struct_h
-#define LOGINLEN 240                    // an email address
-#define IRC_MSGLEN 1024                 // extended for IRCv3
-#define CHANLEN 64                      // channel name length
-#define NICKLEN 40                      // nick name length
-#define TOPICLEN 256
-#define PASSLEN 128
-#define USERLEN 16
-#define HOSTLEN 256
-#define NETLEN 64
-#define RECVQLEN 16384                  // read, but unprocessed data from the
+#define	LOGINLEN 240                   // an email address
+#define	IRC_MSGLEN 1024                // extended for IRCv3
+#define	CHANLEN 64                     // channel name length
+#define	NICKLEN 40                     // nick name length
+#define	TOPICLEN 256
+#define	PASSLEN 128
+#define	USERLEN 16
+#define	HOSTLEN 256
+#define	NETLEN 64
+#define	RECVQLEN 16384                 // read, but unprocessed data from the
                                         // server
-#define SENDQLEN 16384                  // data waiting to be sent to the server
-#define AUTOJOIN_LEN 1024               // auto-join channels
-#define USER_HASHSZ 127  // prime number
+#define	SENDQLEN 16384                 // data waiting to be sent to the server
+#define	AUTOJOIN_LEN 1024              // auto-join channels
+#define	USER_HASHSZ 127 // prime number
 
 typedef struct rrconn rrconn_t;
 typedef struct irc_command irc_command_t;
@@ -118,8 +118,8 @@ typedef struct server_cfg {
 
 struct rrconn {
 #if     defined(USE_MONGOOSE)
-  struct mg_connection *mg;
-#endif  // defined(USE_MONGOOSE)
+   struct mg_connection *mg;
+#endif // defined(USE_MONGOOSE)
    server_cfg_t *server;                 // server config data (if a client)
    bool connected;                       // is it connected?
    bool sent_login;                      // have we sent login?
@@ -132,11 +132,11 @@ struct rrconn {
    int fd;                               // socket fd
    char recvq[RECVQLEN + 1];
    char sendq[SENDQLEN + 1];
-#if	defined(USE_LIBEV)
+#if     defined(USE_LIBEV)
    ev_io io_watcher;
 #endif
 };
 
 typedef bool (*irc_command_cb)(rrconn_t *cptr, irc_message_t *mp);
 
-#endif	// !defined(__librustyaxe_struct_h)
+#endif // !defined(__librustyaxe_struct_h)

@@ -31,6 +31,7 @@ static time_t chat_ts_updated = 0;
 
 const char *get_chat_ts(time_t ts) {
    time_t now = time(NULL);
+
    // If this is "live now", allow caching per second
    if (ts == 0 || ts >= now) {
       if (chat_ts_updated == now) {
@@ -42,6 +43,7 @@ const char *get_chat_ts(time_t ts) {
    struct tm tmsg, tcurr;
    localtime_r(&ts, &tmsg);
    localtime_r(&now, &tcurr);
+
    // Check if the message is from today
    if (tmsg.tm_year == tcurr.tm_year &&
        tmsg.tm_yday == tcurr.tm_yday) {
@@ -51,19 +53,22 @@ const char *get_chat_ts(time_t ts) {
    } else {
       strftime(chat_ts, sizeof(chat_ts), "%a %b %d %H:%M:%S", &tmsg);
    }
+
    return chat_ts;
 }
 
 time_t dhms2time_t(const char *str) {
    time_t seconds = 0;
    char *copy = NULL;
+
    if (str == NULL) {
       fprintf(stderr, "+ERROR timestr2time_t: passed NULL str\n");
 
       return 0;
    }
    size_t len = strlen(str);
-   if ( (copy = malloc(len + 1) ) == NULL) {
+
+   if ( ( copy = malloc(len + 1) ) == NULL ) {
       fprintf(stderr, "+ERROR timestr2time_t: out of memory\n");
       exit(ENOMEM);
    }
@@ -154,6 +159,7 @@ char *time_t2dhms(time_t seconds) {
          p += sprintf(p, "%ld%c", (long)val, parts[i].unit);
       }
    }
+
    return strdup(buf);
 }
 

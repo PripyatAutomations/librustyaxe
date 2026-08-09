@@ -8,10 +8,10 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(_rr_cat_control_h)
-#define _rr_cat_control_h
+#define	_rr_cat_control_h
 #include <librustyaxe/config.h>
 // Maximum arguments
-#define MAX_ARGS 12
+#define	MAX_ARGS 12
 
 typedef enum rr_cat_req_type {
    REQ_NONE = 0,                // Not set (invalid)
@@ -67,7 +67,8 @@ extern int32_t rr_cat_parse_line_real(char *line);
 extern int32_t rr_cat_parse_line(char *line);
 extern int32_t rr_cat_parse_amp_line(char *line);
 extern int32_t rr_cat_printf(char *str, ...);
-//extern bool rr_cat_parse_ws(rr_cat_req_type reqtype, struct mg_ws_message *msg);
+//extern bool rr_cat_parse_ws(rr_cat_req_type reqtype, struct mg_ws_message
+// *msg);
 extern bool cat_register_callback(const char *cmd, CATCallback cb);
 extern bool cat_invoke_callbacks(const char *cmd, const char *args);
 extern bool cat_register_builtin_array(const CATBuiltin *arr);

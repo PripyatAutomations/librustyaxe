@@ -29,7 +29,7 @@
 //
 // Here we deal with loading and unloading modules
 //
-#define RUSTY_MODULE_API_VER 100
+#define	RUSTY_MODULE_API_VER 100
 
 // Module functions
 typedef struct rr_module_hook {
@@ -47,15 +47,18 @@ rr_module_t *modules = NULL;
 
 char *concat_path(const char *dir, const char *file, const char *suffix) {
    char *tmp = malloc(PATH_MAX + 1);
+
    if (tmp == NULL) {
       abort();
    }
    memset(tmp, 0, PATH_MAX + 1);
+
    if (suffix) {
       snprintf(tmp, PATH_MAX, "%s/%s.%s", dir, file, suffix);
    } else {
       snprintf(tmp, PATH_MAX, "%s/%s", dir, file);
    }
+
    return tmp;
 }
 
@@ -64,20 +67,24 @@ char *rr_find_module(const char *name) {
 
    const char *cpath = cfg_get_exp("path.modules");
    char *tmp = NULL;
+
    if (cpath) {
       tmp = concat_path(cpath, name, NULL);
       free( (char *)cpath );
    }
+
    return tmp;
 }
 
 bool rr_load_module(const char *name) {
    bool rv = true;
+
    if (!name) {
       return true;
    }
    // Does the module exist?
    char *mod_path = rr_find_module(name);
+
    if (!mod_path) {
       // Display an error that the module wasn't found
       Log(LOG_CRIT, "module", "rr_load_module: Couldn't find module %s: File not found.", name);
@@ -86,6 +93,7 @@ bool rr_load_module(const char *name) {
    }
    // Try to load the module
    void *dp = dlopen(mod_path, RTLD_NOW | RTLD_GLOBAL);
+
    if (!dp) {
       Log( LOG_CRIT, "module", "rr_load_module: Failed opening module %s: %d:%s", mod_path, errno,
          strerror(errno) );
@@ -94,6 +102,7 @@ bool rr_load_module(const char *name) {
    }
    Log(LOG_DEBUG, "module", "rr_load_module: Module %s opened from %s at <%p>", name, mod_path, dp);
    rr_module_t *mp = malloc( sizeof(rr_module_t) );
+
    if (mp == NULL) {
       fprintf(stderr, "OOM in rr_load_module!\n");
 
@@ -102,13 +111,16 @@ bool rr_load_module(const char *name) {
    memset( mp, 0, sizeof(rr_module_t) );
 
    mp->dlptr = dp;
-   if ( (mp->mod_path = strdup(mod_path) ) == NULL) {
+
+   if ( ( mp->mod_path = strdup(mod_path) ) == NULL ) {
       abort();
    }
-   if ( (mp->mod_name = strdup(name) ) == NULL) {
+
+   if ( ( mp->mod_name = strdup(name) ) == NULL ) {
       abort();
    }
    rr_module_event_t *ep = dlsym(mp->dlptr, "modinfo");
+
    // if no modinfo found, free memory and bail!
    if (!ep) {
       Log(LOG_CRIT, "module", "rr_load_module: Mod info not found loading %s", mod_path);
@@ -118,6 +130,7 @@ bool rr_load_module(const char *name) {
    }
    // Look for export list
    rr_module_event_t *mep = dlsym(mp->dlptr, "modexports");
+
    if (mep) {
       mp->mod_events = mep;
       // XXX: We need to hook events here
@@ -125,6 +138,7 @@ bool rr_load_module(const char *name) {
    } else {
       Log(LOG_WARN, "module", "rr_load_module: No exports found for module %s", mod_path);
    }
+
    // Add to module's list
    if (!modules) {
       modules = mp;
@@ -140,6 +154,7 @@ bool rr_load_module(const char *name) {
          lp = lp->next;
          i++;
       }
+
       if (lp != NULL) {
          lp->next = mp;
       }
@@ -156,5 +171,6 @@ bool rr_unload_module(const char *name) {
    if (!name) {
       return true;
    }
+
    return false;
 }

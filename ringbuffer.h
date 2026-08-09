@@ -6,7 +6,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(_ringbuffer_h)
-#define _ringbuffer_h
+#define	_ringbuffer_h
 #include <time.h>
 
 #ifdef __cplusplus

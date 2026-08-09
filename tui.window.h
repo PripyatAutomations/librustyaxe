@@ -6,9 +6,9 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_tui_window_h)
-#define __librustyaxe_tui_window_h
+#define	__librustyaxe_tui_window_h
 
-#define TUI_INPUTLEN 512
+#define	TUI_INPUTLEN 512
 
 typedef struct tui_window {
    ansi_entry_t    *default_bg, *default_fg;

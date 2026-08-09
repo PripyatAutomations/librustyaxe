@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__rr_common_logger_h)
-#define __rr_common_logger_h
+#define	__rr_common_logger_h
 #include <stdarg.h>
 #include <fcntl.h>
 #include <stdio.h>

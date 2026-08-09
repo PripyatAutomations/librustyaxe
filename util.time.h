@@ -6,7 +6,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__util_time_h)
-#define __util_time_h
+#define	__util_time_h
 #include <time.h>
 #include <stdbool.h>
 

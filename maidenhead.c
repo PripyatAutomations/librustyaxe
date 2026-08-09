@@ -11,7 +11,7 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-#define RADIUS_EARTH 6371.0 // Earth's radius in kilometers
+#define	RADIUS_EARTH 6371.0 // Earth's radius in kilometers
 
 double rad2deg(double rad) {
    return(rad * 180 / M_PI);
@@ -25,6 +25,7 @@ static char *complete_mh(const char *locator) {
                                                          // locator
 
    int len = strlen(locator);
+
    if (len > 10 || len < 4) {
       fprintf(stdout,
          "+ERROR grid square must be between 4 and 10 digits. More digits provides more accuracy. Current length: %d. Returning NULL!\n\n",
@@ -32,6 +33,7 @@ static char *complete_mh(const char *locator) {
 
       return NULL;
    }
+
    // Alert that we got an odd length string
    if (len % 2 != 0) {
       fprintf(stdout,
@@ -64,24 +66,28 @@ Coordinates maidenhead2latlon(const char *locator) {
       .latitude = 0, .longitude = 0, .precision = 0, .error = true
    };
    double field, square, subsquare, extsquare, precsquare;
+
    if (locator == NULL) {
       return c;
    }
    int len = strlen(locator);
+
    // If invalid grid square, return 0,0 to indicate it
    if (len > 10 || len < 4) {
       return c;
    }
+
    // if grid square is odd length, return error
-   if ( (len % 2) != 0) {
+   if ( (len % 2) != 0 ) {
       fprintf(stdout, "+ERROR grid squares must be 4-10 digits (A-Z, 0-9) long and even length.\n");
 
       return c;
    }
+
    // if the grid square is less than 10 digits, pad it to the middle of squares
    // (LL55)
    if (len < 10) {
-      if ( (lp = complete_mh(locator) ) == NULL) {
+      if ( ( lp = complete_mh(locator) ) == NULL ) {
          // Invalid (uneven length?) grid square passed
          fprintf(stdout,
             "+ERROR grid squares must be 4-10 digits (A-Z, 0-9) long and even length.\n");
@@ -127,6 +133,7 @@ const char *latlon2maidenhead(Coordinates *c) {
    int size = 4;
    lon += 180;
    lat += 90;
+
    // minimum of 4, maximum of 10 digits
    if (c->precision > 2 && c->precision <= 5) {
       size = c->precision * 2;
@@ -138,6 +145,7 @@ const char *latlon2maidenhead(Coordinates *c) {
    // make it even due to rounding
    size /= 2;
    size *= 2;
+
    // limit to 10
    if (size > 10) {
       size = 10;
@@ -156,6 +164,7 @@ const char *latlon2maidenhead(Coordinates *c) {
       lon = fmod(lon, LON_F[i]);
       lat = fmod(lat, LAT_F[i]);
    }
+
    locator[i * 2] = 0;
 
    return locator;

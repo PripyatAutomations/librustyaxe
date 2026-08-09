@@ -49,6 +49,7 @@ static CATcmd *cat_find_or_create_cmd(const char *cmd) {
       c = c->next;
    }
    CATcmd *newc = calloc( 1, sizeof(*newc) );
+
    if (!newc) {
       return NULL;
    }
@@ -62,10 +63,12 @@ static CATcmd *cat_find_or_create_cmd(const char *cmd) {
 
 bool cat_register_callback(const char *cmd, CATCallback cb) {
    CATcmd *c = cat_find_or_create_cmd(cmd);
+
    if (!c) {
       return false;
    }
    CATCallbackNode *n = calloc( 1, sizeof(*n) );
+
    if (!n) {
       return false;
    }
@@ -101,13 +104,15 @@ bool cat_register_builtin_array(const CATBuiltin *arr) {
    if (!arr) {
       return false;
    }
+
    for (const CATBuiltin *p = arr ; p->cmd != NULL ; p++) {
       if (p->cb) {
-         if (!cat_register_callback(p->cmd, p->cb) ) {
+         if ( !cat_register_callback(p->cmd, p->cb) ) {
             return false;
          }
       }
    }
+
    return true;
 }
 
@@ -152,8 +157,9 @@ int32_t rr_cat_parse_line_real(char *line) {
 int32_t rr_cat_parse_line(char *line) {
    size_t line_len = -1;
    char *endp = NULL;
+
    // If passed empty string, stop immediately and let the caller know...
-   if (line == NULL || (line_len = strlen(line) <= 0) ) {
+   if ( line == NULL || (line_len = strlen(line) <= 0) ) {
       return -1;
    } else {
       char *p = endp = line + line_len;
@@ -165,11 +171,13 @@ int32_t rr_cat_parse_line(char *line) {
          }
          p--;
       }
+
       // validate the pointers, just in case...
-      if (endp <= line || (endp > (line + line_len) ) ) {
+      if ( endp <= line || ( endp > (line + line_len) ) ) {
          // Line is invalid, stop touching it and let the caller know
          return -1;
       }
+
       // is command line complete? if not, return -2 to say "Not yet"
       if (*endp == ';') {
          *endp = '\0';
@@ -179,6 +187,7 @@ int32_t rr_cat_parse_line(char *line) {
       }
    }
 #if     defined(CAT_KPA500)
+
    // is command for amp?
    if (*line == '^') {
       return rr_cat_parse_amp_line(line + 1);
@@ -206,6 +215,7 @@ bool rr_cat_parse_ws(rr_cat_req_type reqtype, struct mg_ws_message *msg) {
    const char *cmd_str = mg_json_get_str(msg->data, "$.cat.cmd");
    const char *val_str = mg_json_get_str(msg->data, "$.cat.val");
    Log(LOG_DEBUG, "cat.ws", "cmd: %s, val: %s", cmd_str, val_str);
+
    if (cmd_str && val_str) {
       // Copy cmd to a fixed-size buffer and null-terminate
       char cmd[16] = {
