@@ -61,15 +61,25 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    }
    kv_list_t *list = kv_lookup(event_store, event);
 
+
    if (!list) {
       return;
    }
 
+   int evt_hits = 0;
+
    for (size_t i = 0 ; i < list->count ; i++) {
       event_listener_t *l = ( (void**)list->ptr )[i];
-      Log(LOG_CRAZY, "event", "Event %s from cptr:<%p> with data:<%p> user:<%p", event, cptr, data,
+      Log(LOG_CRAZY, "event", "Event %s from cptr:<%p> with data:<%p> user:<%p>", event, cptr, data,
          l->user);
       l->cb(event, data, cptr, l->user);
+      evt_hits++;
+   }
+
+   if (evt_hits == 0) {	// no matches ;(
+      Log(LOG_CRIT, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|", event, cptr, data);
+   } else {
+      Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> hit %d times", event, cptr, evt_hits);
    }
 }
 
