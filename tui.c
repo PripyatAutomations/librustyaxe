@@ -252,7 +252,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       dict_free(vars);
 
       // update the status line
-      strncpy(status_line, colored, sizeof(status_line) - 1);
+      strlcpy(status_line, colored, sizeof(status_line) - 1);
       free(colored);
       status_line[sizeof(status_line) - 1] = '\0';
    }
@@ -306,7 +306,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             if ( varlen >= sizeof(varspec) ) {
                varlen = sizeof(varspec) - 1;
             }
-            strncpy(varspec, src + 2, varlen);
+            strlcpy(varspec, src + 2, varlen);
             varspec[varlen] = '\0';
 
             // Split on ':' → varname:default
@@ -457,7 +457,7 @@ void tui_update_input_line(void) {
       start_col = cursor_screen_pos - max_input_width;
    }
    char slice[2048];
-   strncpy(slice, &colorized_line[start_col], max_input_width);
+   strlcpy(slice, &colorized_line[start_col], max_input_width);
    slice[max_input_width] = '\0';
 
    // --- prepare colored prompt ---

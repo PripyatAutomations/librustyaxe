@@ -739,7 +739,7 @@ static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t int
    csi->saved_string_id++;
    csi->saved_string = malloc(len + 1);
 
-   strncpy(csi->saved_string, (char *)tk->buffer + tk->buffstart + introlen, len);
+   strlcpy(csi->saved_string, (char *)tk->buffer + tk->buffstart + introlen, len);
    csi->saved_string[len] = 0;
 
    key->type = (CHARAT(introlen - 1) & 0x1f) == 0x10 ?

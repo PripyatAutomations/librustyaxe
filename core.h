@@ -9,6 +9,7 @@
 #define	__librustyaxe_core_h
 #include <stdbool.h>
 #include <stdint.h>
+#include <bsd/string.h>
 #include "build_config.h"
 #if     defined(USE_MONGOOSE)
 #include <ext/libmongoose/mongoose.h>

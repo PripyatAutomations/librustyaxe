@@ -522,7 +522,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
       if ( name_len >= sizeof(name) ) {
          continue;
       }
-      strncpy(name, name_start, name_len);
+      strlcpy(name, name_start, name_len);
       name[name_len] = '\0';
 
       if ( dict_get(seen, name, NULL) ) {

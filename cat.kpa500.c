@@ -28,7 +28,7 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-#if     defined(CAT) && defined(CAT_KPA500)
+#if     defined(CAT_KPA500)
 // ALC Threshold: 0-210, per band
 static int32_t rr_cat_kpa500_alc(struct AmpState *amp, char *args) {
    uint32_t alc = amp->alc[amp->current_band];

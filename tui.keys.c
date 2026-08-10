@@ -74,7 +74,7 @@ void history_add(const char *line) {
       memmove( input_history, input_history + 1, sizeof(input_history[0]) * (HISTORY_LINES - 1) );
       history_count--;
    }
-   strncpy(input_history[history_count++], line, TUI_INPUTLEN - 1);
+   strlcpy(input_history[history_count++], line, TUI_INPUTLEN - 1);
    input_history[history_count - 1][TUI_INPUTLEN - 1] = '\0';
    history_index = history_count;
 }
@@ -330,7 +330,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
                const char *prev = history_prev();
 
                if (prev) {
-                  strncpy(input_buf, prev, TUI_INPUTLEN - 1);
+                  strlcpy(input_buf, prev, TUI_INPUTLEN - 1);
                   input_len = strlen(input_buf);
                   input_buf[input_len] = '\0';
                   cursor_pos = input_len;
@@ -343,7 +343,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
                const char *next = history_next();
 
                if (next) {
-                  strncpy(input_buf, next, TUI_INPUTLEN - 1);
+                  strlcpy(input_buf, next, TUI_INPUTLEN - 1);
                   input_len = strlen(next);
                   input_buf[input_len] = '\0';
                   cursor_pos = input_len;

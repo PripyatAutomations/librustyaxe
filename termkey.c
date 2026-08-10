@@ -1406,7 +1406,7 @@ size_t termkey_push_bytes(TermKey *tk, const char *bytes, size_t len)
    if (len > tk->buffsize - tk->buffcount) {
       len = tk->buffsize - tk->buffcount;
    }
-   // memcpy(), not strncpy() in case of null bytes in input
+   // memcpy(), not strlcpy() in case of null bytes in input
    memcpy(tk->buffer + tk->buffcount, bytes, len);
    tk->buffcount += len;
 

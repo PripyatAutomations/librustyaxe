@@ -29,7 +29,7 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
    buffer->tail = NULL;
    buffer->max_size = max_size;
    buffer->current_size = 0;
-   strncpy(buffer_name, name, name_len);
+   strlcpy(buffer_name, name, name_len);
    buffer_name[name_len - 1] = '\0';  // make sure name is null-terminated
    buffer->name = buffer_name;
 
