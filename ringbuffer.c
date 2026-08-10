@@ -119,9 +119,9 @@ rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
    rb_node_t *latest_node = current;
 
    while (current != NULL) {
-      if ( current->timestamp.tv_sec > latest_node->timestamp.tv_sec ||
-           (current->timestamp.tv_sec == latest_node->timestamp.tv_sec &&
-            current->timestamp.tv_nsec > latest_node->timestamp.tv_nsec) ) {
+      if (current->timestamp.tv_sec > latest_node->timestamp.tv_sec ||
+          (current->timestamp.tv_sec == latest_node->timestamp.tv_sec &&
+           current->timestamp.tv_nsec > latest_node->timestamp.tv_nsec) ) {
          latest_node = current;
       }
       current = current->next;
@@ -149,7 +149,7 @@ void **rb_get_range(rb_buffer_t *buffer, int start, int count) {
    }
    void **array = malloc( count * sizeof(void*) );
 
-   if ( (void *)array == NULL ) {
+   if ( (void *)array == NULL) {
       fprintf(stderr, "rb_get_range: out of memory!\n");
       exit(ENOMEM);
    }

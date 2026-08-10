@@ -88,7 +88,7 @@ static struct log_priority log_priorities[] = {
 FILE    *logfp = NULL;
 
 enum LogPriority log_priority_from_str(const char *priority) {
-   int log_levels = ( sizeof(log_priorities) / sizeof(struct log_priority) );
+   int log_levels = (sizeof(log_priorities) / sizeof(struct log_priority) );
 
    for (int i = 0 ; i < log_levels ; i++) {
       if (strcasecmp(log_priorities[i].msg, priority) == 0) {
@@ -100,7 +100,7 @@ enum LogPriority log_priority_from_str(const char *priority) {
 }
 
 const char *log_priority_to_str(logpriority_t priority) {
-   int log_levels = ( sizeof(log_priorities) / sizeof(struct log_priority) );
+   int log_levels = (sizeof(log_priorities) / sizeof(struct log_priority) );
 
    for (int i = 0 ; i < log_levels ; i++) {
       if (log_priorities[i].prio == priority) {
@@ -128,7 +128,7 @@ bool log_add_filter(const char *pattern, logpriority_t level) {
       return true;
    }
 
-   if ( ( f->pattern = strdup(pattern) ) == NULL ) {
+   if ( (f->pattern = strdup(pattern) ) == NULL) {
       free(f);
 
       return true;
@@ -168,11 +168,11 @@ void load_log_filters_from_config(void) {
 
    char *tok = copy;
    while (*tok) {
-      while ( isspace( (unsigned char)*tok ) ) {
+      while (isspace( (unsigned char)*tok ) ) {
          tok++;
       }
       char *end = tok;
-      while ( *end && *end != ',' && !isspace( (unsigned char)*end ) ) {
+      while (*end && *end != ',' && !isspace( (unsigned char)*end ) ) {
          end++;
       }
 
@@ -219,7 +219,7 @@ bool debug_filter(const char *subsys, logpriority_t msg_level) {
    }
    while (f) {
       if (fnmatch(f->pattern, subsys, 0) == 0) {
-         if ( !best || strlen(f->pattern) > strlen(best->pattern) ) {
+         if (!best || strlen(f->pattern) > strlen(best->pattern) ) {
             best = f;
          }
       }
@@ -276,7 +276,7 @@ void logger_init(const char *logfile) {
 }
 
 void logger_end(void) {
-   if ( logfp && (logfp != stdout && logfp != stderr) ) {
+   if (logfp && (logfp != stdout && logfp != stderr) ) {
       fclose(logfp);
    }
    logfp = NULL;
@@ -305,7 +305,7 @@ int update_timestamp(void) {
    last_ts_update = now;
    memset( latest_timestamp, 0, sizeof(latest_timestamp) );
 
-   if ( ( tmp = localtime(&now) ) ) {
+   if ( (tmp = localtime(&now) ) ) {
       /* success, proceed */
       if (strftime(latest_timestamp, sizeof(latest_timestamp), "%Y/%m/%d %H:%M:%S", tmp) == 0) {
          /* handle the error */
@@ -332,7 +332,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    }
    va_start(ap, fmt);
 
-   if ( debug_filter(subsys, priority) ) {
+   if (debug_filter(subsys, priority) ) {
 //      fprintf(stderr, "skip %s:%d\n", subsys, priority);
       return;
    }
@@ -390,7 +390,8 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       }
    }
 // XXX: readd this
-//   const char *jp = dict2json_mkstr(VAL_STR, "log.subsys", subsys, VAL_STR, "log.prio", priority, VAL_STR, "log.data", log_msg);
+//   const char *jp = dict2json_mkstr(VAL_STR, "log.subsys", subsys, VAL_STR,
+// "log.prio", priority, VAL_STR, "log.data", log_msg);
 //   event_emit("log.message", NULL, jp);
 //   free( (void *)jp);
    va_end(ap_c1);

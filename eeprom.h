@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include "eeprom_types.h"
 
-#define	PIN_LEN 8              // 8 byte pin
+#define	PIN_LEN 8             // 8 byte pin
 
 typedef enum mod_mode {
    MOD_NONE = 0,

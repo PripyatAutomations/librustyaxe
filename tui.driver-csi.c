@@ -30,7 +30,7 @@ static TermKeyResult handle_csi_ss3_full(TermKey *tk, TermKeyKey *key, int cmd, 
 {
    if (args > 1 && arg[1] != -1) {
       key->modifiers = arg[1] - 1;
-   }else {
+   } else {
       key->modifiers = 0;
    }
    key->type = csi_ss3s[cmd - 0x40].type;
@@ -86,13 +86,13 @@ static void register_ss3kpalt(TermKeyType type, TermKeySym sym, unsigned char cm
 
 static struct keyinfo csifuncs[35];  /* This value must be increased if more CSI
                                       * function keys are added */
-#define	NCSIFUNCS ( sizeof(csifuncs) / sizeof(csifuncs[0]) )
+#define	NCSIFUNCS (sizeof(csifuncs) / sizeof(csifuncs[0]) )
 
 static TermKeyResult handle_csifunc(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
 {
    if (args > 1 && arg[1] != -1) {
       key->modifiers = arg[1] - 1;
-   }else {
+   } else {
       key->modifiers = 0;
    }
    key->type = TERMKEY_TYPE_KEYSYM;
@@ -101,12 +101,12 @@ static TermKeyResult handle_csifunc(TermKey *tk, TermKeyKey *key, int cmd, long 
       int mod = key->modifiers;
       (*tk->method.emit_codepoint) (tk, arg[2], key);
       key->modifiers |= mod;
-   }else if (arg[0] >= 0 && arg[0] < NCSIFUNCS) {
+   } else if (arg[0] >= 0 && arg[0] < NCSIFUNCS) {
       key->type = csifuncs[arg[0]].type;
       key->code.sym = csifuncs[arg[0]].sym;
       key->modifiers &= ~(csifuncs[arg[0]].modifier_mask);
       key->modifiers |= csifuncs[arg[0]].modifier_set;
-   }else {
+   } else {
       key->code.sym = TERMKEY_SYM_UNKNOWN;
    }
 
@@ -144,7 +144,7 @@ static TermKeyResult handle_csi_u(TermKey *tk, TermKeyKey *key, int cmd, long *a
       case 'u': {
          if (args > 1 && arg[1] != -1) {
             key->modifiers = arg[1] - 1;
-         }else {
+         } else {
             key->modifiers = 0;
          }
          int mod = key->modifiers;
@@ -396,10 +396,10 @@ static TermKeyResult parse_csi(TermKey *tk, size_t introlen, size_t *csi_len, lo
          if (!present) {
             args[argi] = c - '0';
             present = 1;
-         }else {
+         } else {
             args[argi] = (args[argi] * 10) + c - '0';
          }
-      }else if (c == ';') {
+      } else if (c == ';') {
          if (!present) {
             args[argi] = -1;
          }
@@ -409,7 +409,7 @@ static TermKeyResult parse_csi(TermKey *tk, size_t introlen, size_t *csi_len, lo
          if (argi > 16) {
             break;
          }
-      }else if (c >= 0x20 && c <= 0x2f) {
+      } else if (c >= 0x20 && c <= 0x2f) {
          *commandp |= c << 16;
          break;
       }
@@ -536,7 +536,7 @@ static int register_keys(void)
 static void *new_driver(TermKey *tk, const char *term)
 {
    if (!keyinfo_initialised) {
-      if ( !register_keys() ) {
+      if (!register_keys() ) {
          return NULL;
       }
    }
@@ -678,7 +678,7 @@ static TermKeyResult peekkey_ss3(TermKey *tk, TermKeyCsi *csi, size_t introlen, 
 
          key->utf8[0] = key->code.codepoint;
          key->utf8[1] = 0;
-      }else {
+      } else {
          key->type = ss3s[cmd - 0x40].type;
          key->code.sym = ss3s[cmd - 0x40].sym;
          key->modifiers = ss3s[cmd - 0x40].modifier_set;
@@ -757,13 +757,13 @@ static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force
    }
    TermKeyCsi *csi = info;
 
-   switch ( CHARAT(0) ) {
+   switch (CHARAT(0) ) {
       case 0x1b: {
          if (tk->buffcount < 2) {
             return TERMKEY_RES_NONE;
          }
 
-         switch ( CHARAT(1) ) {
+         switch (CHARAT(1) ) {
             case 0x4f: {
                // ESC-prefixed SS3
 

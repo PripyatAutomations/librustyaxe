@@ -19,8 +19,7 @@ typedef struct tui_window {
    char title[64];
    char input_buf[TUI_INPUTLEN];
    char status_line[128];
-   void            *cptr;                // associated irc client connection, if
-                                         // any
+   rrconn_t *cptr;
 } tui_window_t;
 
 extern tui_window_t *tui_window_find(const char *title);

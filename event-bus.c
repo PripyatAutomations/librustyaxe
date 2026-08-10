@@ -51,7 +51,7 @@ void event_on(const char *event, event_cb_t cb, void *user) {
    if (!list->ptr) {
       abort();
    }
-   ( (void**)list->ptr )[list->count++] = l;
+   ( (void**)list->ptr)[list->count++] = l;
 }
 
 /* emit */
@@ -61,7 +61,6 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    }
    kv_list_t *list = kv_lookup(event_store, event);
 
-
    if (!list) {
       return;
    }
@@ -69,30 +68,33 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    int evt_hits = 0;
 
    for (size_t i = 0 ; i < list->count ; i++) {
-      event_listener_t *l = ( (void**)list->ptr )[i];
+      event_listener_t *l = ( (void**)list->ptr)[i];
       Log(LOG_CRAZY, "event", "Event %s from cptr:<%p> with data:<%p> user:<%p>", event, cptr, data,
          l->user);
       l->cb(event, data, cptr, l->user);
       evt_hits++;
    }
 
-   if (evt_hits == 0) {	// no matches ;(
-      Log(LOG_CRIT, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|", event, cptr, data);
+   if (evt_hits == 0) {
+      // no matches ;(
+      Log(LOG_CRIT, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|", event,
+         cptr, data);
    } else {
       Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> hit %d times", event, cptr, evt_hits);
    }
 }
 
 void event_emit_dict(const char *event, rrconn_t *cptr, dict *data) {
-    const char *jp = NULL;
-    if (data) {
-       jp = dict2json(data);
-    }
-    event_emit(event, cptr, jp);
+   const char *jp = NULL;
 
-    if (jp) {
-       free( (void *)jp );
-    }
+   if (data) {
+      jp = dict2json(data);
+   }
+   event_emit(event, cptr, jp);
+
+   if (jp) {
+      free( (void *)jp );
+   }
 }
 
 /* unsubscribe */
@@ -107,11 +109,11 @@ void event_off(const char *event, event_cb_t cb, void *user) {
    }
 
    for (size_t i = 0 ; i < list->count ; ) {
-      event_listener_t *l = ( (void**)list->ptr )[i];
+      event_listener_t *l = ( (void**)list->ptr)[i];
 
       if ( (!cb || l->cb == cb) && (!user || l->user == user) ) {
          free(l);
-         memmove( &( (void**)list->ptr )[i], &( (void**)list->ptr )[i + 1],
+         memmove( &( (void**)list->ptr)[i], &( (void**)list->ptr)[i + 1],
             (list->count - i - 1) * sizeof(void*) );
          list->count--;
          continue;
