@@ -82,7 +82,7 @@ tui_window_t *tui_window_create(const char *title) {
 
       return NULL;
    }
-   strlcpy(w->title, title, sizeof(w->title) - 1);
+   strlcpy(w->title, title, sizeof(w->title));
    memset( w->status_line, 0, sizeof(w->status_line) );
    snprintf(w->status_line, sizeof(w->status_line), "%s", title);
    w->title[sizeof(w->title) - 1] = '\0';

@@ -613,7 +613,7 @@ const char *dict_get_exp(dict *d, const char *key) {
 
       return NULL;
    }
-   strlcpy(buf, p, MAX_CFG_EXP_STRLEN - 1);
+   strlcpy(buf, p, MAX_CFG_EXP_STRLEN);
    buf[MAX_CFG_EXP_STRLEN - 1] = '\0';
 
    for (int depth = 0 ; depth < MAX_CFG_EXP_RECURSION ; depth++) {

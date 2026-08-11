@@ -252,7 +252,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       dict_free(vars);
 
       // update the status line
-      strlcpy(status_line, colored, sizeof(status_line) - 1);
+      strlcpy(status_line, colored, sizeof(status_line));
       free(colored);
       status_line[sizeof(status_line) - 1] = '\0';
    }
