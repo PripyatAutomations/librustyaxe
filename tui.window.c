@@ -69,7 +69,7 @@ tui_window_t *tui_window_create(const char *title) {
 
    // Not found, create new
    if (tui_num_windows >= TUI_MAX_WINDOWS) {
-      tui_print_win(tui_active_window(), "No more windows available: TUI_MAX_WINDOWS: %d",
+      tui_print(tui_active_window(), "No more windows available: TUI_MAX_WINDOWS: %d",
          TUI_MAX_WINDOWS);
 
       return NULL;
@@ -99,7 +99,7 @@ bool tui_window_destroy(tui_window_t *w) {
    }
 
    if (strcasecmp(w->title, "status") == 0) {
-      tui_print_win(tui_active_window(),
+      tui_print(tui_active_window(),
          "{red}*** {bright-red}Can't destroy status window! {red}***{reset}.");
 
       return false;
@@ -109,7 +109,7 @@ bool tui_window_destroy(tui_window_t *w) {
    // Find and remove from global list
    for (int i = 0 ; i < tui_num_windows ; i++) {
       if (tui_windows[i] == w) {
-         tui_print_win(tui_window_find("status"), "* Closed window %d (%s)", i, w->title);
+         tui_print(tui_window_find("status"), "* Closed window %d (%s)", i, w->title);
          destroyed_index = i;
 
          for (int j = i ; j < tui_num_windows - 1 ; j++) {
@@ -156,7 +156,7 @@ bool tui_window_destroy(tui_window_t *w) {
 
 bool tui_window_destroy_id(int id) {
    if (id < 1 || id > tui_num_windows) {
-      tui_print_win(tui_active_window(),
+      tui_print(tui_active_window(),
          "{bright-red}Invalid window %d, must be between 2 and %d{reset}.", id, tui_num_windows);
 
       return true;
@@ -222,7 +222,7 @@ tui_window_t *tui_window_focus(const char *title) {
 
 tui_window_t *tui_window_focus_id(int id) {
    if (id < 1 || id > tui_num_windows) {
-      tui_print_win(tui_active_window(),
+      tui_print(tui_active_window(),
          "{bright-red}Invalid window %d, must be between 1 and %d{reset}.", id, tui_num_windows);
 
       return NULL;
@@ -263,7 +263,7 @@ int tui_window_swap(int c, int key) {
       tui_redraw_screen();
    }
 
-//   tui_print_win(tui_window_find("status"), "Swap to window %d", num + 1);
+//   tui_print(tui_window_find("status"), "Swap to window %d", num + 1);
    return 0;
 }
 

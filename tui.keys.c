@@ -131,7 +131,7 @@ int handle_ptt_button(int count, int key) {
    if (!w) {
       return 0;
    }
-   tui_print_win(w, "* F13 (PTT) pressed!");
+   tui_print(w, "* F13 (PTT) pressed!");
 
    return 0;
 }

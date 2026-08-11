@@ -32,7 +32,8 @@ extern char **tui_completion_cb(const char*text, int start, int end);
 extern int tui_rows(void);
 extern int tui_cols(void);
 extern void tui_draw_input(tui_window_t *w, int term_rows);
-extern void tui_print_win(tui_window_t *win, const char *fmt, ...);
+extern void tui_print(tui_window_t *win, const char *fmt, ...);
+extern void tui_vprint(tui_window_t *win, const char *fmt, va_list ap);
 
 // tui.keys.c
 extern void tui_raw_mode(bool enabled);

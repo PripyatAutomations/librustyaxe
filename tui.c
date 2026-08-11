@@ -66,7 +66,6 @@ static void clear_line(int row) {
 
 // Handle window size changes
 static void sigwinch_handler(int signum) {
-   (void)signum;
    update_term_size();
    tui_redraw_screen();
 }

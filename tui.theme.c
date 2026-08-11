@@ -384,22 +384,24 @@ char *irc_to_tui_colors(const char *in) {
    return out;
 }
 
-void tui_print_win(tui_window_t *win, const char *fmt, ...) {
+void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
    if (!tui_enabled || !win || !fmt) {
       return;
    }
+
    char msgbuf[2048];
-   va_list ap;
-   va_start(ap, fmt);
-   vsnprintf(msgbuf, sizeof(msgbuf), fmt, ap);
-   va_end(ap);
+
+   va_list aq;
+   va_copy(aq, ap);
+   vsnprintf(msgbuf, sizeof(msgbuf), fmt, aq);
+   va_end(aq);
 
    char *colored = tui_colorize_string(msgbuf);
 
    if (!colored) {
       return;
    }
-   // Copy whole message as a single buffer entry
+
    char *line = strdup(colored);
    free(colored);
 
@@ -407,18 +409,29 @@ void tui_print_win(tui_window_t *win, const char *fmt, ...) {
       return;
    }
 
-   // Free old line safely
    if (win->buffer[win->log_head]) {
       free(win->buffer[win->log_head]);
-      win->buffer[win->log_head] = NULL;
    }
+
    win->buffer[win->log_head] = line;
    win->log_head = (win->log_head + 1) % LOG_LINES;
 
    if (win->log_count < LOG_LINES) {
       win->log_count++;
    }
+
    tui_redraw_screen();
+}
+
+void tui_print(tui_window_t *win, const char *fmt, ...) {
+   if (!tui_enabled || !win || !fmt) {
+      return;
+   }
+
+   va_list ap;
+   va_start(ap, fmt);
+   tui_vprint(win, fmt, ap);
+   va_end(ap);
 }
 
 char *strip_mirc_formatting(const char *input) {
