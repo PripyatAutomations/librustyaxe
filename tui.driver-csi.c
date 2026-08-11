@@ -628,7 +628,7 @@ static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, 
             break;
          }
          default: {
-            fprintf(stderr, "CSI: Unknown arg1=%ld arg2=%ld arg3=%ul ... args=%zu cmd=%c\n", arg[0],
+            fprintf(stderr, "CSI: Unknown arg1=%ld arg2=%ld arg3=%ld ... args=%zu cmd=%c\n", arg[0],
                arg[1], arg[2], args, (char)cmd);
             break;
          }
