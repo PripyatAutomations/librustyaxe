@@ -1698,6 +1698,7 @@ size_t termkey_strfkey(TermKey *tk, char *buffer, size_t len, TermKeyKey *key, T
          } else {
             l = snprintf(buffer + pos, len - pos, "Mode(%d=%d)", mode, value);
          }
+         break;
       }
       case TERMKEY_TYPE_DCS: {
          l = snprintf(buffer + pos, len - pos, "DCS");

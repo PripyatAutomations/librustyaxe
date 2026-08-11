@@ -73,7 +73,7 @@ dict *dict_merge_new(dict *a, dict *b) {
    return merged;
 }
 
-bool cfg_set_default(dict *d, char *key, char *val) {
+bool cfg_set_default(dict *d, const char *key, const char *val) {
    if (!key || !d) {
       Log(LOG_WARN, "config", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);
 
@@ -82,7 +82,7 @@ bool cfg_set_default(dict *d, char *key, char *val) {
 
 //   Log(LOG_CRAZY, "config", "Setting default for dict:<%p>/%s to '%s'", d,
 // key, val);
-   if (dict_add(d, key, val) != 0) {
+   if (dict_add(d, key, (char *)val) != 0) {
       Log(LOG_WARN, "config", "defcfg dict:<%p> failed to set key |%s| to val |%s| at <%p>", d, key,
          val, val);
 
@@ -528,7 +528,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
       if (dict_get(seen, name, NULL) ) {
          continue;
       }
-      dict_add(seen, name, "1");
+      dict_add(seen, name, (char *)"1");
 
       fprintf(fp, "[server:%s]\n", name);
 

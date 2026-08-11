@@ -24,9 +24,9 @@
 
 // Used to store hard coded defaults for kv items
 struct defconfig {
-   char *key;
-   char *val;
-   char *help;           // Description of the config item for when we someday
+   const char *key;
+   const char *val;
+   const char *help;           // Description of the config item for when we someday
                          // have a config editor
 };
 typedef struct defconfig defconfig_t;
@@ -56,7 +56,7 @@ extern dict *pipelines;                  // fwdsp/rrgtk pipelines
 extern reload_event_t *reload_events;
 
 // Functions
-extern bool cfg_set_default(dict *d, char *key, char *val);
+extern bool cfg_set_default(dict *d, const char *key, const char *val);
 extern bool cfg_set_defaults(dict *d, defconfig_t *defaults);
 extern dict *cfg_load(const char *path);
 

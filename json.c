@@ -598,7 +598,7 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
          }
          case VAL_BOOL: {
             int val = va_arg(ap, int);  // promoted
-            dict_add(d, key, val ? "true" : "false");
+            dict_add(d, key, (char *)(val ? "true" : "false"));
             break;
          }
          case VAL_FLOATP: {

@@ -242,7 +242,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       dict *vars = dict_new();
 
       if (win) {
-         dict_add(vars, "win.title", win->title ? win->title : "status");
+         dict_add(vars, "win.title", (char *)(win->title ? win->title : "status"));
          char scroll_val[16];
          snprintf(scroll_val, sizeof(scroll_val), "%d", win->scroll_offset);
          dict_add(vars, "win.scroll", scroll_val);

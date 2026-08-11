@@ -203,7 +203,7 @@ tui_window_t *tui_window_focus(const char *title) {
             }
 #endif
          }
-         char *win_color = "{bright-cyan}";
+         const char *win_color = "{bright-cyan}";
 
          if (tw->title[0] == '&' || tw->title[0] == '#') {
             win_color = "{bright-magenta}";

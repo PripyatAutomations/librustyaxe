@@ -75,7 +75,7 @@ time_t dhms2time_t(const char *str) {
    memset(copy, 0, len + 1);
    memcpy(copy, str, len);
 
-   char *multipliers = "ywdhms";
+   const char *multipliers = "ywdhms";
    char *ptr = copy;
 
    while (*ptr != '\0') {
