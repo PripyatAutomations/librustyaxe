@@ -25,6 +25,10 @@ static const char *json_parse_value(const char *s, const char *path, dict *d);
 
 // helper: append to path dynamically
 static char *path_append(const char *base, const char *suffix) {
+   if (!base || !suffix) {
+      return NULL;
+   }
+
    size_t len = strlen(base) + strlen(suffix) + 2;  // +1 for dot or brackets,
                                                     // +1
                                                     // for \0
@@ -485,6 +489,10 @@ static void sbuf_puts(sbuf *b, const char *s) {
 }
 
 static void dump_json(json_node *n, sbuf *out) {
+   if (!n || !out) {
+      return;
+   }
+
    sbuf_putc(out, '{');
 
    for (json_node *c = n->child ; c ; c = c->next) {
@@ -509,6 +517,10 @@ static void dump_json(json_node *n, sbuf *out) {
 }
 
 static void free_json(json_node *n) {
+   if (!n) {
+      return;
+   }
+
    for (json_node *c = n->child ; c ; ) {
       json_node *next = c->next;
       free_json(c);

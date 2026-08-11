@@ -242,8 +242,10 @@ void tui_window_init(void) {
    if (tui_num_windows == 0) {
       tui_windows[0] = tui_window_create("status");
       char *sl = tui_windows[0]->status_line;
-      memset( sl, 0, sizeof(tui_windows[0]->status_line) );
-      snprintf(sl, sizeof(sl), "%s", " status window");
+      if (sl) {
+         memset( sl, 0, sizeof(tui_windows[0]->status_line) );
+         snprintf(sl, sizeof(sl), "%s", " status window");
+      }
       tui_num_windows = 1;
       tui_active_win = 0;
    }

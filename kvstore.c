@@ -204,6 +204,7 @@ int kv_insert(kv_store_t *store, const char *key, void *val) {
       int pos = kv_array_bsearch(arr, list->count, suffix);
 
       if (pos >= 0) {
+         // XXX: Look into this as it's triggering a warning in scan-build for NULL ptr deref
          arr[pos]->value = val;
 
          return 0;

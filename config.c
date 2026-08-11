@@ -450,6 +450,7 @@ dict *cfg_load(const char *path) {
    } else {
       Log(LOG_INFO, "config", "cfg loaded %d lines from %s with no errors", line, path);
    }
+   fclose(fp);
 
    return newcfg;
 }
