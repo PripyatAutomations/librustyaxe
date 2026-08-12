@@ -45,8 +45,8 @@ static TermKeyResult handle_csi_ss3_full(TermKey *tk, TermKeyKey *key, int cmd, 
    return TERMKEY_RES_KEY;
 }
 
-static void register_csi_ss3_full(TermKeyType type, TermKeySym sym, int modifier_set,
-                                  int modifier_mask, unsigned char cmd)
+static void register_csi_ss3_full(TermKeyType type, TermKeySym sym, int modifier_set, int modifier_mask,
+                                  unsigned char cmd)
 {
    if (cmd < 0x40 || cmd >= 0x80) {
       return;
@@ -86,7 +86,7 @@ static void register_ss3kpalt(TermKeyType type, TermKeySym sym, unsigned char cm
 
 static struct keyinfo csifuncs[35];  /* This value must be increased if more CSI
                                       * function keys are added */
-#define	NCSIFUNCS (sizeof(csifuncs) / sizeof(csifuncs[0]) )
+#define	NCSIFUNCS ( sizeof(csifuncs) / sizeof(csifuncs[0]) )
 
 static TermKeyResult handle_csifunc(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
 {
@@ -214,8 +214,8 @@ static TermKeyResult handle_csi_m(TermKey *tk, TermKeyKey *key, int cmd, long *a
    return TERMKEY_RES_NONE;
 }
 
-TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKeyMouseEvent *event,
-                                      int *button, int *line, int *col)
+TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKeyMouseEvent *event, int *button,
+                                      int *line, int *col)
 {
    if (key->type != TERMKEY_TYPE_MOUSE) {
       return TERMKEY_RES_NONE;
@@ -336,8 +336,7 @@ static TermKeyResult handle_csi_y(TermKey *tk, TermKeyKey *key, int cmd, long *a
    }
 }
 
-TermKeyResult termkey_interpret_modereport(TermKey *tk, const TermKeyKey *key, int *initial,
-                                           int *mode, int *value)
+TermKeyResult termkey_interpret_modereport(TermKey *tk, const TermKeyKey *key, int *initial, int *mode, int *value)
 {
    if (key->type != TERMKEY_TYPE_MODEREPORT) {
       return TERMKEY_RES_NONE;
@@ -360,8 +359,8 @@ TermKeyResult termkey_interpret_modereport(TermKey *tk, const TermKeyKey *key, i
 
 #define	CHARAT(i) (tk->buffer[tk->buffstart + (i)])
 
-static TermKeyResult parse_csi(TermKey *tk, size_t introlen, size_t *csi_len, long args[],
-                               size_t *nargs, unsigned long *commandp)
+static TermKeyResult parse_csi(TermKey *tk, size_t introlen, size_t *csi_len, long args[], size_t *nargs,
+                               unsigned long *commandp)
 {
    size_t csi_end = introlen;
 
@@ -425,8 +424,7 @@ static TermKeyResult parse_csi(TermKey *tk, size_t introlen, size_t *csi_len, lo
    return TERMKEY_RES_KEY;
 }
 
-TermKeyResult termkey_interpret_csi(TermKey *tk, const TermKeyKey *key, long args[], size_t *nargs,
-                                    unsigned long *cmd)
+TermKeyResult termkey_interpret_csi(TermKey *tk, const TermKeyKey *key, long args[], size_t *nargs, unsigned long *cmd)
 {
    size_t dummy;
 
@@ -467,8 +465,7 @@ static int register_keys(void)
    register_csi_ss3(TERMKEY_TYPE_FUNCTION, 3, 'R');
    register_csi_ss3(TERMKEY_TYPE_FUNCTION, 4, 'S');
 
-   register_csi_ss3_full(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_TAB, TERMKEY_KEYMOD_SHIFT,
-      TERMKEY_KEYMOD_SHIFT, 'Z');
+   register_csi_ss3_full(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_TAB, TERMKEY_KEYMOD_SHIFT, TERMKEY_KEYMOD_SHIFT, 'Z');
 
    register_ss3kpalt(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_KPENTER, 'M', 0);
    register_ss3kpalt(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_KPEQUALS, 'X', '=');
@@ -536,7 +533,7 @@ static int register_keys(void)
 static void *new_driver(TermKey *tk, const char *term)
 {
    if (!keyinfo_initialised) {
-      if (!register_keys() ) {
+      if ( !register_keys() ) {
          return NULL;
       }
    }
@@ -562,8 +559,8 @@ static void free_driver(void *info)
    free(csi);
 }
 
-static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key,
-                                 int force, size_t *nbytep)
+static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force,
+                                 size_t *nbytep)
 {
    size_t csi_len;
    size_t args = 16;
@@ -623,13 +620,12 @@ static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, 
             break;
          }
          case 3: {
-            fprintf(stderr, "CSI: Unknown arg1=%ld arg2=%ld arg3=%ld cmd=%c\n", arg[0], arg[1],
-               arg[2], (char)cmd);
+            fprintf(stderr, "CSI: Unknown arg1=%ld arg2=%ld arg3=%ld cmd=%c\n", arg[0], arg[1], arg[2], (char)cmd);
             break;
          }
          default: {
-            fprintf(stderr, "CSI: Unknown arg1=%ld arg2=%ld arg3=%ld ... args=%zu cmd=%c\n", arg[0],
-               arg[1], arg[2], args, (char)cmd);
+            fprintf(stderr, "CSI: Unknown arg1=%ld arg2=%ld arg3=%ld ... args=%zu cmd=%c\n", arg[0], arg[1], arg[2],
+               args, (char)cmd);
             break;
          }
       }
@@ -648,8 +644,8 @@ static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, 
    return result;
 }
 
-static TermKeyResult peekkey_ss3(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key,
-                                 int force, size_t *nbytep)
+static TermKeyResult peekkey_ss3(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force,
+                                 size_t *nbytep)
 {
    if (tk->buffcount < introlen + 1) {
       if (!force) {
@@ -697,8 +693,8 @@ static TermKeyResult peekkey_ss3(TermKey *tk, TermKeyCsi *csi, size_t introlen, 
    return TERMKEY_RES_KEY;
 }
 
-static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t introlen,
-                                        TermKeyKey *key, int force, size_t *nbytep)
+static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force,
+                                        size_t *nbytep)
 {
    size_t str_end = introlen;
 
@@ -721,8 +717,7 @@ static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t int
       return TERMKEY_RES_AGAIN;
    }
 #ifdef DEBUG
-   fprintf(stderr, "Found a control string: %*s", str_end - introlen,
-      tk->buffer + tk->buffstart + introlen);
+   fprintf(stderr, "Found a control string: %*s", str_end - introlen, tk->buffer + tk->buffstart + introlen);
 #endif
 
    *nbytep = str_end + 1;
@@ -757,13 +752,13 @@ static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force
    }
    TermKeyCsi *csi = info;
 
-   switch (CHARAT(0) ) {
+   switch ( CHARAT(0) ) {
       case 0x1b: {
          if (tk->buffcount < 2) {
             return TERMKEY_RES_NONE;
          }
 
-         switch (CHARAT(1) ) {
+         switch ( CHARAT(1) ) {
             case 0x4f: {
                // ESC-prefixed SS3
 

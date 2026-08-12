@@ -107,7 +107,7 @@ bool cat_register_builtin_array(const CATBuiltin *arr) {
 
    for (const CATBuiltin *p = arr ; p->cmd != NULL ; p++) {
       if (p->cb) {
-         if (!cat_register_callback(p->cmd, p->cb) ) {
+         if ( !cat_register_callback(p->cmd, p->cb) ) {
             return false;
          }
       }
@@ -159,7 +159,7 @@ int32_t rr_cat_parse_line(char *line) {
    char *endp = NULL;
 
    // If passed empty string, stop immediately and let the caller know...
-   if (line == NULL || (line_len = strlen(line) <= 0) ) {
+   if ( line == NULL || (line_len = strlen(line) <= 0) ) {
       return -1;
    } else {
       char *p = endp = line + line_len;
@@ -173,7 +173,7 @@ int32_t rr_cat_parse_line(char *line) {
       }
 
       // validate the pointers, just in case...
-      if (endp <= line || (endp > (line + line_len) ) ) {
+      if ( endp <= line || ( endp > (line + line_len) ) ) {
          // Line is invalid, stop touching it and let the caller know
          return -1;
       }
@@ -208,8 +208,7 @@ bool rr_cat_parse_ws(rr_cat_req_type reqtype, struct mg_ws_message *msg) {
    if (reqtype != REQ_WS || msg == NULL) {
       return false;
    }
-   Log(LOG_CRAZY, "cat.ws", "parsing %d bytes from ws: |%.*s|", msg->data.len, msg->data.len,
-      msg->data.buf);
+   Log(LOG_CRAZY, "cat.ws", "parsing %d bytes from ws: |%.*s|", msg->data.len, msg->data.len, msg->data.buf);
 
    // Extract "cmd" and "val" from JSON
    const char *cmd_str = mg_json_get_str(msg->data, "$.cat.cmd");

@@ -13,9 +13,6 @@
 #endif
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 typedef struct Coordinates {
    float latitude;
    float longitude;
@@ -44,9 +41,5 @@ extern Coordinates maidenhead2latlon(const char *locator);
 extern const char *latlon2maidenhead(Coordinates *c);
 extern double calculateBearing(double lat1, double lon1, double lat2, double lon2);
 extern double calculateDistance(double lat1, double lon1, double lat2, double lon2);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // !defined(_maidenhead_h)

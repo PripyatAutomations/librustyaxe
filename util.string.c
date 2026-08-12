@@ -70,15 +70,15 @@ void unescape_html(char *s) {
 
    while (*r) {
       if (*r == '&') {
-         if (!strncmp(r, "&lt;", 4) ) {
+         if ( !strncmp(r, "&lt;", 4) ) {
             *w++ = '<'; r += 4;
-         } else if (!strncmp(r, "&gt;", 4) ) {
+         } else if ( !strncmp(r, "&gt;", 4) ) {
             *w++ = '>'; r += 4;
-         } else if (!strncmp(r, "&amp;", 5) ) {
+         } else if ( !strncmp(r, "&amp;", 5) ) {
             *w++ = '&'; r += 5;
-         } else if (!strncmp(r, "&quot;", 6) ) {
+         } else if ( !strncmp(r, "&quot;", 6) ) {
             *w++ = '"'; r += 6;
-         } else if (!strncmp(r, "&#39;", 5) ) {
+         } else if ( !strncmp(r, "&#39;", 5) ) {
             *w++ = '\''; r += 5;
          } else {
             *w++ = *r++;  // unknown entity, copy literally
@@ -129,7 +129,7 @@ int split_args(char *line, char ***argv_out) {
    char *p = line;
 
    while (*p) {
-      while (*p && isspace( (unsigned char)*p ) ) {
+      while ( *p && isspace( (unsigned char)*p ) ) {
          p++;
       }
 
@@ -150,7 +150,7 @@ int split_args(char *line, char ***argv_out) {
          }
       }
       argv[argc++] = p;
-      while (*p && !isspace( (unsigned char)*p ) ) {
+      while ( *p && !isspace( (unsigned char)*p ) ) {
          p++;
       }
 

@@ -69,8 +69,7 @@ tui_window_t *tui_window_create(const char *title) {
 
    // Not found, create new
    if (tui_num_windows >= TUI_MAX_WINDOWS) {
-      tui_print(tui_active_window(), "No more windows available: TUI_MAX_WINDOWS: %d",
-         TUI_MAX_WINDOWS);
+      tui_print(tui_active_window(), "No more windows available: TUI_MAX_WINDOWS: %d", TUI_MAX_WINDOWS);
 
       return NULL;
    }
@@ -82,7 +81,7 @@ tui_window_t *tui_window_create(const char *title) {
 
       return NULL;
    }
-   strlcpy(w->title, title, sizeof(w->title));
+   strlcpy( w->title, title, sizeof(w->title) );
    memset( w->status_line, 0, sizeof(w->status_line) );
    snprintf(w->status_line, sizeof(w->status_line), "%s", title);
    w->title[sizeof(w->title) - 1] = '\0';
@@ -99,8 +98,7 @@ bool tui_window_destroy(tui_window_t *w) {
    }
 
    if (strcasecmp(w->title, "status") == 0) {
-      tui_print(tui_active_window(),
-         "{red}*** {bright-red}Can't destroy status window! {red}***{reset}.");
+      tui_print(tui_active_window(), "{red}*** {bright-red}Can't destroy status window! {red}***{reset}.");
 
       return false;
    }
@@ -156,8 +154,8 @@ bool tui_window_destroy(tui_window_t *w) {
 
 bool tui_window_destroy_id(int id) {
    if (id < 1 || id > tui_num_windows) {
-      tui_print(tui_active_window(),
-         "{bright-red}Invalid window %d, must be between 2 and %d{reset}.", id, tui_num_windows);
+      tui_print(tui_active_window(), "{bright-red}Invalid window %d, must be between 2 and %d{reset}.", id,
+         tui_num_windows);
 
       return true;
    }
@@ -222,8 +220,8 @@ tui_window_t *tui_window_focus(const char *title) {
 
 tui_window_t *tui_window_focus_id(int id) {
    if (id < 1 || id > tui_num_windows) {
-      tui_print(tui_active_window(),
-         "{bright-red}Invalid window %d, must be between 1 and %d{reset}.", id, tui_num_windows);
+      tui_print(tui_active_window(), "{bright-red}Invalid window %d, must be between 1 and %d{reset}.", id,
+         tui_num_windows);
 
       return NULL;
    }
@@ -242,6 +240,7 @@ void tui_window_init(void) {
    if (tui_num_windows == 0) {
       tui_windows[0] = tui_window_create("status");
       char *sl = tui_windows[0]->status_line;
+
       if (sl) {
          memset( sl, 0, sizeof(tui_windows[0]->status_line) );
          snprintf(sl, sizeof(sl), "%s", " status window");

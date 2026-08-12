@@ -5,9 +5,6 @@
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifndef GUARD_TERMKEY_H_
 #define	GUARD_TERMKEY_H_
@@ -223,16 +220,14 @@ const char *termkey_lookup_keyname(TermKey *tk, const char *str, TermKeySym *sym
 
 TermKeySym termkey_keyname2sym(TermKey *tk, const char *keyname);
 
-TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKeyMouseEvent *event,
-                                      int *button, int *line, int *col);
+TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKeyMouseEvent *event, int *button,
+                                      int *line, int *col);
 
 TermKeyResult termkey_interpret_position(TermKey *tk, const TermKeyKey *key, int *line, int *col);
 
-TermKeyResult termkey_interpret_modereport(TermKey *tk, const TermKeyKey *key, int *initial,
-                                           int *mode, int *value);
+TermKeyResult termkey_interpret_modereport(TermKey *tk, const TermKeyKey *key, int *initial, int *mode, int *value);
 
-TermKeyResult termkey_interpret_csi(TermKey *tk, const TermKeyKey *key, long args[], size_t *nargs,
-                                    unsigned long *cmd);
+TermKeyResult termkey_interpret_csi(TermKey *tk, const TermKeyKey *key, long args[], size_t *nargs, unsigned long *cmd);
 
 TermKeyResult termkey_interpret_string(TermKey *tk, const TermKeyKey *key, const char **strp);
 
@@ -257,14 +252,9 @@ typedef enum {
                                              TERMKEY_FORMAT_LOWERMOD | TERMKEY_FORMAT_SPACEMOD | \
                                              TERMKEY_FORMAT_LOWERSPACE)
 
-size_t termkey_strfkey(TermKey *tk, char *buffer, size_t len, TermKeyKey *key,
-                       TermKeyFormat format);
+size_t termkey_strfkey(TermKey *tk, char *buffer, size_t len, TermKeyKey *key, TermKeyFormat format);
 const char *termkey_strpkey(TermKey *tk, const char *str, TermKeyKey *key, TermKeyFormat format);
 
 int termkey_keycmp(TermKey *tk, const TermKeyKey *key1, const TermKeyKey *key2);
 
-#endif
-
-#ifdef __cplusplus
-}
 #endif

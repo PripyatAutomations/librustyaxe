@@ -48,8 +48,7 @@ const char *get_chat_ts(time_t ts) {
    if (tmsg.tm_year == tcurr.tm_year &&
        tmsg.tm_yday == tcurr.tm_yday) {
       strftime(chat_ts, sizeof(chat_ts),
-         "{bright-black}[{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset}",
-         &tmsg);
+         "{bright-black}[{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset}", &tmsg);
    } else {
       strftime(chat_ts, sizeof(chat_ts), "%a %b %d %H:%M:%S", &tmsg);
    }
@@ -68,7 +67,7 @@ time_t dhms2time_t(const char *str) {
    }
    size_t len = strlen(str);
 
-   if ( (copy = malloc(len + 1) ) == NULL) {
+   if ( ( copy = malloc(len + 1) ) == NULL ) {
       fprintf(stderr, "+ERROR timestr2time_t: out of memory\n");
       exit(ENOMEM);
    }

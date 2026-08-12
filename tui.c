@@ -241,7 +241,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       dict *vars = dict_new();
 
       if (win) {
-         dict_add(vars, "win.title", (char *)(win->title ? win->title : "status"));
+         dict_add( vars, "win.title", (char *)(win->title ? win->title : "status") );
          char scroll_val[16];
          snprintf(scroll_val, sizeof(scroll_val), "%d", win->scroll_offset);
          dict_add(vars, "win.scroll", scroll_val);
@@ -251,7 +251,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       dict_free(vars);
 
       // update the status line
-      strlcpy(status_line, colored, sizeof(status_line));
+      strlcpy( status_line, colored, sizeof(status_line) );
       free(colored);
       status_line[sizeof(status_line) - 1] = '\0';
    }
@@ -294,7 +294,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
    const char *src = processed;
    char *dst = expanded;
 
-   while (*src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
+   while ( *src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
       if (src[0] == '$' && src[1] == '{') {
          const char *end = strchr(src + 2, '}');
 
@@ -302,7 +302,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             size_t varlen = end - (src + 2);
             char varspec[256];
 
-            if (varlen >= sizeof(varspec) ) {
+            if ( varlen >= sizeof(varspec) ) {
                varlen = sizeof(varspec) - 1;
             }
             strlcpy(varspec, src + 2, varlen);
@@ -326,7 +326,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             if (val) {
                size_t vlen = strlen(val);
 
-               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1) {
+               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1 ) {
                   memcpy(dst, val, vlen);
                   dst += vlen;
                }
@@ -413,8 +413,7 @@ void tui_update_input_line(void) {
          }
          case 0x1F: {
             // Ctrl-_ underline toggle
-            buf_pos += snprintf(&buf[buf_pos], sizeof(buf) - buf_pos,
-               "{underline}_{underline-off}");
+            buf_pos += snprintf(&buf[buf_pos], sizeof(buf) - buf_pos, "{underline}_{underline-off}");
             break;
          }
          default: {

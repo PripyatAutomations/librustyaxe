@@ -205,7 +205,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
 
    termkey_advisereadable(tk);
 
-   while ( (res = termkey_getkey(tk, &key) ) != TERMKEY_RES_NONE) {
+   while ( ( res = termkey_getkey(tk, &key) ) != TERMKEY_RES_NONE ) {
       if (res == TERMKEY_RES_EOF) {
          break;
       }
@@ -353,7 +353,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
             }
             default: {
                if ( (key.modifiers & TERMKEY_KEYMOD_ALT) &&
-                    key.code.sym >= '0' && key.code.sym <= '9') {
+                    key.code.sym >= '0' && key.code.sym <= '9' ) {
                   handled = tui_window_swap(1, key.code.sym - '0');
                }
                break;
@@ -362,7 +362,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
       }
 
       // --- Ctrl line editing ---
-      if (!handled && (key.modifiers & TERMKEY_KEYMOD_CTRL) ) {
+      if ( !handled && (key.modifiers & TERMKEY_KEYMOD_CTRL) ) {
          char insert = 0;
 
          switch (c) {
@@ -441,8 +441,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
             case 0x08: {
                // Ctrl-H
                if (cursor_pos > 0) {
-                  memmove(&input_buf[cursor_pos - 1], &input_buf[cursor_pos],
-                     input_len - cursor_pos + 1);
+                  memmove(&input_buf[cursor_pos - 1], &input_buf[cursor_pos], input_len - cursor_pos + 1);
                   cursor_pos--;
                   input_len--;
                }
@@ -472,8 +471,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
             }
             case 0x08: case 0x7f: {
                if (cursor_pos > 0) {
-                  memmove(&input_buf[cursor_pos - 1], &input_buf[cursor_pos],
-                     input_len - cursor_pos + 1);
+                  memmove(&input_buf[cursor_pos - 1], &input_buf[cursor_pos], input_len - cursor_pos + 1);
                   cursor_pos--;
                   input_len--;
                }
@@ -490,8 +488,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
             }
             case TERMKEY_SYM_DELETE: {
                if (cursor_pos < input_len) {
-                  memmove(&input_buf[cursor_pos], &input_buf[cursor_pos + 1],
-                     input_len - cursor_pos);
+                  memmove(&input_buf[cursor_pos], &input_buf[cursor_pos + 1], input_len - cursor_pos);
                   input_len--;
                }
                handled = 1;

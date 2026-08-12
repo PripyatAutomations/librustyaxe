@@ -52,7 +52,7 @@ bool is_dir(const char *path) {
 
       return false;
    } else {
-      if ( (sb.st_mode & S_IFMT) == S_IFDIR) {
+      if ( (sb.st_mode & S_IFMT) == S_IFDIR ) {
          return true;
       }
    }
@@ -67,7 +67,7 @@ bool is_link(const char *path) {
       return false;
    }
 
-   if (S_ISLNK(sb.st_mode) ) {
+   if ( S_ISLNK(sb.st_mode) ) {
       return true;
    }
 
@@ -81,7 +81,7 @@ bool is_fifo(const char *path) {
       return false;
    }
 
-   if (S_ISFIFO(sb.st_mode) ) {
+   if ( S_ISFIFO(sb.st_mode) ) {
       return true;
    }
 
@@ -95,7 +95,7 @@ bool is_file(const char *path) {
       return false;
    }
 
-   if (S_ISREG(sb.st_mode) ) {
+   if ( S_ISREG(sb.st_mode) ) {
       return true;
    }
 
@@ -208,7 +208,7 @@ char *find_file_by_list(const char *files[], int file_count) {
          }
          Log(LOG_CRAZY, "core", "%s: Trying %s", __FUNCTION__, fullpath);
 
-         if (file_exists(fullpath) ) {
+         if ( file_exists(fullpath) ) {
             Log(LOG_CRAZY, "core", "%s: Returning \"%s\"", __FUNCTION__, fullpath);
 
             return fullpath;

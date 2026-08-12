@@ -10,7 +10,7 @@
 
 // ---------------- helpers ----------------
 static uint16_t prefix_index_key(const char *key) {
-   return ( (uint8_t)key[0] << 8) | (uint8_t)key[1];
+   return ( (uint8_t)key[0] << 8 ) | (uint8_t)key[1];
 }
 
 static int kv_array_bsearch(kv_node_t **arr, size_t count, const char *key) {
@@ -201,10 +201,16 @@ int kv_insert(kv_store_t *store, const char *key, void *val) {
 
    if (list->type == KV_ARRAY) {
       kv_node_t **arr = (kv_node_t**)list->ptr;
+
+      if (!arr) {
+         return -1;
+      }
+
       int pos = kv_array_bsearch(arr, list->count, suffix);
 
       if (pos >= 0) {
-         // XXX: Look into this as it's triggering a warning in scan-build for NULL ptr deref
+         // XXX: Look into this as it's triggering a warning in scan-build for
+         // NULL ptr deref
          arr[pos]->value = val;
 
          return 0;
@@ -325,7 +331,7 @@ kv_store_t *kv_create_and_load(kv_type_t type, size_t prefix_size, ...) {
 
    const char *key;
 
-   while ( (key = va_arg(ap, const char*) ) != NULL) {
+   while ( ( key = va_arg(ap, const char*) ) != NULL ) {
       void *val = va_arg(ap, void*);
 
       if (!val) {

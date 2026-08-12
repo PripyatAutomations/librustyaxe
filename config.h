@@ -26,8 +26,9 @@
 struct defconfig {
    const char *key;
    const char *val;
-   const char *help;           // Description of the config item for when we someday
-                         // have a config editor
+   const char *help;           // Description of the config item for when we
+                               // someday
+   // have a config editor
 };
 typedef struct defconfig defconfig_t;
 

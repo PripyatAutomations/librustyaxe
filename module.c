@@ -95,8 +95,7 @@ bool rr_load_module(const char *name) {
    void *dp = dlopen(mod_path, RTLD_NOW | RTLD_GLOBAL);
 
    if (!dp) {
-      Log( LOG_CRIT, "module", "rr_load_module: Failed opening module %s: %d:%s", mod_path, errno,
-         strerror(errno) );
+      Log( LOG_CRIT, "module", "rr_load_module: Failed opening module %s: %d:%s", mod_path, errno, strerror(errno) );
       rv = false;
       goto done;
    }
@@ -112,11 +111,11 @@ bool rr_load_module(const char *name) {
 
    mp->dlptr = dp;
 
-   if ( (mp->mod_path = strdup(mod_path) ) == NULL) {
+   if ( ( mp->mod_path = strdup(mod_path) ) == NULL ) {
       abort();
    }
 
-   if ( (mp->mod_name = strdup(name) ) == NULL) {
+   if ( ( mp->mod_name = strdup(name) ) == NULL ) {
       abort();
    }
    rr_module_event_t *ep = dlsym(mp->dlptr, "modinfo");

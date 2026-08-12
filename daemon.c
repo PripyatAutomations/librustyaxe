@@ -52,8 +52,8 @@ int daemonize(void) {
       pid_t sid = setsid();
 
       if (sid < 0) {
-         Log( LOG_CRIT, "daemon", "daemonize: Unable to create new SID for child process: %d (%s)",
-            errno, strerror(errno) );
+         Log( LOG_CRIT, "daemon", "daemonize: Unable to create new SID for child process: %d (%s)", errno,
+            strerror(errno) );
          exit(EXIT_FAILURE);
       }
    }
@@ -61,15 +61,13 @@ int daemonize(void) {
    pidfd = open(pidfile, O_RDWR | O_CREAT | O_SYNC, 0600);
 
    if (pidfd == -1) {
-      Log( LOG_CRIT, "daemon", "daemonize: opening pid file %s failed: %d (%s)", pidfile, errno,
-         strerror(errno) );
+      Log( LOG_CRIT, "daemon", "daemonize: opening pid file %s failed: %d (%s)", pidfile, errno, strerror(errno) );
       exit(EXIT_FAILURE);
    }
 
    // try to lock the pid file, so we can ensure only one instance runs
    if (lockf(pidfd, F_TLOCK, 0) != 0) {
-      Log( LOG_CRIT, "daemon", "daemonize: failed to lock pid file %s: %d (%s)", pidfile, errno,
-         strerror(errno) );
+      Log( LOG_CRIT, "daemon", "daemonize: failed to lock pid file %s: %d (%s)", pidfile, errno, strerror(errno) );
       unlink(pidfile);
       exit(EXIT_FAILURE);
    }
