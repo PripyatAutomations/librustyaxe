@@ -44,14 +44,13 @@ tui_window_t *tui_active_window(void) {
 }
 
 tui_window_t *tui_window_find(const char *title) {
-   if (!title || !*title) {
-      Log(LOG_CRIT, "tui.window", "no window title given in call to %s", __FUNCTION__);
-
-      return NULL;
+   const char *tp = title;
+   if (!tp || !*tp) {
+      tp = "status";
    }
 
    for (int i = 0 ; i < tui_num_windows ; i++) {
-      if (tui_windows[i] && strcasecmp(tui_windows[i]->title, title) == 0) {
+      if (tui_windows[i] && strcasecmp(tui_windows[i]->title, tp) == 0) {
          return tui_windows[i];
       }
    }
