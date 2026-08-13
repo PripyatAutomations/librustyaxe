@@ -122,13 +122,16 @@ struct rrconn {
    bool 	sent_login;                     // have we sent login?
    bool 	is_server;                      // is this a server? If so, we'll send
                                                 // relayed commands to it
-   char 	account[LOGINLEN + 1];
-   char 	nick[NICKLEN + 1];
-   char 	user[USERLEN + 1];
+   char 	account[LOGINLEN + 1];		// Account
+   char 	nick[NICKLEN + 1];		// Nickname (if not account)
+   char 	user[USERLEN + 1];		// Username ('ident')
    char 	hostname[HOSTLEN + 1];          // hostname/servername
    int 		fd;                             // socket fd
-   char 	recvq[RECVQLEN + 1];
-   char		sendq[SENDQLEN + 1];
+   char 	recvq[RECVQLEN + 1];		// Stuff pending processing from the socket
+   char		sendq[SENDQLEN + 1];		// Stuff pending being sent on the socket
+   time_t	last_heard,			// When was the last message from the client heard?
+                last_pinged,			// last time the client was pinged (for timeouts)
+                last_cat_update;		// Last time we sent a cat. message
    size_t	tx_bytes,			// Bytes we've sent
                 tx_packets;			// Packets we've sent
    size_t	rx_bytes,			// Bytes we've received
