@@ -117,23 +117,27 @@ typedef struct server_cfg {
 } server_cfg_t;
 
 struct rrconn {
-#if     defined(USE_MONGOOSE)
+   server_cfg_t *server;                        // server config data (if a client)
+   bool 	connected;                      // is it connected?
+   bool 	sent_login;                     // have we sent login?
+   bool 	is_server;                      // is this a server? If so, we'll send
+                                                // relayed commands to it
+   char 	account[LOGINLEN + 1];
+   char 	nick[NICKLEN + 1];
+   char 	user[USERLEN + 1];
+   char 	hostname[HOSTLEN + 1];          // hostname/servername
+   int 		fd;                             // socket fd
+   char 	recvq[RECVQLEN + 1];
+   char		sendq[SENDQLEN + 1];
+   size_t	tx_bytes,			// Bytes we've sent
+                tx_packets;			// Packets we've sent
+   size_t	rx_bytes,			// Bytes we've received
+                rx_packets;			// Packets we've received
+#ifdef	USE_MONGOOSE
    struct mg_connection *mg;
-#endif // defined(USE_MONGOOSE)
-   server_cfg_t *server;                 // server config data (if a client)
-   bool connected;                       // is it connected?
-   bool sent_login;                      // have we sent login?
-   bool is_server;                       // is this a server? If so, we'll send
-                                         // relayed commands to it
-   char account[LOGINLEN + 1];
-   char nick[NICKLEN + 1];
-   char user[USERLEN + 1];
-   char hostname[HOSTLEN + 1];           // hostname/servername
-   int fd;                               // socket fd
-   char recvq[RECVQLEN + 1];
-   char sendq[SENDQLEN + 1];
-#if     defined(USE_LIBEV)
-   ev_io io_watcher;
+#endif
+#ifdef	USE_LIBEV
+   ev_io 	io_watcher;
 #endif
 };
 

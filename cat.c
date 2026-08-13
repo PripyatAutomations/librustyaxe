@@ -203,7 +203,7 @@ int32_t rr_cat_parse_line(char *line) {
    return 0;
 }
 
-#if     defined(FEATURE_HTTP)
+#if     defined(USE_HTTP)
 bool rr_cat_parse_ws(rr_cat_req_type reqtype, struct mg_ws_message *msg) {
    if (reqtype != REQ_WS || msg == NULL) {
       return false;
