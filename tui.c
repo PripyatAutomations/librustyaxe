@@ -294,7 +294,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
    const char *src = processed;
    char *dst = expanded;
 
-   while ( *src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
+   while (*src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
       if (src[0] == '$' && src[1] == '{') {
          const char *end = strchr(src + 2, '}');
 
@@ -302,7 +302,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             size_t varlen = end - (src + 2);
             char varspec[256];
 
-            if ( varlen >= sizeof(varspec) ) {
+            if (varlen >= sizeof(varspec) ) {
                varlen = sizeof(varspec) - 1;
             }
             strlcpy(varspec, src + 2, varlen);
@@ -326,7 +326,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             if (val) {
                size_t vlen = strlen(val);
 
-               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1 ) {
+               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1) {
                   memcpy(dst, val, vlen);
                   dst += vlen;
                }

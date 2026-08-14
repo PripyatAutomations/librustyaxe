@@ -12,10 +12,10 @@
 #if     defined(USE_EV)
 #include <ev.h>
 #endif
-#define	MAX_SUBPROC 128                    // i doubt we'll ever reach this
-                                            // limit, but it'd be cool if we
-                                            // could (that's a lot of
-                                            // bands!)
+#define	MAX_SUBPROC 128                   // i doubt we'll ever reach this
+                                           // limit, but it'd be cool if we
+                                           // could (that's a lot of
+                                           // bands!)
 
 typedef struct subproc subproc_t;
 struct subproc {

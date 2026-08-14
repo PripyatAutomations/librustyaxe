@@ -55,7 +55,7 @@ static char *path_append(const char *base, const char *suffix) {
 /////////////////////////////////
 // helper: skip whitespace
 static const char *skip_ws(const char *s) {
-   while ( *s && isspace( (unsigned char)*s ) ) {
+   while (*s && isspace( (unsigned char)*s ) ) {
       s++;
    }
    return s;
@@ -103,7 +103,7 @@ static const char *json_parse_str(const char *s, char **out) {
 // parse primitive (number, true, false, null)
 static const char *json_parse_primitive(const char *s, char **out) {
    const char *start = s;
-   while ( *s && !strchr(",]} \t\r\n", *s) ) {
+   while (*s && !strchr(",]} \t\r\n", *s) ) {
       s++;
    }
    size_t len = s - start;
@@ -366,7 +366,7 @@ char *json_unescape(const char *s) {
                   *q++ = 0x80 | (code & 0x3F);
                } else {
                   *q++ = 0xE0 | (code >> 12);
-                  *q++ = 0x80 | ( (code >> 6) & 0x3F );
+                  *q++ = 0x80 | ( (code >> 6) & 0x3F);
                   *q++ = 0x80 | (code & 0x3F);
                }
                break;
@@ -541,7 +541,7 @@ char *dict2json(dict *d) {
       0
    };
 
-   while ( ( rank = dict_enumerate(d, rank, &key, &val) ) >= 0 ) {
+   while ( (rank = dict_enumerate(d, rank, &key, &val) ) >= 0) {
       json_insert(&root, key, val);
    }
    sbuf out;

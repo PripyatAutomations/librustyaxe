@@ -10,8 +10,8 @@
 /*
  * This contains stuff for when we live on a posix host
  *
- * Namely we use optionally use pipes instead of real serial ports and deal with
- * POSIX signals
+ * Namely we use optionally use pipes instead of real serial ports and deal with POSIX
+ * signals
  */
 #include <sys/stat.h>
 #include <stddef.h>

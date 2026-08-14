@@ -45,6 +45,7 @@ tui_window_t *tui_active_window(void) {
 
 tui_window_t *tui_window_find(const char *title) {
    const char *tp = title;
+
    if (!tp || !*tp) {
       tp = "status";
    }

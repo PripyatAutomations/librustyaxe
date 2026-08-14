@@ -84,9 +84,9 @@ static void register_ss3kpalt(TermKeyType type, TermKeySym sym, unsigned char cm
  * Handler for CSI number ~ function keys
  */
 
-static struct keyinfo csifuncs[35];  /* This value must be increased if more CSI
-                                      * function keys are added */
-#define	NCSIFUNCS ( sizeof(csifuncs) / sizeof(csifuncs[0]) )
+static struct keyinfo csifuncs[35];  /* This value must be increased if more CSI function
+                                      * keys are added */
+#define	NCSIFUNCS (sizeof(csifuncs) / sizeof(csifuncs[0]) )
 
 static TermKeyResult handle_csifunc(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
 {
@@ -161,8 +161,8 @@ static TermKeyResult handle_csi_u(TermKey *tk, TermKeyKey *key, int cmd, long *a
 }
 
 /*
- * Handler for CSI M / CSI m mouse events in SGR and rxvt encodings Note: This
- * does not handle X10 encoding
+ * Handler for CSI M / CSI m mouse events in SGR and rxvt encodings Note: This does not
+ * handle X10 encoding
  */
 
 static TermKeyResult handle_csi_m(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
@@ -276,8 +276,8 @@ TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKe
 }
 
 /*
- * Handler for CSI ? R position reports A plain CSI R with no arguments is
- * probably actually <F3>
+ * Handler for CSI ? R position reports A plain CSI R with no arguments is probably
+ * actually <F3>
  */
 
 static TermKeyResult handle_csi_R(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
@@ -533,7 +533,7 @@ static int register_keys(void)
 static void *new_driver(TermKey *tk, const char *term)
 {
    if (!keyinfo_initialised) {
-      if ( !register_keys() ) {
+      if (!register_keys() ) {
          return NULL;
       }
    }
@@ -752,13 +752,13 @@ static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force
    }
    TermKeyCsi *csi = info;
 
-   switch ( CHARAT(0) ) {
+   switch (CHARAT(0) ) {
       case 0x1b: {
          if (tk->buffcount < 2) {
             return TERMKEY_RES_NONE;
          }
 
-         switch ( CHARAT(1) ) {
+         switch (CHARAT(1) ) {
             case 0x4f: {
                // ESC-prefixed SS3
 

@@ -22,9 +22,9 @@
 
 /*
  *  completion:
- *  - This needs to become aware of the focused window if line starts with / and
- * no space: cli_command_t.cmd if word starts with & or #, check channels joined
- * Else, show users in current channel if a channel window
+ *  - This needs to become aware of the focused window if line starts with / and no space:
+ * cli_command_t.cmd if word starts with & or #, check channels joined Else, show users in
+ * current channel if a channel window
  */
 
 char *tui_completion_generator(const char*text, int state) {

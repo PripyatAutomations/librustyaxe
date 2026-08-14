@@ -246,7 +246,7 @@ char *tui_colorize_string(const char *in) {
          size_t key_len = end - (p + 1);
          char key[64];
 
-         if ( key_len >= sizeof(key) ) {
+         if (key_len >= sizeof(key) ) {
             key_len = sizeof(key) - 1;
          }
          memcpy(key, p + 1, key_len);
@@ -317,11 +317,11 @@ char *irc_to_tui_colors(const char *in) {
          int fg = -1, bg = -1;
 
          // --- parse foreground (1–2 digits) ---
-         if ( isdigit( (unsigned char)p[0] ) ) {
+         if (isdigit( (unsigned char)p[0] ) ) {
             fg = p[0] - '0';
             p++;
 
-            if ( isdigit( (unsigned char)p[0] ) ) {
+            if (isdigit( (unsigned char)p[0] ) ) {
                fg = fg * 10 + (p[0] - '0');
                p++;
             }
@@ -331,11 +331,11 @@ char *irc_to_tui_colors(const char *in) {
          if (*p == ',') {
             p++;
 
-            if ( isdigit( (unsigned char)p[0] ) ) {
+            if (isdigit( (unsigned char)p[0] ) ) {
                bg = p[0] - '0';
                p++;
 
-               if ( isdigit( (unsigned char)p[0] ) ) {
+               if (isdigit( (unsigned char)p[0] ) ) {
                   bg = bg * 10 + (p[0] - '0');
                   p++;
                }
@@ -462,11 +462,11 @@ char *strip_mirc_formatting(const char *input) {
          p++;
 
          // skip up to two digits for foreground
-         if ( isdigit( (unsigned char)*p ) ) {
+         if (isdigit( (unsigned char)*p ) ) {
             p++;
          }
 
-         if ( isdigit( (unsigned char)*p ) ) {
+         if (isdigit( (unsigned char)*p ) ) {
             p++;
          }
 
@@ -474,11 +474,11 @@ char *strip_mirc_formatting(const char *input) {
          if (*p == ',') {
             p++;
 
-            if ( isdigit( (unsigned char)*p ) ) {
+            if (isdigit( (unsigned char)*p ) ) {
                p++;
             }
 
-            if ( isdigit( (unsigned char)*p ) ) {
+            if (isdigit( (unsigned char)*p ) ) {
                p++;
             }
          }

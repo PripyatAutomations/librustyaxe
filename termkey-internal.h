@@ -57,8 +57,8 @@ struct TermKey {
    size_t buffstart;  // First offset in buffer
    size_t buffcount;  // NUMBER of entires valid in buffer
    size_t buffsize;  // Total malloc'ed size
-   size_t hightide;  /* Position beyond buffstart at which peekkey() should next
-                      * start normally 0, but see also termkey_interpret_csi */
+   size_t hightide;  /* Position beyond buffstart at which peekkey() should next start
+                      * normally 0, but see also termkey_interpret_csi */
 
 #ifdef HAVE_TERMIOS
    struct termios restore_termios;
@@ -93,11 +93,11 @@ struct TermKey {
 static inline void termkey_key_get_linecol(const TermKeyKey *key, int *line, int *col)
 {
    if (col) {
-      *col = (unsigned char)key->code.mouse[1] | ( (unsigned char)key->code.mouse[3] & 0x0f ) << 8;
+      *col = (unsigned char)key->code.mouse[1] | ( (unsigned char)key->code.mouse[3] & 0x0f) << 8;
    }
 
    if (line) {
-      *line = (unsigned char)key->code.mouse[2] | ( (unsigned char)key->code.mouse[3] & 0x70 ) <<
+      *line = (unsigned char)key->code.mouse[2] | ( (unsigned char)key->code.mouse[3] & 0x70) <<
               4;
    }
 }

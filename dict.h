@@ -21,10 +21,10 @@
  *  @date   Apr 2011
  *  @brief   Dictionary object
  *
- *  This file implements a basic string/string associative array that grows when
- * needed to store all inserted key/value pairs. The implementation is very
- * closely based on the Python dictionary, without the associated Pythonisms and
- * with specification on string/string.
+ *  This file implements a basic string/string associative array that grows when needed to
+ * store all inserted key/value pairs. The implementation is very closely based on the
+ * Python dictionary, without the associated Pythonisms and with specification on
+ * string/string.
  */
 /*--------------------------------------------------------------------------*/
 #ifndef _DICT_H_
@@ -124,8 +124,8 @@ extern void dict_free(dict *d);
  *  @param   val   Value to associate to the key
  *  @return   0 if Ok, something else in case of error
  *
- *  Insert an element into a dictionary. If an element already exists with the
- * same key, it is overwritten and the previous associated data are freed.
+ *  Insert an element into a dictionary. If an element already exists with the same key,
+ * it is overwritten and the previous associated data are freed.
  */
 /*--------------------------------------------------------------------------*/
 extern int dict_add(dict *d, const char *key, char *val);
@@ -138,8 +138,8 @@ extern int dict_add(dict *d, const char *key, char *val);
  *  @param   defval  Value to return if key is not found in dict
  *  @return   Element found, or defval
  *
- *  Get the value associated to a given key in a dict. If the key is not found,
- * defval is returned.
+ *  Get the value associated to a given key in a dict. If the key is not found, defval is
+ * returned.
  */
 /*--------------------------------------------------------------------------*/
 extern char *dict_get(dict *d, const char *key, char *defval);
@@ -151,8 +151,8 @@ extern char *dict_get(dict *d, const char *key, char *defval);
  *  @param   key   Key to look for
  *  @return   0 if Ok, something else in case of error
  *
- *  Delete an item in a dictionary. Will return 0 if item was correctly deleted
- * and -1 if the item could not be found or an error occurred.
+ *  Delete an item in a dictionary. Will return 0 if item was correctly deleted and -1 if
+ * the item could not be found or an error occurred.
  */
 /*--------------------------------------------------------------------------*/
 extern int dict_del(dict *d, const char *key);
@@ -166,11 +166,11 @@ extern int dict_del(dict *d, const char *key);
  *  @param   val   Enumerated value (modified)
  *  @return   int rank of the next item to enumerate, or -1 if end reached
  *
- *  Enumerate a dictionary by returning all the key/value pairs it contains.
- * Start the iteration by providing rank=0 and two pointers that will be
- * modified to references inside the dict. The returned value is the immediate
- * successor to the one being returned, or -1 if the end of dict was reached. Do
- * not free or modify the returned key/val pointers.
+ *  Enumerate a dictionary by returning all the key/value pairs it contains. Start the
+ * iteration by providing rank=0 and two pointers that will be modified to references
+ * inside the dict. The returned value is the immediate successor to the one being
+ * returned, or -1 if the end of dict was reached. Do not free or modify the returned
+ * key/val pointers.
  *
  *  See dict_dump() for usage example.
  */
@@ -184,8 +184,8 @@ extern int dict_enumerate(dict *d, int rank, const char **key, char **val);
  *  @param   out  File to output data to
  *  @return  void
  *
- *  Dump the contents of a dictionary to an opened file pointer. It is Ok to
- * pass 'stdout' or 'stderr' as file pointers.
+ *  Dump the contents of a dictionary to an opened file pointer. It is Ok to pass 'stdout'
+ * or 'stderr' as file pointers.
  *
  *  This function is mostly meant for debugging purposes.
  */

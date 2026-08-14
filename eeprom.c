@@ -8,8 +8,8 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 /*
- * Here we deal with a few different ways of accessing flash depending on how
- * it's connected.
+ * Here we deal with a few different ways of accessing flash depending on how it's
+ * connected.
  *
  * We support the following:
  * mmaping a file on posix hosts memory mapped eeprom/flash devices with direct
@@ -41,7 +41,7 @@
 //
 #endif
 
-#define	EEPROM_C           // Let the header know we're in the C file
+#define	EEPROM_C          // Let the header know we're in the C file
 #include "eeprom_layout.h"              // in $builddir/ and contains
                                         // offset/size/type data
 
@@ -67,7 +67,7 @@ uint32_t eeprom_offset_index(const char *key) {
    }
    uint32_t max_entries = -1, idx = -1;
 
-   max_entries = ( sizeof(eeprom_layout) / sizeof(eeprom_layout[0]) );
+   max_entries = (sizeof(eeprom_layout) / sizeof(eeprom_layout[0]) );
 
    if (max_entries == 0) {
       return -1;
@@ -435,7 +435,7 @@ uint32_t get_eeprom_change_age(void) {
 
 // Write the pending changes if any
 bool write_pending_eeprom_changes(void) {
-   if ( check_pending_eeprom_changes() ) {
+   if (check_pending_eeprom_changes() ) {
       // XXx: this should come from config
       int max_age = 60;
 
@@ -621,8 +621,8 @@ uint32_t crc32(uint32_t crc, const void *data, size_t len) {
 
 #if     defined(DEBUG_EEPROM)
    printf("len=%zu ptr=%p\n", (size_t)(EEPROM_SIZE - 4), eeprom_mmap);
-   printf("%02x %02x %02x %02x\n", ( (uint8_t *)eeprom_mmap )[0], ( (uint8_t *)eeprom_mmap )[1],
-      ( (uint8_t *)eeprom_mmap )[2], ( (uint8_t *)eeprom_mmap )[3]);
+   printf("%02x %02x %02x %02x\n", ( (uint8_t *)eeprom_mmap)[0], ( (uint8_t *)eeprom_mmap)[1],
+      ( (uint8_t *)eeprom_mmap)[2], ( (uint8_t *)eeprom_mmap)[3]);
 #endif
 
    if (!init) {

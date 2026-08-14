@@ -13,13 +13,11 @@
  * Here we parse commands for the various functions of the radio.
  *
  * Amplifier and rig control are split up into two CAT interfaces. CAT_KPA500:
- * Electraft KPA-500 amplifier control protocol CAT_YAESU: Yaesu FT-891/991A rig
- * control protocol You can enable both protocols or just one, depending on your
- * build
+ * Electraft KPA-500 amplifier control protocol CAT_YAESU: Yaesu FT-891/991A rig control
+ * protocol You can enable both protocols or just one, depending on your build
  *
- * Since the KPA500 commands have a prefix character, we can be flexible about
- * how it is connected. A single pipe/serial port/socket can be used, for CAT,
- * if desired.
+ * Since the KPA500 commands have a prefix character, we can be flexible about how it is
+ * connected. A single pipe/serial port/socket can be used, for CAT, if desired.
  *
  * We have two entry points here
  * - rr_cat_parse_line(): Parses a line from io (sock|net|pipe)
@@ -107,7 +105,7 @@ bool cat_register_builtin_array(const CATBuiltin *arr) {
 
    for (const CATBuiltin *p = arr ; p->cmd != NULL ; p++) {
       if (p->cb) {
-         if ( !cat_register_callback(p->cmd, p->cb) ) {
+         if (!cat_register_callback(p->cmd, p->cb) ) {
             return false;
          }
       }
@@ -159,7 +157,7 @@ int32_t rr_cat_parse_line(char *line) {
    char *endp = NULL;
 
    // If passed empty string, stop immediately and let the caller know...
-   if ( line == NULL || (line_len = strlen(line) <= 0) ) {
+   if (line == NULL || (line_len = strlen(line) <= 0) ) {
       return -1;
    } else {
       char *p = endp = line + line_len;
@@ -173,7 +171,7 @@ int32_t rr_cat_parse_line(char *line) {
       }
 
       // validate the pointers, just in case...
-      if ( endp <= line || ( endp > (line + line_len) ) ) {
+      if (endp <= line || (endp > (line + line_len) ) ) {
          // Line is invalid, stop touching it and let the caller know
          return -1;
       }

@@ -1,18 +1,18 @@
 #if     !defined(__librustyaxe_struct_h)
 #define	__librustyaxe_struct_h
-#define	LOGINLEN 240               // an email address
-#define	IRC_MSGLEN 1024            // extended for IRCv3
-#define	CHANLEN 64                 // channel name length
-#define	NICKLEN 40                 // nick name length
+#define	LOGINLEN 240              // an email address
+#define	IRC_MSGLEN 1024           // extended for IRCv3
+#define	CHANLEN 64                // channel name length
+#define	NICKLEN 40                // nick name length
 #define	TOPICLEN 256
 #define	PASSLEN 128
 #define	USERLEN 16
 #define	HOSTLEN 256
 #define	NETLEN 64
-#define	RECVQLEN 16384             // read, but unprocessed data from the
-                                    // server
-#define	SENDQLEN 16384             // data waiting to be sent to the server
-#define	AUTOJOIN_LEN 1024          // auto-join channels
+#define	RECVQLEN 16384            // read, but unprocessed data from the
+                                   // server
+#define	SENDQLEN 16384            // data waiting to be sent to the server
+#define	AUTOJOIN_LEN 1024         // auto-join channels
 #define	USER_HASHSZ 127 // prime number
 
 typedef struct rrconn rrconn_t;
@@ -118,29 +118,32 @@ typedef struct server_cfg {
 
 struct rrconn {
    server_cfg_t *server;                        // server config data (if a client)
-   bool 	connected;                      // is it connected?
-   bool 	sent_login;                     // have we sent login?
-   bool 	is_server;                      // is this a server? If so, we'll send
+   bool connected;                              // is it connected?
+   bool sent_login;                             // have we sent login?
+   bool is_server;                              // is this a server? If so, we'll send
                                                 // relayed commands to it
-   char 	account[LOGINLEN + 1];		// Account
-   char 	nick[NICKLEN + 1];		// Nickname (if not account)
-   char 	user[USERLEN + 1];		// Username ('ident')
-   char 	hostname[HOSTLEN + 1];          // hostname/servername
-   int 		fd;                             // socket fd
-   char 	recvq[RECVQLEN + 1];		// Stuff pending processing from the socket
-   char		sendq[SENDQLEN + 1];		// Stuff pending being sent on the socket
-   time_t	last_heard,			// When was the last message from the client heard?
-                last_pinged,			// last time the client was pinged (for timeouts)
-                last_cat_update;		// Last time we sent a cat. message
-   size_t	tx_bytes,			// Bytes we've sent
-                tx_packets;			// Packets we've sent
-   size_t	rx_bytes,			// Bytes we've received
-                rx_packets;			// Packets we've received
-#ifdef	USE_MONGOOSE
+   char account[LOGINLEN + 1];                  // Account
+   char nick[NICKLEN + 1];                      // Nickname (if not account)
+   char user[USERLEN + 1];                      // Username ('ident')
+   char hostname[HOSTLEN + 1];                  // hostname/servername
+   int fd;                                      // socket fd
+   char recvq[RECVQLEN + 1];                    // Stuff pending processing from the
+                                                // socket
+   char sendq[SENDQLEN + 1];                    // Stuff pending being sent on the socket
+   time_t last_heard,                           // When was the last message from the
+                                                // client heard?
+          last_pinged,                          // last time the client was pinged (for
+                                                // timeouts)
+          last_cat_update;                      // Last time we sent a cat. message
+   size_t tx_bytes,                             // Bytes we've sent
+          tx_packets;                           // Packets we've sent
+   size_t rx_bytes,                             // Bytes we've received
+          rx_packets;                           // Packets we've received
+#ifdef  USE_MONGOOSE
    struct mg_connection *mg;
 #endif
-#ifdef	USE_LIBEV
-   ev_io 	io_watcher;
+#ifdef  USE_LIBEV
+   ev_io io_watcher;
 #endif
 };
 

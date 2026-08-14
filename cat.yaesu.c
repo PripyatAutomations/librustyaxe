@@ -8,8 +8,8 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 /*
- * Here we implement the Yaesu 891/991a style CAT protocol for control of the
- * rig ft891 has complete CAT enough for all uses, so it's our milestone goal
+ * Here we implement the Yaesu 891/991a style CAT protocol for control of the rig ft891
+ * has complete CAT enough for all uses, so it's our milestone goal
  *
  * We have two entry points here
  * - rr_cat_parse_line(): Parses a line from io (sock|net|pipe)

@@ -27,8 +27,8 @@ typedef struct json_node {
  * dict2jsonump - Convert a dict into a JSON string.
  *
  * Params:
- *   d   - pointer to dict to convert out - optional FILE* to also write the
- * JSON into (may be NULL)
+ *   d   - pointer to dict to convert out - optional FILE* to also write the JSON into
+ * (may be NULL)
  *
  * Returns:
  *   A malloc'd JSON string (null-terminated). Caller MUST free() it when done.

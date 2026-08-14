@@ -27,7 +27,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define	streq(a, b) ( !strcmp(a, b) )
+#define	streq(a, b) (!strcmp(a, b) )
 
 #define	MAX_FUNCNAME 9
 
@@ -176,7 +176,7 @@ static struct {
 #ifdef HAVE_UNIBILIUM
 static enum unibi_string unibi_lookup_str(const char *name) {
    for (enum unibi_string ret = unibi_string_begin_ + 1 ; ret < unibi_string_end_ ; ret++) {
-      if ( streq(unibi_name_str(ret), name) ) {
+      if (streq(unibi_name_str(ret), name) ) {
          return ret;
       }
    }
@@ -196,10 +196,10 @@ static const char *unibi_get_str_by_name(const unibi_term *ut, const char *name)
 }
 #endif
 
-/* To be efficient at lookups, we store the byte sequence => keyinfo mapping in
- * a trie. This avoids a slow linear search through a flat list of sequences.
- * Because it is likely most nodes will be very sparse, we optimise vector to
- * store an extent map after the database is loaded.
+/* To be efficient at lookups, we store the byte sequence => keyinfo mapping in a trie.
+ * This avoids a slow linear search through a flat list of sequences. Because it is likely
+ * most nodes will be very sparse, we optimise vector to store an extent map after the
+ * database is loaded.
  */
 
 typedef enum {
@@ -256,7 +256,7 @@ static struct trie_node *new_node_key(TermKeyType type, TermKeySym sym, int modm
 }
 
 static struct trie_node *new_node_arr(unsigned char min, unsigned char max) {
-   struct trie_node_arr *n = malloc( sizeof(*n) + ( (int)max - min + 1 ) * sizeof(n->arr[0]) );
+   struct trie_node_arr *n = malloc( sizeof(*n) + ( (int)max - min + 1) * sizeof(n->arr[0]) );
 
    if (!n) {
       return NULL;
@@ -399,8 +399,8 @@ static int load_terminfo(TermKeyTI *ti)
    {
       int err;
 
-      /* Have to cast away the const. But it's OK - we know terminfo won't
-       * really modify term */
+      /* Have to cast away the const. But it's OK - we know terminfo won't really modify
+       * term */
       if (setupterm( (char*)ti->term, 1, &err ) != OK) {
          return 0;
       }
@@ -420,7 +420,7 @@ static int load_terminfo(TermKeyTI *ti)
 
       sprintf(name, "key_%s", funcs[i].funcname);
 
-      if ( !try_load_terminfo_key(ti, name, &(struct keyinfo) {
+      if (!try_load_terminfo_key(ti, name, &(struct keyinfo) {
          .type = funcs[i].type,
          .sym = funcs[i].sym,
          .modifier_mask = funcs[i].mods,
@@ -444,7 +444,7 @@ static int load_terminfo(TermKeyTI *ti)
       char name[9];
       sprintf(name, "key_f%d", i);
 
-      if ( !try_load_terminfo_key(ti, name, &(struct keyinfo) {
+      if (!try_load_terminfo_key(ti, name, &(struct keyinfo) {
          .type = TERMKEY_TYPE_FUNCTION,
          .sym = i,
          .modifier_mask = 0,
@@ -459,9 +459,8 @@ static int load_terminfo(TermKeyTI *ti)
       .type = TERMKEY_TYPE_MOUSE,
    });
 
-   /* Take copies of these terminfo strings, in case we build multiple termkey
-    * instances for multiple different termtypes, and it's different by the time
-    * we want to use it
+   /* Take copies of these terminfo strings, in case we build multiple termkey instances
+    * for multiple different termtypes, and it's different by the time we want to use it
     */
 #ifdef HAVE_UNIBILIUM
    const char *keypad_xmit = unibi ?
@@ -525,9 +524,8 @@ static void *new_driver(TermKey *tk, const char *term)
 
       return NULL;
    }
-   /* ti->unibi may be NULL if errno == ENOENT. That means the terminal wasn't
-    * known. Lets keep going because if we get getstr hook that might invent new
-    * strings for us
+   /* ti->unibi may be NULL if errno == ENOENT. That means the terminal wasn't known. Lets
+    * keep going because if we get getstr hook that might invent new strings for us
     */
 #else
    {
@@ -535,8 +533,8 @@ static void *new_driver(TermKey *tk, const char *term)
 
       ti->term = NULL;
 
-      /* Have to cast away the const. But it's OK - we know terminfo won't
-       * really modify term */
+      /* Have to cast away the const. But it's OK - we know terminfo won't really modify
+       * term */
       if (setupterm( (char*)term, 1, &err ) == OK) {
          ti->term = strdup(term);
       }
@@ -562,8 +560,8 @@ static int start_driver(TermKey *tk, void *info)
       return 1;
    }
 
-   /* The terminfo database will contain keys in application cursor key mode. We
-    * may need to enable that mode
+   /* The terminfo database will contain keys in application cursor key mode. We may need
+    * to enable that mode
     */
    /* There's no point trying to write() to a pipe */
    if (fstat(tk->fd, &statbuf) == -1) {
@@ -571,7 +569,7 @@ static int start_driver(TermKey *tk, void *info)
    }
 #ifndef _WIN32
 
-   if ( S_ISFIFO(statbuf.st_mode) ) {
+   if (S_ISFIFO(statbuf.st_mode) ) {
       return 1;
    }
 #endif
@@ -607,13 +605,13 @@ static int stop_driver(TermKey *tk, void *info)
    }
 #ifndef _WIN32
 
-   if ( S_ISFIFO(statbuf.st_mode) ) {
+   if (S_ISFIFO(statbuf.st_mode) ) {
       return 1;
    }
 #endif
 
-   /* The terminfo database will contain keys in application cursor key mode. We
-    * may need to enable that mode
+   /* The terminfo database will contain keys in application cursor key mode. We may need
+    * to enable that mode
     */
 
    // Can't call putp or tputs because they suck and don't give us fd control

@@ -12,11 +12,11 @@
  *
  * Here we parse commands for the various functions of the radio.
  *
- * Since this module is designed to be used either with an existing rig or
- * eventually as a stand-alone transceiver, we support two protocols for control
+ * Since this module is designed to be used either with an existing rig or eventually as a
+ * stand-alone transceiver, we support two protocols for control
  *
- * CAT_KPA500: Electraft KPA-500 amplifier control protocol CAT_YAESU: Yaesu
- * FT-891/991A rig control protocol You can enable both protocols or just one.
+ * CAT_KPA500: Electraft KPA-500 amplifier control protocol CAT_YAESU: Yaesu FT-891/991A
+ * rig control protocol You can enable both protocols or just one.
  */
 #include <stddef.h>
 #include <stdarg.h>
