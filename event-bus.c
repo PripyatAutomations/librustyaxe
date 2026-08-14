@@ -9,7 +9,26 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
+#define EVENT_NOMATCH "NOMATCH"
+
 static kv_store_t *event_store = NULL;
+
+static void event_fire_list(kv_list_t *list, const char *event,
+      rrconn_t *cptr, const char *data) {
+   if (!list) {
+      return;
+   }
+
+   for (size_t i = 0 ; i < list->count ; i++) {
+      event_listener_t *l = ((void **)list->ptr)[i];
+
+      Log(LOG_CRAZY, "event",
+         "Firing event %s from cptr:<%p> with data:<%p> user:%s",
+         event, cptr, data, l->user);
+
+      l->cb(event, data, cptr, l->user);
+   }
+}
 
 void event_init(void) {
    if (!event_store) {
@@ -54,31 +73,35 @@ void event_on(const char *event, event_cb_t cb, void *user) {
    ( (void**)list->ptr)[list->count++] = l;
 }
 
-/* emit */
 void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    if (!event_store || !event) {
       return;
    }
+
    kv_list_t *list = kv_lookup(event_store, event);
-
-   if (!list) {
-      return;
-   }
-
    int evt_hits = 0;
 
-   for (size_t i = 0 ; i < list->count ; i++) {
-      event_listener_t *l = ( (void**)list->ptr)[i];
-      Log(LOG_CRAZY, "event", "Event %s from cptr:<%p> with data:<%p> user:<%p>", event, cptr, data, l->user);
-      l->cb(event, data, cptr, l->user);
-      evt_hits++;
+   if (list) {
+      evt_hits = list->count;
+      event_fire_list(list, event, cptr, data);
    }
 
    if (evt_hits == 0) {
-      // no matches ;(
-      Log(LOG_CRIT, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|", event, cptr, data);
+      kv_list_t *nomatch = kv_lookup(event_store, EVENT_NOMATCH);
+
+      if (nomatch) {
+         Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match; firing NOMATCH",
+            event, cptr);
+
+         event_fire_list(nomatch, event, cptr, data);
+      } else {
+         Log(LOG_CRIT, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|",
+            event, cptr, data);
+      }
    } else {
-      Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> hit %d times", event, cptr, evt_hits);
+      Log(LOG_DEBUG, "event",
+         "Event %s from cptr:<%p> hit %d times",
+         event, cptr, evt_hits);
    }
 }
 

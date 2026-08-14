@@ -260,15 +260,18 @@ void logger_init(const char *logfile) {
 
    log_show_ts = eeprom_get_bool("debug/show-ts");
 
-   if (!logfp) {
-      logfp = fopen(logfile, "a+");
-
+   if (logfile[0] == '-' && logfile[1] == '\0') {
+      logfp = stdout;
+   } else {
       if (!logfp) {
-         fprintf(stderr, "Couldn't open log file %s, falling back to stdout\n", logfile);
-         logfp = stdout;
+         logfp = fopen(logfile, "a+");
+
+         if (!logfp) {
+            fprintf(stderr, "Couldn't open log file %s, falling back to stdout\n", logfile);
+            logfp = stdout;
+         }
       }
    }
-   log_stdout = cfg_get_bool("debug/log/stdout", true);
 
    // Load fine-grained log_filters from config
    load_log_filters_from_config();
