@@ -144,6 +144,6 @@ struct rrconn {
 #endif
 };
 
-typedef bool (*irc_command_cb)(rrconn_t *cptr, irc_message_t *mp);
+//typedef bool (*irc_command_cb)(rrconn_t *cptr, irc_message_t *mp);
 
 #endif // !defined(__librustyaxe_struct_h)
