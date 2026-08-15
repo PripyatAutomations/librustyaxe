@@ -704,6 +704,10 @@ static const char *json_parse_value(const char *s, const char *path, dict *d) {
 
 // public API: parse JSON into flattened dict
 dict *json2dict(const char *json) {
+   if (!json || *json == '\0') {
+      return NULL;
+   }
+
    dict *d = dict_new();
 
    if (!d) {
