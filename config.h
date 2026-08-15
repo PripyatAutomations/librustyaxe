@@ -61,17 +61,8 @@ extern bool cfg_set_default(dict *d, const char *key, const char *val);
 extern bool cfg_set_defaults(dict *d, defconfig_t *defaults);
 extern dict *cfg_load(const char *path);
 
-// Merge two dicts into a new one, with values from B being preferred. Be sure
-// to dict_free() the result!
-extern dict *dict_merge_new(dict *a, dict *b);
-
-// XXX: Compare old and new configuration, yielding a dict with ONLY changes
-extern dict *dict_diff(dict *a, dict *b);
-
 // Apply new configuration to the oldcfg dict
 extern bool cfg_apply_new(dict *oldcfg, dict *newcfg);
-// Merge two dicts into the first
-extern int dict_merge(dict *dst, dict *src);
 
 // Save the dict into a file
 extern bool cfg_save(dict *d, const char *path);

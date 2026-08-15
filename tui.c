@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <stdbool.h>
+#include <errno.h>
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 #include <ev.h>

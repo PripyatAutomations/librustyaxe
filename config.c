@@ -19,60 +19,6 @@ dict *cfg = NULL;                        // User configuration values from
 dict *default_cfg = NULL;                // Hard-coded defaults (defcfg.c)
 cfg_cb_list_t *cfg_callbacks = NULL;
 
-int dict_merge(dict *dst, dict *src) {
-   if (!dst || !src) {
-      return -1;
-   }
-   int rank = 0;
-   const char *key;
-   char *val;
-   while ( (rank = dict_enumerate(src, rank, &key, &val) ) >= 0) {
-      if (dict_add(dst, key, val) != 0) {
-         continue;
-      }
-   }
-   return 0;
-}
-
-dict *dict_merge_new(dict *a, dict *b) {
-   if (!a || !b) {
-      Log(LOG_WARN, "dict", "dict_merge_new called with NULL a <%p> or NULL b <%p>", a, b);
-
-      return NULL;
-   }
-   dict *merged = dict_new();
-
-   if (!merged) {
-      fprintf(stderr, "OOM in dict_merge_new?!\n");
-
-      return NULL;
-   }
-   const char *key;
-   char *val;
-   int rank = 0;
-
-   // Copy from a
-   while ( (rank = dict_enumerate(a, rank, &key, &val) ) >= 0) {
-      if (dict_add(merged, key, val) != 0) {
-         Log(LOG_WARN, "dict", "dict_merge_new: Failed merging A for a:<%p>, b:<%p>", a, b);
-         dict_free(merged);
-
-         return NULL;
-      }
-   }
-   rank = 0;
-   // Copy from b (overwriting a's entries if necessary)
-   while ( (rank = dict_enumerate(b, rank, &key, &val) ) >= 0) {
-      if (dict_add(merged, key, val) != 0) {
-         Log(LOG_WARN, "dict", "dict_merge_new: Failed merging B for a:<%p>, b:<%p>", a, b);
-         dict_free(merged);
-
-         return NULL;
-      }
-   }
-   return merged;
-}
-
 bool cfg_set_default(dict *d, const char *key, const char *val) {
    if (!key || !d) {
       Log(LOG_WARN, "config", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);

@@ -204,4 +204,14 @@ extern time_t dict_get_time_t(dict *d, const char *key, time_t def);
 
 extern const char *dict_get_exp(dict *d, const char *key);
 
+// Merge two dicts into the first
+extern int dict_merge(dict *dst, dict *src);
+
+// Merge two dicts into a new one, with values from B being preferred. Be sure
+// to dict_free() the result!
+extern dict *dict_merge_new(dict *a, dict *b);
+
+// XXX: Compare old and new configuration, yielding a dict with ONLY changes
+extern dict *dict_diff(dict *a, dict *b);
+
 #endif
