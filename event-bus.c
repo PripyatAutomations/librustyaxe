@@ -95,11 +95,11 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
 
          event_fire_list(nomatch, event, cptr, data);
       } else {
-         Log(LOG_CRIT, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|",
+         Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|",
             event, cptr, data);
       }
    } else {
-      Log(LOG_DEBUG, "event",
+      Log(LOG_CRAZY, "event",
          "Event %s from cptr:<%p> hit %d times",
          event, cptr, evt_hits);
    }

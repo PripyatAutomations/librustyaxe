@@ -1,5 +1,31 @@
 #if     !defined(__librustyaxe_struct_h)
 #define	__librustyaxe_struct_h
+
+// XXX:ASAP Move these to build time config file
+// Maximum number of subscribed channels for users
+#define MAX_RX_CHANNELS 64        // User RX channels
+#define MAX_TX_CHANNELS 16        // User TX channels
+
+// HTTP Basic-auth user
+#define	HTTP_MAX_USERS 64                 // How many users are allowed in
+                                           // http.users?
+#define	HTTP_USER_LEN 16                  // username length (16 char)
+#define	HTTP_PASS_LEN 40                  // sha1: 40, sha256: 64
+#define	HTTP_HASH_LEN 40                  // sha1
+#define	HTTP_TOKEN_LEN 14                 // session-id / nonce length,
+                                           // longer moar secure
+#define	HTTP_UA_LEN 512                   // allow 128 bytes
+#define	USER_PRIV_LEN 100                 // privileges list
+#define	USER_EMAIL_LEN 128                // email address
+
+#define HTTP_MAX_SESSIONS 32              // max sessions total
+#define	HTTP_MAX_ELMERS 8                 // how many elmers can accept
+                                           // elevate request from the
+                                           // user?
+#define HTTP_MAX_NOOBS 8                  // how many noobs can an elmer
+#define HTTP_MAX_USERS 64                 // How many users are allowed in
+#define HTTP_MAX_ROUTES 64
+ 
 #define	LOGINLEN 240              // an email address
 #define	IRC_MSGLEN 1024           // extended for IRCv3
 #define	CHANLEN 64                // channel name length
@@ -116,25 +142,98 @@ typedef struct server_cfg {
    struct server_cfg *next;
 } server_cfg_t;
 
+// http.users entry
+struct http_user {
+   int uid;
+   char name[HTTP_USER_LEN + 1];                         // Username
+   char pass[HTTP_PASS_LEN + 1];                         // Password hash
+   char email[USER_EMAIL_LEN + 1];                       // Email address
+   char privs[USER_PRIV_LEN + 1];                        // privileges string?
+   bool enabled;                                         // Is the user enabled?
+   int max_clones;                                       // maximum allowed
+                                                         // sessions
+   int clones;                                           // active logins
+   int is_muted;                                         // is this user muted?
+};
+typedef struct http_user http_user_t;
+
 struct rrconn {
-   server_cfg_t *server;                        // server config data (if a client)
-   bool connected;                              // is it connected?
+   bool active;                  // Is this slot actually used or is it
+                                 // free-listed?
+   bool authenticated;           // Is the user fully logged in?
+   bool ghost;                   // Is the session a ghost?
+   bool is_ws;                   // Flag to indicate if it's a WebSocket client
+   bool is_ptt;                  // Is the user keying up ANY attached rig?
    bool sent_login;                             // have we sent login?
    bool is_server;                              // is this a server? If so, we'll send
                                                 // relayed commands to it
+   int fd;                                      // socket fd
+   int guest_id;                 // 4 digit unique id for guest users in
+                                 // chat/etc
+                                 // for comfort
+   int ping_attempts;            // How many times have we tried to ping the
+                                 // client without answer?
+   int ptt_session;              // Set when PTT has been raised
+   u_int32_t user_flags;         // Bit flags for user features, permissions,
+                                 // etc.
+   time_t connected;             // when was the socket connected?
+   time_t session_expiry;        // When does the session expire?
+   time_t session_start;         // When did they login?
+   time_t last_heard;            // when a last valid message was heard from
+                                 // client
+   time_t last_ping;             // If client is pending timeout, this will
+                                 // contain the time a ping was sent to check
+                                 // for
+                                 // dead connection
+   time_t last_cat_update;                      // Last time we sent a cat message
+   http_user_t *user;            // pointer to http user, once login is sent. DO
+                                 // NOT TRUST IF authenticated != true!
+   char nonce[HTTP_TOKEN_LEN + 1];   // Authentication nonce - only used between
+                                     // challenge & pass stages
+   char chatname[HTTP_USER_LEN + 1];   // username to show in chat (GUESTxxxx or
+                                       // USER)
    char account[LOGINLEN + 1];                  // Account
    char nick[NICKLEN + 1];                      // Nickname (if not account)
-   char user[USERLEN + 1];                      // Username ('ident')
+   char username[USERLEN + 1];                  // Username ('ident')
    char hostname[HOSTLEN + 1];                  // hostname/servername
-   int fd;                                      // socket fd
+   char token[HTTP_TOKEN_LEN + 1];   // Session token
+   char  *user_agent;            // User-agent
+   char user_ip[256];            // string containing the user's IP
+   char  *cli_version;           // Client version
+#if     defined(USE_MONGOOSE)
+   struct mg_connection *conn;   // Connection pointer (HTTP or WebSocket)
+#endif
+   time_t ghost_time;            // When did the session become a ghost?
+
+   // These contain arrays of audio channel IDs
+   u_int32_t rx_channels[MAX_RX_CHANNELS];
+   u_int32_t tx_channels[MAX_RX_CHANNELS];
+   // This is for connections between instances (NYI)
+   enum {
+      CONN_NONE = 0,
+      CONN_RIGUI,               // User-interface (chat and CAT)
+      CONN_AUDIO_RX,            // RX audio
+      CONN_AUDIO_TX             // TX audio
+   } connection_type;
+   char codec_rx[5], codec_tx[5];                // 4 byte ID of the codec for
+                                                 // each audio direction
+
+   // This is a little ugly, but this stores pointers to the users associated
+   // with elmer/noob system
+   union {
+      rrconn_t *elmers[HTTP_MAX_ELMERS];       // pointer(s) to elmers
+                                                         // who have accepted to
+                                                         // babysit user (if
+                                                         // noob)
+      rrconn_t *noobs[HTTP_MAX_NOOBS];         // pointer(s) to noobs
+                                                         // this user is
+                                                         // babysitting
+   } en_data;
+   rrconn_t *next;     // pointer to next client in list
+   server_cfg_t *server;                        // server config data (if a client)
    char recvq[RECVQLEN + 1];                    // Stuff pending processing from the
                                                 // socket
    char sendq[SENDQLEN + 1];                    // Stuff pending being sent on the socket
-   time_t last_heard,                           // When was the last message from the
-                                                // client heard?
-          last_pinged,                          // last time the client was pinged (for
-                                                // timeouts)
-          last_cat_update;                      // Last time we sent a cat. message
    size_t tx_bytes,                             // Bytes we've sent
           tx_packets;                           // Packets we've sent
    size_t rx_bytes,                             // Bytes we've received
@@ -146,6 +245,8 @@ struct rrconn {
    ev_io io_watcher;
 #endif
 };
+
+typedef struct rrconn rrconn_t;
 
 //typedef bool (*irc_command_cb)(rrconn_t *cptr, irc_message_t *mp);
 

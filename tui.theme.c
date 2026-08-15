@@ -20,7 +20,7 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-bool tui_colors = true;
+bool cfg_tui_colors = true;
 
 static const ansi_entry_t ansi_table[] = {
    {
@@ -253,7 +253,7 @@ char *tui_colorize_string(const char *in) {
          key[key_len] = '\0';
 
          // if TUI colors are enabled, insert them
-         if (tui_colors) {
+         if (cfg_tui_colors) {
             // look up ANSI escape
             const ansi_entry_t *ae;
 
@@ -264,7 +264,7 @@ char *tui_colorize_string(const char *in) {
                }
             }
          }
-         // if tui_colors == 0, just skip the {key} sequence
+         // if cfg_tui_colors == 0, just skip the {key} sequence
          p = end + 1;
       } else {
          *o++ = *p++;

@@ -83,16 +83,18 @@ int tui_cols(void) {
 
 extern void tui_keys_init(struct ev_loop *loop);         // tui.keys.c
 
+char *s_status_offline = NULL;
 bool tui_init(void) {
-   char *color = tui_colorize_string("{bright-black}[{red}OFFLINE{bright-black}]{reset}");
-   snprintf(status_line, STATUS_LEN, "%s", color);
-   free(color);
    update_term_size();
 
    // set SIGnal WINdow CHange handler
    signal(SIGWINCH, sigwinch_handler);
 
-   tui_colors = cfg_get_bool("tui.use-color", true);
+   // set default status line
+   char *s_status_offline = tui_colorize_string("{bright-black}[{red}OFFLINE{bright-black}]{reset}");
+   snprintf(status_line, STATUS_LEN, "%s", s_status_offline);
+   free(s_status_offline);
+   cfg_tui_colors = cfg_get_bool("tui.use-color", true);
 
    // set up windowing
    tui_window_init();

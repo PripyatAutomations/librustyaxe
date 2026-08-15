@@ -18,7 +18,7 @@ typedef struct tui_theme_data {
    ansi_entry_t *ansi_entry;
 } tui_theme_data_t;
 
-extern bool tui_colors;
+extern bool cfg_tui_colors;
 
 // Convert tui color escapes {color} to ANSI sequences -- MUST BE FREED!
 extern char *tui_colorize_string(const char *input);
