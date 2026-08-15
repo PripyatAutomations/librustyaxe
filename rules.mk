@@ -46,7 +46,7 @@ extra_clean += ${real_librustyaxe_objs} ${librustyaxe}
 
 libs += ${librustyaxe}
 
-${librustyaxe_src}: GNUmakefile ${librustyaxe_headers}
+${librustyaxe_src}: GNUmakefile ${librustyaxe_headers} librustyaxe/rules.mk ${BUILD_DIR}/build_config.h
 
 ${BUILD_DIR}/librustyaxe/.timestamp:
 	mkdir -p ${BUILD_DIR}/librustyaxe

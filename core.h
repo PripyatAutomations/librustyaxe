@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <bsd/string.h>
+#include <sys/resource.h>
 #include "build_config.h"
 #if     defined(USE_MONGOOSE)
 #include <ext/libmongoose/mongoose.h>
