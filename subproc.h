@@ -9,7 +9,7 @@
 #define	_subproc_h
 #include <limits.h>
 #include <stdlib.h>
-#if     defined(USE_EV)
+#if     defined(USE_LIBEV)
 #include <ev.h>
 #endif
 #define	MAX_SUBPROC 128                  // i doubt we'll ever reach this
@@ -41,7 +41,7 @@ struct subproc {
    int _stdin[2];                        // stdin of process
    int _stdout[2];                       // stdout of process
    int _stderr[2];                       // stderr of process
-#if     defined(USE_EV)
+#if     defined(USE_LIBEV)
    ev_child watcher;     // ev_child watcher for process
    ev_io stdin_watcher;
    ev_io stdout_watcher;

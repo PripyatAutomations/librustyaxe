@@ -24,12 +24,12 @@ int daemonize(void) {
 
    if (pidfile == NULL) {
       Log(LOG_CRIT, "daemon", "no pidfile specified in path.pid-file");
-      exit(255);
+      exit(EXIT_FAILURE);
    }
 
    if (stat(pidfile, &sb) == 0) {
       Log(LOG_CRIT, "daemon", "pidfile %s already exists, bailing!", pidfile);
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    bool daemonize = cfg_get_bool("core.daemonize", false);
 

@@ -213,7 +213,7 @@ dict *cfg_load(const char *path) {
 
    if (!newcfg) {
       fprintf(stderr, "OOM in cfg_load?!\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    FILE *fp = fopen(path, "r");
 

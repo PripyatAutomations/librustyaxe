@@ -41,6 +41,8 @@
 #define	AUTOJOIN_LEN 1024        // auto-join channels
 #define	USER_HASHSZ 127 // prime number
 
+#include <ev.h>
+
 typedef struct rrconn rrconn_t;
 typedef struct irc_command irc_command_t;
 

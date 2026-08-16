@@ -142,7 +142,7 @@ uint32_t eeprom_init(void) {
       // Deal with failed mmap here
       Log( LOG_CRIT, "eeprom", "EEPROM mount failed: %d:%s!", errno, strerror(errno) );
 #if     defined(HOST_POSIX)
-      exit(1);
+      exit(EXIT_FAILURE);
 #endif
    }
    eeprom_ready = 1;
@@ -271,7 +271,7 @@ bool eeprom_validate_checksum(void) {
       eeprom_ready = -1;
       eeprom_corrupted = 1;
 #if     defined(HOST_POSIX)
-      exit(1);
+      exit(EXIT_FAILURE);
 #endif
 
       return true;
@@ -367,7 +367,7 @@ uint32_t eeprom_load_config(void) {
             Log(LOG_CRIT, "eeprom", "unhandled type %d while parsing eeprom layout", eeprom_layout[i].type);
             Log(LOG_CRIT, "eeprom", "Please ensure eeprom is built for current fw ver!");
 #if     defined(HOST_POSIX)
-            exit(1);
+            exit(EXIT_FAILURE);
 #else
             abort();
 #endif
