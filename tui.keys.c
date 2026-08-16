@@ -86,7 +86,7 @@ int handle_pgup(int count, int key) {
    if (!w) {
       return 0;
    }
-   int page = tui_rows() - 4;  // screen minus status+input
+   int page = tui_rows() - 3;  // screen minus status+input
 
    if (page < 1) {
       page = 1;
@@ -109,7 +109,7 @@ int handle_pgdn(int count, int key) {
    if (!w) {
       return 0;
    }
-   int page = tui_rows() - 4;
+   int page = tui_rows() - 3;
 
    if (page < 1) {
       page = 1;
