@@ -7,7 +7,9 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 //
-// Socket backend for io subsys
+// Generic multi-screen ('windows') text user interface stuff
+//
+// XXX: Need to remove rrclient-specific crap from here asap
 //
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +26,9 @@
 static tui_window_t *tui_windows[TUI_MAX_WINDOWS];
 static int tui_active_win = 0;
 static int tui_num_windows = 0;
+
+// XXX: remove this! it goes in rrclient NOT here
+int ws_connected = 0;
 
 ////////////////
 // Public API //
@@ -178,6 +183,7 @@ const char *tui_window_get_active_title(void) {
    return w ? w->title : NULL;
 }
 
+
 tui_window_t *tui_window_focus(const char *title) {
    if (!title) {
       return NULL;
@@ -206,9 +212,22 @@ tui_window_t *tui_window_focus(const char *title) {
          if (tw->title[0] == '&' || tw->title[0] == '#') {
             win_color = "{bright-magenta}";
          }
-         tui_update_status(tui_active_window(),
-            "{bright-black}[{bright-green}online{bright-black}] [{green}%s{bright-black}] [%s%s{bright-black}]{reset}",
-            network, win_color, tw->title);
+         char connected_status[32];
+         memset(connected_status, 0, sizeof(connected_status));
+         if (ws_connected == 1) {
+            snprintf(connected_status, sizeof(connected_status),
+                "{bright-green}ONLINE{reset}");
+         } else if (ws_connected == 0) {
+            snprintf(connected_status, sizeof(connected_status),
+                "{bright-red}offline{reset}");
+         } else if (ws_connected == -1) {
+            snprintf(connected_status, sizeof(connected_status),
+                "{bright-yellow}trying{reset}");
+         }
+         tui_update_status(tw,
+             "{bright-black}[%s{bright-black}] [{green}%s{bright-black}] [%s%s{bright-black}]{reset}",
+             connected_status, network, win_color, tw->title);
+
          tui_update_input_line();
 
          return tui_windows[i];

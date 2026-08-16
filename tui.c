@@ -7,7 +7,9 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 //
-// Socket backend for io subsys
+// Generic multi-screen ('windows') text user interface stuff
+//
+// XXX: Need to remove rrclient-specific crap from here asap
 //
 #include <stdio.h>
 #include <stdlib.h>
@@ -85,6 +87,7 @@ int tui_cols(void) {
 extern void tui_keys_init(struct ev_loop *loop);         // tui.keys.c
 
 char *s_status_offline = NULL;
+
 bool tui_init(void) {
    update_term_size();
 
