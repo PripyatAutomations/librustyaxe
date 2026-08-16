@@ -3,42 +3,42 @@
 
 // XXX:ASAP Move these to build time config file
 // Maximum number of subscribed channels for users
-#define MAX_RX_CHANNELS 64        // User RX channels
-#define MAX_TX_CHANNELS 16        // User TX channels
+#define	MAX_RX_CHANNELS 64       // User RX channels
+#define	MAX_TX_CHANNELS 16       // User TX channels
 
 // HTTP Basic-auth user
-#define	HTTP_MAX_USERS 64                 // How many users are allowed in
-                                           // http.users?
-#define	HTTP_USER_LEN 16                  // username length (16 char)
-#define	HTTP_PASS_LEN 40                  // sha1: 40, sha256: 64
-#define	HTTP_HASH_LEN 40                  // sha1
-#define	HTTP_TOKEN_LEN 14                 // session-id / nonce length,
-                                           // longer moar secure
-#define	HTTP_UA_LEN 512                   // allow 128 bytes
-#define	USER_PRIV_LEN 100                 // privileges list
-#define	USER_EMAIL_LEN 128                // email address
+#define	HTTP_MAX_USERS 64                // How many users are allowed in
+                                          // http.users?
+#define	HTTP_USER_LEN 16                 // username length (16 char)
+#define	HTTP_PASS_LEN 40                 // sha1: 40, sha256: 64
+#define	HTTP_HASH_LEN 40                 // sha1
+#define	HTTP_TOKEN_LEN 14                // session-id / nonce length,
+                                          // longer moar secure
+#define	HTTP_UA_LEN 512                  // allow 128 bytes
+#define	USER_PRIV_LEN 100                // privileges list
+#define	USER_EMAIL_LEN 128               // email address
 
-#define HTTP_MAX_SESSIONS 32              // max sessions total
-#define	HTTP_MAX_ELMERS 8                 // how many elmers can accept
-                                           // elevate request from the
-                                           // user?
-#define HTTP_MAX_NOOBS 8                  // how many noobs can an elmer
-#define HTTP_MAX_USERS 64                 // How many users are allowed in
-#define HTTP_MAX_ROUTES 64
- 
-#define	LOGINLEN 240              // an email address
-#define	IRC_MSGLEN 1024           // extended for IRCv3
-#define	CHANLEN 64                // channel name length
-#define	NICKLEN 40                // nick name length
+#define	HTTP_MAX_SESSIONS 32             // max sessions total
+#define	HTTP_MAX_ELMERS 8                // how many elmers can accept
+                                          // elevate request from the
+                                          // user?
+#define	HTTP_MAX_NOOBS 8                 // how many noobs can an elmer
+#define	HTTP_MAX_USERS 64                // How many users are allowed in
+#define	HTTP_MAX_ROUTES 64
+
+#define	LOGINLEN 240             // an email address
+#define	IRC_MSGLEN 1024          // extended for IRCv3
+#define	CHANLEN 64               // channel name length
+#define	NICKLEN 40               // nick name length
 #define	TOPICLEN 256
 #define	PASSLEN 128
 #define	USERLEN 16
 #define	HOSTLEN 256
 #define	NETLEN 64
-#define	RECVQLEN 16384            // read, but unprocessed data from the
-                                   // server
-#define	SENDQLEN 16384            // data waiting to be sent to the server
-#define	AUTOJOIN_LEN 1024         // auto-join channels
+#define	RECVQLEN 16384           // read, but unprocessed data from the
+                                  // server
+#define	SENDQLEN 16384           // data waiting to be sent to the server
+#define	AUTOJOIN_LEN 1024        // auto-join channels
 #define	USER_HASHSZ 127 // prime number
 
 typedef struct rrconn rrconn_t;
@@ -222,12 +222,12 @@ struct rrconn {
    // with elmer/noob system
    union {
       rrconn_t *elmers[HTTP_MAX_ELMERS];       // pointer(s) to elmers
-                                                         // who have accepted to
-                                                         // babysit user (if
-                                                         // noob)
+      // who have accepted to
+      // babysit user (if
+      // noob)
       rrconn_t *noobs[HTTP_MAX_NOOBS];         // pointer(s) to noobs
-                                                         // this user is
-                                                         // babysitting
+      // this user is
+      // babysitting
    } en_data;
    rrconn_t *next;     // pointer to next client in list
    server_cfg_t *server;                        // server config data (if a client)

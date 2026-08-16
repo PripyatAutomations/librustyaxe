@@ -86,7 +86,7 @@ static void register_ss3kpalt(TermKeyType type, TermKeySym sym, unsigned char cm
 
 static struct keyinfo csifuncs[35];  /* This value must be increased if more CSI function
                                       * keys are added */
-#define	NCSIFUNCS (sizeof(csifuncs) / sizeof(csifuncs[0]) )
+#define	NCSIFUNCS ( sizeof(csifuncs) / sizeof(csifuncs[0]) )
 
 static TermKeyResult handle_csifunc(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
 {
@@ -533,7 +533,7 @@ static int register_keys(void)
 static void *new_driver(TermKey *tk, const char *term)
 {
    if (!keyinfo_initialised) {
-      if (!register_keys() ) {
+      if ( !register_keys() ) {
          return NULL;
       }
    }
@@ -752,13 +752,13 @@ static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force
    }
    TermKeyCsi *csi = info;
 
-   switch (CHARAT(0) ) {
+   switch ( CHARAT(0) ) {
       case 0x1b: {
          if (tk->buffcount < 2) {
             return TERMKEY_RES_NONE;
          }
 
-         switch (CHARAT(1) ) {
+         switch ( CHARAT(1) ) {
             case 0x4f: {
                // ESC-prefixed SS3
 

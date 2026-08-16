@@ -62,7 +62,7 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
 
 //      Log(LOG_CRAZY, "config", "cfg_set_defaults: |%s| => |%s|",
 // defaults[i].key, defaults[i].val);
-      if (cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
+      if ( cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
          Log(LOG_WARN, "config", "cfg_set_defaults: Failed to set key: |%s|", defaults[i].key);
          warnings++;
       }
@@ -84,11 +84,11 @@ bool cfg_detect_and_load(const char *configs[], int num_configs) {
    }
 
    if (fullpath) {
-      if ( (config_file = strdup(fullpath) ) == NULL) {
+      if ( ( config_file = strdup(fullpath) ) == NULL ) {
          abort();
       }
 
-      if (!(cfg = cfg_load(fullpath) ) ) {
+      if ( !( cfg = cfg_load(fullpath) ) ) {
          Log(LOG_CRIT, "core", "Couldn't load config \"%s\", using defaults instead", fullpath);
       } else {
          Log(LOG_DEBUG, "config", "Loaded config from '%s'", fullpath);
@@ -123,13 +123,13 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    }
 
    if (path) {
-      if ( (new_cb->path = strdup(path) ) == NULL) {
+      if ( ( new_cb->path = strdup(path) ) == NULL ) {
          abort();
       }
    }
 
    if (section) {
-      if ( (new_cb->section = strdup(section) ) == NULL) {
+      if ( ( new_cb->section = strdup(section) ) == NULL ) {
          abort();
       }
    }
@@ -169,7 +169,7 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    int i = 0;
    while (cbp && i < CONFIG_MAX_CALLBACKS) {
       if (cbp->section && fnmatch(cbp->section, section, 0) == 0) {
-         if (!cbp->path || (fnmatch(cbp->path, path, 0) == 0) ) {
+         if ( !cbp->path || (fnmatch(cbp->path, path, 0) == 0) ) {
             Log(LOG_DEBUG, "config",
                "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)", cbp->callback,
                section, cbp->section, path, cbp->path);
@@ -204,7 +204,7 @@ dict *cfg_load(const char *path) {
 
    memset( this_section, 0, sizeof(this_section) );
 
-   if (!file_exists(path) ) {
+   if ( !file_exists(path) ) {
       fprintf(stderr, "Can't find config file %s\n", path);
 
       return NULL;
@@ -229,7 +229,7 @@ dict *cfg_load(const char *path) {
    do{
       memset( buf, 0, sizeof(buf) );
 
-      if (!fgets(buf, sizeof(buf) - 1, fp) ) {
+      if ( !fgets(buf, sizeof(buf) - 1, fp) ) {
          fclose(fp);
          fp = NULL;
          break;
@@ -243,21 +243,21 @@ dict *cfg_load(const char *path) {
       }
       // trim trailing newlines and whitespace
       end = buf + strlen(buf) - 1;
-      while (end >= buf && (*end == '\r' || *end == '\n' || *end == ' ' || *end == '\t') ) {
+      while ( end >= buf && (*end == '\r' || *end == '\n' || *end == ' ' || *end == '\t') ) {
          *end-- = '\0';
       }
 
-      if ( (end - skip) < 0) {
+      if ( (end - skip) < 0 ) {
          continue;
       }
       // Handle line continuations
       while (1) {
          // Trim trailing newlines / carriage returns
-         while (end >= buf && (*end == '\r' || *end == '\n') ) {
+         while ( end >= buf && (*end == '\r' || *end == '\n') ) {
             *end-- = '\0';
          }
          // Trim trailing spaces/tabs before checking for '\'
-         while (end >= buf && (*end == ' ' || *end == '\t') ) {
+         while ( end >= buf && (*end == ' ' || *end == '\t') ) {
             *end-- = '\0';
          }
 
@@ -273,13 +273,13 @@ dict *cfg_load(const char *path) {
          end--;
 
          // Also remove trailing spaces before backslash if any remain
-         while (end >= buf && (*end == ' ' || *end == '\t') ) {
+         while ( end >= buf && (*end == ' ' || *end == '\t') ) {
             *end-- = '\0';
          }
          // Read continuation line
          char contbuf[sizeof(buf)];
 
-         if (!fgets(contbuf, sizeof(contbuf), fp) ) {
+         if ( !fgets(contbuf, sizeof(contbuf), fp) ) {
             break;   // EOF or error
          }
          line++;
@@ -291,7 +291,7 @@ dict *cfg_load(const char *path) {
          }
          // Trim trailing whitespace/newlines on continuation line
          char *e2 = cont + strlen(cont) - 1;
-         while (e2 >= cont && (*e2 == '\r' || *e2 == '\n' || *e2 == ' ' || *e2 == '\t') ) {
+         while ( e2 >= cont && (*e2 == '\r' || *e2 == '\n' || *e2 == ' ' || *e2 == '\t') ) {
             *e2-- = '\0';
          }
 
@@ -317,7 +317,7 @@ dict *cfg_load(const char *path) {
          continue;
       } else if (in_comment) {
          continue;
-      } else if ( (*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';') {
+      } else if ( (*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';' ) {
          continue;
       } else if (*skip == '[' && *end == ']') {
          size_t section_len = sizeof(this_section);
@@ -352,7 +352,7 @@ dict *cfg_load(const char *path) {
             continue;
          }
          char *key_end = key + strlen(key) - 1;
-         while (key_end >= key && (*key_end == ' ' || *key_end == '\t') ) {
+         while ( key_end >= key && (*key_end == ' ' || *key_end == '\t') ) {
             *key_end-- = '\0';
          }
 
@@ -379,12 +379,12 @@ dict *cfg_load(const char *path) {
          } else {
             Log(LOG_WARN, "config", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
-      } else if (cfg_dispatch_callback(path, line, this_section, buf) ) {
+      } else if ( cfg_dispatch_callback(path, line, this_section, buf) ) {
          Log(LOG_WARN, "config", "Unknown configuration section |%s| parsing |%s| at %s:%d", this_section, buf, path,
             line);
          errors++;
       }
-   } while (!feof(fp) );
+   } while ( !feof(fp) );
 
    if (errors > 0) {
       Log(LOG_INFO, "config", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
@@ -451,7 +451,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
    int rank = 0;
    dict *seen = dict_new();
 
-   while ( (rank = dict_enumerate(d, rank, &key, &val) ) >= 0) {
+   while ( ( rank = dict_enumerate(d, rank, &key, &val) ) >= 0 ) {
       if (strncmp(key, "server:", 7) != 0) {
          continue;
       }
@@ -464,13 +464,13 @@ static void cfg_print_servers(dict *d, FILE *fp) {
       size_t name_len = dot - name_start;
       char name[64];
 
-      if (name_len >= sizeof(name) ) {
+      if ( name_len >= sizeof(name) ) {
          continue;
       }
       strlcpy(name, name_start, name_len);
       name[name_len] = '\0';
 
-      if (dict_get(seen, name, NULL) ) {
+      if ( dict_get(seen, name, NULL) ) {
          continue;
       }
       dict_add(seen, name, (char *)"1");
@@ -480,7 +480,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
       int inner_rank = 0;
       const char *inner_key;
       char *inner_val;
-      while ( (inner_rank = dict_enumerate(d, inner_rank, &inner_key, &inner_val) ) >= 0) {
+      while ( ( inner_rank = dict_enumerate(d, inner_rank, &inner_key, &inner_val) ) >= 0 ) {
          if (strncmp(inner_key, "server:", 7) == 0) {
             const char *inner_name = inner_key + 7;
 
@@ -512,7 +512,7 @@ bool cfg_save(dict *d, const char *path) {
    int rank = 0;
    const char *key;
    char *val;
-   while ( (rank = dict_enumerate(merged, rank, &key, &val) ) >= 0) {
+   while ( ( rank = dict_enumerate(merged, rank, &key, &val) ) >= 0 ) {
       if (strncmp(key, "server:", 7) == 0) {
          continue;
       }
@@ -558,7 +558,7 @@ if (homedir && empty_config) {
    snprintf(pathbuf, sizeof(pathbuf), "%s/.config/rrgtk.cfg", homedir);
 #endif
 
-   if (!file_exists(pathbuf) ) {
+   if ( !file_exists(pathbuf) ) {
       Log(LOG_CRIT, "main", "Saving default config to %s since it doesn't exist", pathbuf);
       cfg_save(cfg, pathbuf);
       config_file = pathbuf;
@@ -585,13 +585,13 @@ reload_event_t *reload_event_add(const char *key, bool (*callback) (), const cha
    }
    memset( r, 0, sizeof(reload_event_t) );
 
-   if ( (r->key = strdup(key) ) == NULL) {
+   if ( ( r->key = strdup(key) ) == NULL ) {
       abort();
    }
    r->callback = callback;
 
    if (note) {
-      if ( (r->note = strdup(note) ) == NULL) {
+      if ( ( r->note = strdup(note) ) == NULL ) {
          abort();
       }
    }

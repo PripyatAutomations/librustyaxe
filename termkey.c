@@ -15,9 +15,9 @@
 #include <librustyaxe/termkey-internal.h>
 
 #ifdef _MSC_VER
-#define	                  strcaseeq(a, b) (_stricmp(a, b) == 0)
+#define	                 strcaseeq(a, b) (_stricmp(a, b) == 0)
 #else
-#define	                  strcaseeq(a, b) (strcasecmp(a, b) == 0)
+#define	                 strcaseeq(a, b) (strcasecmp(a, b) == 0)
 #endif
 
 void termkey_check_version(int major, int minor)
@@ -557,16 +557,16 @@ TermKey *termkey_new(int fd, int flags)
    }
    tk->fd = fd;
 
-   if (!(flags & (TERMKEY_FLAG_RAW | TERMKEY_FLAG_UTF8) ) ) {
+   if ( !( flags & (TERMKEY_FLAG_RAW | TERMKEY_FLAG_UTF8) ) ) {
       char *e;
 
       /* Most OSes will set .UTF-8. Some will set .utf8. Try to be fairly generous in
        * parsing these
        */
-      if ( ( (e = getenv("LANG") ) || (e = getenv("LC_MESSAGES") ) ||
-             (e = getenv("LC_ALL") ) ) &&
-           (e = strchr(e, '.') ) && e++ &&
-           (strcaseeq(e, "UTF-8") || strcaseeq(e, "UTF8") ) ) {
+      if ( ( ( e = getenv("LANG") ) || ( e = getenv("LC_MESSAGES") ) ||
+             ( e = getenv("LC_ALL") ) ) &&
+           ( e = strchr(e, '.') ) && e++ &&
+           ( strcaseeq(e, "UTF-8") || strcaseeq(e, "UTF8") ) ) {
          flags |= TERMKEY_FLAG_UTF8;
       } else {
          flags |= TERMKEY_FLAG_RAW;
@@ -576,11 +576,11 @@ TermKey *termkey_new(int fd, int flags)
 
    const char *term = getenv("TERM");
 
-   if (!termkey_init(tk, term) ) {
+   if ( !termkey_init(tk, term) ) {
       goto abort;
    }
 
-   if (!(flags & TERMKEY_FLAG_NOSTART) && !termkey_start(tk) ) {
+   if ( !(flags & TERMKEY_FLAG_NOSTART) && !termkey_start(tk) ) {
       goto abort;
    }
 
@@ -603,13 +603,13 @@ TermKey *termkey_new_abstract(const char *term, int flags)
 
    termkey_set_flags(tk, flags);
 
-   if (!termkey_init(tk, term) ) {
+   if ( !termkey_init(tk, term) ) {
       free(tk);
 
       return NULL;
    }
 
-   if (!(flags & TERMKEY_FLAG_NOSTART) && !termkey_start(tk) ) {
+   if ( !(flags & TERMKEY_FLAG_NOSTART) && !termkey_start(tk) ) {
       goto abort;
    }
 
@@ -659,7 +659,7 @@ int termkey_start(TermKey *tk)
    }
 #ifdef HAVE_TERMIOS
 
-   if (tk->fd != -1 && !(tk->flags & TERMKEY_FLAG_NOTERMIOS) ) {
+   if ( tk->fd != -1 && !(tk->flags & TERMKEY_FLAG_NOTERMIOS) ) {
       struct termios termios;
 
       if (tcgetattr(tk->fd, &termios) == 0) {
@@ -699,7 +699,7 @@ int termkey_start(TermKey *tk)
 
    for (p = tk->drivers ; p ; p = p->next) {
       if (p->driver->start_driver) {
-         if (!(*p->driver->start_driver) (tk, p->info) ) {
+         if ( !(*p->driver->start_driver) (tk, p->info) ) {
             return 0;
          }
       }
@@ -950,14 +950,14 @@ static TermKeyResult parse_utf8(const unsigned char *bytes, size_t len, long *cp
    }
 
    // Check for overlong sequences
-   if (nbytes > utf8_seqlen(*cp) ) {
+   if ( nbytes > utf8_seqlen(*cp) ) {
       *cp = UTF8_INVALID;
    }
 
    // Check for UTF-16 surrogates or invalid *cps
    if ( (*cp >= 0xD800 && *cp <= 0xDFFF) ||
         *cp == 0xFFFE ||
-        *cp == 0xFFFF) {
+        *cp == 0xFFFF ) {
       *cp = UTF8_INVALID;
    }
    *nbytep = nbytes;
@@ -1000,7 +1000,7 @@ static void emit_codepoint(TermKey *tk, long codepoint, TermKeyKey *key)
       } else {
          key->type = TERMKEY_TYPE_KEYSYM;
       }
-   } else if (codepoint == 0x7f && !(tk->flags & TERMKEY_FLAG_NOINTERPRET) ) {
+   } else if ( codepoint == 0x7f && !(tk->flags & TERMKEY_FLAG_NOINTERPRET) ) {
       // ASCII DEL
       key->type = TERMKEY_TYPE_KEYSYM;
       key->code.sym = TERMKEY_SYM_DEL;
@@ -1312,14 +1312,14 @@ retry:
             int pollret = poll(&fd, 1, tk->waittime);
 
             if (pollret == -1) {
-               if (errno == EINTR && !(tk->flags & TERMKEY_FLAG_EINTR) ) {
+               if ( errno == EINTR && !(tk->flags & TERMKEY_FLAG_EINTR) ) {
                   goto retry;
                }
 
                return TERMKEY_RES_ERROR;
             }
 
-            if (fd.revents & (POLLIN | POLLHUP | POLLERR) ) {
+            if ( fd.revents & (POLLIN | POLLHUP | POLLERR) ) {
                ret = termkey_advisereadable(tk);
             } else {
                ret = TERMKEY_RES_NONE;
@@ -1367,7 +1367,7 @@ retry:
    if (len == -1) {
       if (errno == EAGAIN) {
          return TERMKEY_RES_NONE;
-      } else if (errno == EINTR && !(tk->flags & TERMKEY_FLAG_EINTR) ) {
+      } else if ( errno == EINTR && !(tk->flags & TERMKEY_FLAG_EINTR) ) {
          goto retry;
       } else {
          return TERMKEY_RES_ERROR;
@@ -1730,7 +1730,7 @@ const char *termkey_strpkey(TermKey *tk, const char *str, TermKeyKey *key, TermK
 
    key->modifiers = 0;
 
-   if ( (format & TERMKEY_FORMAT_CARETCTRL) && str[0] == '^' && str[1]) {
+   if ( (format & TERMKEY_FORMAT_CARETCTRL) && str[0] == '^' && str[1] ) {
       str = termkey_strpkey(tk, str + 1, key, format & ~TERMKEY_FORMAT_CARETCTRL);
 
       if (!str ||
@@ -1750,7 +1750,7 @@ const char *termkey_strpkey(TermKey *tk, const char *str, TermKeyKey *key, TermK
    }
    const char *sep_at;
 
-   while ( (sep_at = strchr(str, (format & TERMKEY_FORMAT_SPACEMOD) ? ' ' : '-') ) ) {
+   while ( ( sep_at = strchr(str, (format & TERMKEY_FORMAT_SPACEMOD) ? ' ' : '-') ) ) {
       size_t n = sep_at - str;
 
       if (n == strlen(mods->alt) && strncmp(mods->alt, str, n) == 0) {
@@ -1770,7 +1770,7 @@ const char *termkey_strpkey(TermKey *tk, const char *str, TermKeyKey *key, TermK
    int button;
    char event_name[32];
 
-   if ( (endstr = termkey_lookup_keyname_format(tk, str, &key->code.sym, format) ) ) {
+   if ( ( endstr = termkey_lookup_keyname_format(tk, str, &key->code.sym, format) ) ) {
       key->type = TERMKEY_TYPE_KEYSYM;
       str = endstr;
    } else if (sscanf(str, "F%d%zn", &key->code.number, &snbytes) == 1) {
@@ -1814,7 +1814,7 @@ const char *termkey_strpkey(TermKey *tk, const char *str, TermKeyKey *key, TermK
 
       unsigned int line = 0, col = 0;
 
-      if ( (format & TERMKEY_FORMAT_MOUSE_POS) && sscanf(str, " @ (%u,%u)%zn", &col, &line, &snbytes) == 2) {
+      if ( (format & TERMKEY_FORMAT_MOUSE_POS) && sscanf(str, " @ (%u,%u)%zn", &col, &line, &snbytes) == 2 ) {
          str += snbytes;
       }
       termkey_key_set_linecol(key, col, line);

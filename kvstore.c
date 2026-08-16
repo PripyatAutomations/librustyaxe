@@ -10,7 +10,7 @@
 
 // ---------------- helpers ----------------
 static uint16_t prefix_index_key(const char *key) {
-   return ( (uint8_t)key[0] << 8) | (uint8_t)key[1];
+   return ( (uint8_t)key[0] << 8 ) | (uint8_t)key[1];
 }
 
 static int kv_array_bsearch(kv_node_t **arr, size_t count, const char *key) {
@@ -331,7 +331,7 @@ kv_store_t *kv_create_and_load(kv_type_t type, size_t prefix_size, ...) {
 
    const char *key;
 
-   while ( (key = va_arg(ap, const char*) ) != NULL) {
+   while ( ( key = va_arg(ap, const char*) ) != NULL ) {
       void *val = va_arg(ap, void*);
 
       if (!val) {

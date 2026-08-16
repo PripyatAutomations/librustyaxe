@@ -93,11 +93,11 @@ struct TermKey {
 static inline void termkey_key_get_linecol(const TermKeyKey *key, int *line, int *col)
 {
    if (col) {
-      *col = (unsigned char)key->code.mouse[1] | ( (unsigned char)key->code.mouse[3] & 0x0f) << 8;
+      *col = (unsigned char)key->code.mouse[1] | ( (unsigned char)key->code.mouse[3] & 0x0f ) << 8;
    }
 
    if (line) {
-      *line = (unsigned char)key->code.mouse[2] | ( (unsigned char)key->code.mouse[3] & 0x70) <<
+      *line = (unsigned char)key->code.mouse[2] | ( (unsigned char)key->code.mouse[3] & 0x70 ) <<
               4;
    }
 }

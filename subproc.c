@@ -101,7 +101,7 @@ bool subproc_start(int slot) {
       return false;
    }
 
-   if ( (p = children[slot]) == NULL) {
+   if ( (p = children[slot]) == NULL ) {
       log_send(mainlog, LOG_CRIT, "subproc_start %d failed: no such subprocess in table main");
 
       return false;
@@ -204,7 +204,7 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
    // figure out our subprocess slot...
    int myslot = -1;
 
-   if ( (sp = malloc( sizeof(subproc_t) ) ) == NULL) {
+   if ( ( sp = malloc( sizeof(subproc_t) ) ) == NULL ) {
       fprintf(stderr, "subproc_create: out of memory!\n");
       exit(ENOMEM);
    }
@@ -463,7 +463,7 @@ int subproc_check_all(void) {
       }
 
       // schedule 3-15 seconds in the future, if not already set...
-      if (!dying && sp->needs_restarted && (sp->restart_time == 0) ) {
+      if ( !dying && sp->needs_restarted && (sp->restart_time == 0) ) {
          sp->restart_time = get_random_interval(3, 15) + now;
          log_send( mainlog, LOG_CRIT, "subprocess %d (%s) exited, registering it for restart in %lu seconds", i,
             sp->name, (sp->restart_time - now) );

@@ -23,7 +23,7 @@
 #define	DICT_MIN_SZ 8
 
 /** Dummy pointer to reference deleted keys */
-#define	DUMMY_PTR ( (void*)-1)
+#define	DUMMY_PTR ( (void*)-1 )
 /** Used to hash further when handling collisions */
 #define	PERTURB_SHIFT 5
 /** Beyond this size, a dictionary will not be grown by the same factor */
@@ -139,7 +139,7 @@ static keypair *dict_lookup(dict *d, const char *key, unsigned hash) {
    if (ep->key == DUMMY_PTR) {
       freeslot = ep;
    } else {
-      if (ep->hash == hash && !strcmp(key, ep->key) ) {
+      if ( ep->hash == hash && !strcmp(key, ep->key) ) {
          return ep;
       }
       freeslot = NULL;
@@ -154,7 +154,7 @@ static keypair *dict_lookup(dict *d, const char *key, unsigned hash) {
          return freeslot == NULL ? ep : freeslot;
       }
 
-      if ( (ep->key == key) || (ep->hash == hash && ep->key != DUMMY_PTR && !strcmp(ep->key, key) ) ) {
+      if ( (ep->key == key) || ( ep->hash == hash && ep->key != DUMMY_PTR && !strcmp(ep->key, key) ) ) {
          return ep;
       }
 
@@ -215,12 +215,12 @@ int dict_add(dict *d, const char *key, char *val) {
    if (slot) {
       slot->key = strdup(key);
 
-      if (!(slot->key) ) {
+      if ( !(slot->key) ) {
          return -1;
       }
       slot->val.s = val ? strdup(val) : val;
 
-      if (val && !(slot->val.s) ) {
+      if ( val && !(slot->val.s) ) {
          free( (char *)slot->key );
 
          return -1;
@@ -253,7 +253,7 @@ static int dict_resize(dict *d) {
     * bigger ones only 2 times
     */
    factor = (d->size > DICT_BIGSZ) ? 2 : 4;
-   while (newsize <= (factor * d->used) ) {
+   while ( newsize <= (factor * d->used) ) {
       newsize *= 2;
    }
 
@@ -268,7 +268,7 @@ static int dict_resize(dict *d) {
    oldtable = d->table;
    d->table = calloc( newsize, sizeof(keypair) );
 
-   if (!(d->table) ) {
+   if ( !(d->table) ) {
       /* Memory allocation failure */
       return -1;
    }
@@ -278,7 +278,7 @@ static int dict_resize(dict *d) {
    d->fill = 0;
 
    for (i = 0 ; i < oldsize ; i++) {
-      if (oldtable[i].key && (oldtable[i].key != DUMMY_PTR) ) {
+      if ( oldtable[i].key && (oldtable[i].key != DUMMY_PTR) ) {
          dict_add_p(d, oldtable[i].key, oldtable[i].val.s);
       }
    }
@@ -378,7 +378,7 @@ int dict_del(dict *d, const char *key) {
 
 /** Public: enumerate a dictionary */
 int dict_enumerate(dict *d, int rank, const char **key, char **val) {
-   if (!d || !key || !val || (rank < 0) ) {
+   if ( !d || !key || !val || (rank < 0) ) {
       return -1;
    }
    while ( (d->table[rank].key == NULL || d->table[rank].key == DUMMY_PTR) && (rank < d->size) ) {
@@ -498,7 +498,7 @@ time_t dict_get_time_t(dict *d, const char *key, time_t def) {
       long long val = strtoll(s, &ep, 10);
 
       // Skip trailing whitespace
-      while (*ep && isspace( (unsigned char)*ep ) ) {
+      while ( *ep && isspace( (unsigned char)*ep ) ) {
          ep++;
       }
 
@@ -628,7 +628,7 @@ const char *dict_get_exp(dict *d, const char *key) {
                size_t klen = end - (src + 2);
                char keybuf[256];
 
-               if (klen >= sizeof(keybuf) ) {
+               if ( klen >= sizeof(keybuf) ) {
                   klen = sizeof(keybuf) - 1;
                }
                memcpy(keybuf, src + 2, klen);
@@ -639,7 +639,7 @@ const char *dict_get_exp(dict *d, const char *key) {
                if (val) {
                   size_t vlen = strlen(val);
 
-                  if ( (dst - tmp) + vlen >= MAX_CFG_EXP_STRLEN - 1) {
+                  if ( (dst - tmp) + vlen >= MAX_CFG_EXP_STRLEN - 1 ) {
                      vlen = MAX_CFG_EXP_STRLEN - 1 - (dst - tmp);
                   }
                   memcpy(dst, val, vlen);
@@ -682,7 +682,7 @@ int dict_merge(dict *dst, dict *src) {
    int rank = 0;
    const char *key;
    char *val;
-   while ( (rank = dict_enumerate(src, rank, &key, &val) ) >= 0) {
+   while ( ( rank = dict_enumerate(src, rank, &key, &val) ) >= 0 ) {
       if (dict_add(dst, key, val) != 0) {
          continue;
       }
@@ -708,7 +708,7 @@ dict *dict_merge_new(dict *a, dict *b) {
    int rank = 0;
 
    // Copy from a
-   while ( (rank = dict_enumerate(a, rank, &key, &val) ) >= 0) {
+   while ( ( rank = dict_enumerate(a, rank, &key, &val) ) >= 0 ) {
       if (dict_add(merged, key, val) != 0) {
          Log(LOG_WARN, "dict", "dict_merge_new: Failed merging A for a:<%p>, b:<%p>", a, b);
          dict_free(merged);
@@ -718,7 +718,7 @@ dict *dict_merge_new(dict *a, dict *b) {
    }
    rank = 0;
    // Copy from b (overwriting a's entries if necessary)
-   while ( (rank = dict_enumerate(b, rank, &key, &val) ) >= 0) {
+   while ( ( rank = dict_enumerate(b, rank, &key, &val) ) >= 0 ) {
       if (dict_add(merged, key, val) != 0) {
          Log(LOG_WARN, "dict", "dict_merge_new: Failed merging B for a:<%p>, b:<%p>", a, b);
          dict_free(merged);

@@ -9,22 +9,19 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-#define EVENT_NOMATCH "NOMATCH"
+#define	EVENT_NOMATCH "NOMATCH"
 
 static kv_store_t *event_store = NULL;
 
-static void event_fire_list(kv_list_t *list, const char *event,
-      rrconn_t *cptr, const char *data) {
+static void event_fire_list(kv_list_t *list, const char *event, rrconn_t *cptr, const char *data) {
    if (!list) {
       return;
    }
 
    for (size_t i = 0 ; i < list->count ; i++) {
-      event_listener_t *l = ((void **)list->ptr)[i];
+      event_listener_t *l = ( (void **)list->ptr )[i];
 
-      Log(LOG_CRAZY, "event",
-         "Firing event %s from cptr:<%p> with data:<%p> user:%s",
-         event, cptr, data, l->user);
+      Log(LOG_CRAZY, "event", "Firing event %s from cptr:<%p> with data:<%p> user:%s", event, cptr, data, l->user);
 
       l->cb(event, data, cptr, l->user);
    }
@@ -70,7 +67,7 @@ void event_on(const char *event, event_cb_t cb, void *user) {
    if (!list->ptr) {
       abort();
    }
-   ( (void**)list->ptr)[list->count++] = l;
+   ( (void**)list->ptr )[list->count++] = l;
 }
 
 void event_emit(const char *event, rrconn_t *cptr, const char *data) {
@@ -90,18 +87,14 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
       kv_list_t *nomatch = kv_lookup(event_store, EVENT_NOMATCH);
 
       if (nomatch) {
-         Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match; firing NOMATCH",
-            event, cptr);
+         Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match; firing NOMATCH", event, cptr);
 
          event_fire_list(nomatch, event, cptr, data);
       } else {
-         Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|",
-            event, cptr, data);
+         Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|", event, cptr, data);
       }
    } else {
-      Log(LOG_CRAZY, "event",
-         "Event %s from cptr:<%p> hit %d times",
-         event, cptr, evt_hits);
+      Log(LOG_CRAZY, "event", "Event %s from cptr:<%p> hit %d times", event, cptr, evt_hits);
    }
 }
 
@@ -130,11 +123,11 @@ void event_off(const char *event, event_cb_t cb, void *user) {
    }
 
    for (size_t i = 0 ; i < list->count ; ) {
-      event_listener_t *l = ( (void**)list->ptr)[i];
+      event_listener_t *l = ( (void**)list->ptr )[i];
 
       if ( (!cb || l->cb == cb) && (!user || l->user == user) ) {
          free(l);
-         memmove( &( (void**)list->ptr)[i], &( (void**)list->ptr)[i + 1], (list->count - i - 1) * sizeof(void*) );
+         memmove( &( (void**)list->ptr )[i], &( (void**)list->ptr )[i + 1], (list->count - i - 1) * sizeof(void*) );
          list->count--;
          continue;
       }

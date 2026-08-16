@@ -67,7 +67,7 @@ time_t dhms2time_t(const char *str) {
    }
    size_t len = strlen(str);
 
-   if ( (copy = malloc(len + 1) ) == NULL) {
+   if ( ( copy = malloc(len + 1) ) == NULL ) {
       fprintf(stderr, "+ERROR timestr2time_t: out of memory\n");
       exit(ENOMEM);
    }
