@@ -275,6 +275,7 @@ char *tui_colorize_string(const char *in) {
    return out;
 }
 
+// XXX: Add support for extended colors
 char *irc_to_tui_colors(const char *in) {
    if (!in) {
       return NULL;
