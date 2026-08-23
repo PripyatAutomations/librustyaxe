@@ -1,6 +1,7 @@
 ===============
 = librustyaxe =
 ===============
+* Finish implementing typed storage in dict.[ch] and json.[ch]
 * Finish theme support for TUI
 
 * rework Log() and tui_print_win() a little so there's a variant i can

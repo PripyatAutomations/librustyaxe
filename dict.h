@@ -128,7 +128,7 @@ extern void dict_free(dict *d);
  * it is overwritten and the previous associated data are freed.
  */
 /*--------------------------------------------------------------------------*/
-extern int dict_add(dict *d, const char *key, char *val);
+extern int dict_add(dict *d, const char *key, const char *val);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -213,5 +213,9 @@ extern dict *dict_merge_new(dict *a, dict *b);
 
 // XXX: Compare old and new configuration, yielding a dict with ONLY changes
 extern dict *dict_diff(dict *a, dict *b);
+extern int dict_add_bool(dict *d, const char *key, bool val);
+extern int dict_add_int(dict *d, const char *key, int val);
+extern int dict_add_ulong(dict *d, const char *key, ulong val);
+extern int dict_add_long(dict *d, const char *key, long val);
 
 #endif

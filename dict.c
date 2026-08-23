@@ -198,8 +198,9 @@ static int dict_add_p(dict *d, const char *key, char *val) {
    return 0;
 }
 
+
 /** Add an item to a dictionary by copying key/val into the dict. */
-int dict_add(dict *d, const char *key, char *val) {
+int dict_add(dict *d, const char *key, const char *val) {
    unsigned hash;
    keypair *slot;
 
@@ -218,6 +219,8 @@ int dict_add(dict *d, const char *key, char *val) {
       if ( !(slot->key) ) {
          return -1;
       }
+
+      // don't strdup a NULL value
       slot->val.s = val ? strdup(val) : val;
 
       if ( val && !(slot->val.s) ) {
@@ -238,6 +241,7 @@ int dict_add(dict *d, const char *key, char *val) {
 
    return 0;
 }
+
 
 /** Resize a dictionary */
 static int dict_resize(dict *d) {
@@ -727,4 +731,37 @@ dict *dict_merge_new(dict *a, dict *b) {
       }
    }
    return merged;
+}
+
+int dict_add_int(dict *d, const char *key, int val) {
+   char buf[128];
+   memset(buf, 0, sizeof(buf));
+   snprintf(buf, sizeof(buf), "%i", val);
+   return dict_add(d, key, buf);
+}
+
+int dict_add_bool(dict *d, const char *key, bool val) {
+   const char *s_yes = "yes";
+   const char *s_no = "no";
+
+   if (val) {
+      return dict_add(d, key, s_yes);
+   } else {
+      return dict_add(d, key, s_no);
+   }
+   return -1;
+}
+
+int dict_add_ulong(dict *d, const char *key, ulong val) {
+   char buf[128];
+   memset(buf, 0, sizeof(buf));
+   snprintf(buf, sizeof(buf), "%lu", val);
+   return dict_add(d, key, buf);
+}
+
+int dict_add_long(dict *d, const char *key, long val) {
+   char buf[128];
+   memset(buf, 0, sizeof(buf));
+   snprintf(buf, sizeof(buf), "%li", val);
+   return dict_add(d, key, buf);
 }
