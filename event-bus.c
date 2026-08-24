@@ -88,7 +88,11 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
       kv_list_t *nomatch = kv_lookup(event_store, EVENT_NOMATCH);
 
       if (nomatch) {
-         Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match; firing NOMATCH", event, cptr);
+         if (cptr && cptr->chatname) {
+            Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match; firing NOMATCH", event, cptr->chatname);
+         } else {
+            Log(LOG_DEBUG, "event", "Event %s didn't match; firing NOMATCH", event);
+         }
 
          event_fire_list(nomatch, event, cptr, data);
       } else {
