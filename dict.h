@@ -25,6 +25,9 @@
  * store all inserted key/value pairs. The implementation is very closely based on the
  * Python dictionary, without the associated Pythonisms and with specification on
  * string/string.
+ *
+ * This code has been heavily modified from Mr Devillard's implementation
+ * - Any bugs in it are probably not his.
  */
 /*--------------------------------------------------------------------------*/
 #ifndef _DICT_H_
@@ -41,22 +44,26 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
+#include <time.h>
 
 /*---------------------------------------------------------------------------
  *            Additional types
  *
  *
  * ---------------------------------------------------------------------------*/
-
 typedef enum {
    VAL_END = 0,
+   VAL_NULL,
    VAL_STR,
    VAL_INT,
+   VAL_UINT,
    VAL_LONG,
    VAL_ULONG,
+   VAL_LLONG,
+   VAL_ULLONG,
    VAL_FLOAT,
-   VAL_DOUBLE,
    VAL_BOOL,
+   VAL_DOUBLE,
    VAL_FLOATP,   // float with precision specified
    VAL_DOUBLEP,  // double with precision specified
    VAL_CHAR,     // a single character/byte (%c)
@@ -64,10 +71,13 @@ typedef enum {
 } val_type_t;
 
 typedef union {
-   char      *s;     // string
+   const char      *s;     // string
    int i;
+   unsigned int ui;
    long l;
    unsigned long ul;
+   long long ll;
+   unsigned long long ull;
    float f;
    double d;
    char c;           // single char/byte
@@ -103,7 +113,6 @@ typedef struct _dict_ {
  */
 /*--------------------------------------------------------------------------*/
 extern dict *dict_new(void);
-
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -192,17 +201,36 @@ extern int dict_enumerate(dict *d, int rank, const char **key, char **val);
 /*--------------------------------------------------------------------------*/
 extern void dict_dump(dict *d, FILE *out);
 
-// Wrappers
+// Retrieve values, converting types if needed
 extern int dict_get_int(dict *d, const char *key, int def);
 extern bool dict_get_bool(dict *d, const char *key, bool def);
 extern float dict_get_float(dict *d, const char *key, float def);
 extern double dict_get_double(dict *d, const char *key, double def);
 extern long dict_get_long(dict *d, const char *key, long def);
 extern long long dict_get_llong(dict *d, const char *key, long long def);
+extern unsigned long long dict_get_ullong(dict *d, const char *key, unsigned long long def);
+extern char dict_get_char(dict *d, const char *key, char def);
 extern unsigned int dict_get_uint(dict *d, const char *key, unsigned int def);
 extern time_t dict_get_time_t(dict *d, const char *key, time_t def);
-
+extern unsigned long dict_get_ulong(dict *d, const char *key, unsigned long def);
 extern const char *dict_get_exp(dict *d, const char *key);
+
+// Store values with their native types
+extern int dict_add_null(dict *d, const char *key);
+extern int dict_add_bool(dict *d, const char *key, bool val);
+extern int dict_add_char(dict *d, const char *key, char val);
+extern int dict_add_int(dict *d, const char *key, int val);
+extern int dict_add_uint(dict *d, const char *key, unsigned int val);
+extern int dict_add_ulong(dict *d, const char *key, unsigned long val);
+extern int dict_add_long(dict *d, const char *key, long val);
+extern int dict_add_llong(dict *d, const char *key, long long val);
+extern int dict_add_ullong(dict *d, const char *key, unsigned long long val);
+extern int dict_add_float(dict *d, const char *key, float val);
+extern int dict_add_double(dict *d, const char *key, double val);
+
+extern val_type_t dict_get_type(dict *d, const char *key);
+extern int dict_enumerate_typed(dict *d, int rank, const char **key,
+                                dict_value_t *val, val_type_t *type);
 
 // Merge two dicts into the first
 extern int dict_merge(dict *dst, dict *src);
@@ -211,11 +239,7 @@ extern int dict_merge(dict *dst, dict *src);
 // to dict_free() the result!
 extern dict *dict_merge_new(dict *a, dict *b);
 
-// XXX: Compare old and new configuration, yielding a dict with ONLY changes
+// XXX: Compare old and new configuration, yielding a dict with ONLY changes (NYI)
 extern dict *dict_diff(dict *a, dict *b);
-extern int dict_add_bool(dict *d, const char *key, bool val);
-extern int dict_add_int(dict *d, const char *key, int val);
-extern int dict_add_ulong(dict *d, const char *key, ulong val);
-extern int dict_add_long(dict *d, const char *key, long val);
 
 #endif

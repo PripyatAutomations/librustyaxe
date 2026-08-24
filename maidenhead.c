@@ -27,23 +27,19 @@ static char *complete_mh(const char *locator) {
    int len = strlen(locator);
 
    if (len > 10 || len < 4) {
-      fprintf(stdout,
-         "+ERROR grid square must be between 4 and 10 digits. More digits provides more accuracy. Current length: %d. Returning NULL!\n\n",
-         len);
+      Log(LOG_CRIT, "librustyaxe", "complete_mh: grid square must be between 4 and 10 digits. More digits provides more accuracy. Current length: %d. Returning NULL!", len);
 
       return NULL;
    }
 
    // Alert that we got an odd length string
    if (len % 2 != 0) {
-      fprintf(stdout,
-         "+ERROR gridsquares must contain an even number of digits. Your request of %d digits was invalid, returning NULL!\n\n",
+      Log(LOG_CRIT, "librustyaxe", "complete_mh: grid squares must contain an even number of digits. Your request of %d digits was invalid, returning NULL!\n\n",
          len);
 
       return NULL;
    }
-   // always 'zero' strings.. This will ensure we get a full 10 digits and
-   // always clean...
+   // always 'zero' strings.. This will ensure we get a full 10 digits and always clean...
    memcpy(locator2, locator2_init, 11);
 
    // This copies the locator, leaving the padding (from LL55LL55LL) in place to
@@ -79,7 +75,7 @@ Coordinates maidenhead2latlon(const char *locator) {
 
    // if grid square is odd length, return error
    if ( (len % 2) != 0 ) {
-      fprintf(stdout, "+ERROR grid squares must be 4-10 digits (A-Z, 0-9) long and even length.\n");
+      Log(LOG_CRIT, "librustyaxe", "maidenhead2latlon: grid squares must be 4-10 digits (A-Z, 0-9) long and even length.");
 
       return c;
    }
@@ -89,7 +85,7 @@ Coordinates maidenhead2latlon(const char *locator) {
    if (len < 10) {
       if ( ( lp = complete_mh(locator) ) == NULL ) {
          // Invalid (uneven length?) grid square passed
-         fprintf(stdout, "+ERROR grid squares must be 4-10 digits (A-Z, 0-9) long and even length.\n");
+         Log(LOG_CRIT, "librustyaxe", "maidenhead2latlon: grid squares must be 4-10 digits (A-Z, 0-9) long and even length.\n");
 
          return c;
       }

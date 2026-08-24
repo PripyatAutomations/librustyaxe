@@ -1,4 +1,4 @@
-// logger.c
+// librustyaxe/logger.c: a reusable logging system
 //    This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
@@ -6,9 +6,7 @@
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-/*
- * support logging to a a few places Targets: syslog console flash (file)
- */
+// XXX: ToDo: support logging to a a few places -- syslog console flash (file)
 //
 #include <stddef.h>
 #include <stdarg.h>
@@ -30,13 +28,13 @@
  * thread */
 // These are in main
 extern char latest_timestamp[64];
-extern bool tui_enabled;
 extern time_t now;
 static time_t last_ts_update;
 bool log_stdout = true;
+bool tui_mode_enabled = false;
 
 // Do we need to show a timestamp in log messages?
-static bool log_show_ts = false;
+static bool cfg_log_show_ts = false;
 char latest_timestamp[64];       // Current printed timestamp
 
 static struct log_callback *log_callbacks = NULL;
@@ -153,7 +151,7 @@ void log_clear_log_filters(void) {
 
 // Load log_filters from config string
 void load_log_filters_from_config(void) {
-   const char *cfg = cfg_get_exp("debug/loglevel");   // or "log.log_filters"
+   const char *cfg = cfg_get_exp("log.level");
 
    if (!cfg) {
       return;
@@ -214,24 +212,20 @@ bool debug_filter(const char *subsys, logpriority_t msg_level) {
    struct log_filter *f = log_filters, *best = NULL;
 
    if (!f && msg_level > DEFAULT_LOG_LEVEL) {
-//      fprintf(stderr, "!f: %d > %d\n", msg_level, DEFAULT_LOG_LEVEL);
       return true;
    }
+
    while (f) {
       if (fnmatch(f->pattern, subsys, 0) == 0) {
-         if ( !best || strlen(f->pattern) > strlen(best->pattern) ) {
+         if (!best || strlen(f->pattern) > strlen(best->pattern)) {
             best = f;
          }
       }
       f = f->next;
    }
 
-   if (best) {
-      fprintf(stderr, "msg: %d best: %d\n", msg_level, best->level);
-
-      if (best->level <= msg_level) {
-         return true;
-      }
+   if (best && msg_level > best->level) {
+      return true;
    }
 
    return false;
@@ -252,13 +246,17 @@ void log_dump_log_filters(void) {
 //////////////////////////////
 // Actual log handling code //
 //////////////////////////////
-void logger_init(const char *logfile) {
+void logger_init(const char *logfile, bool tui_mode) {
    const char *ll = NULL;
 #if defined(USE_EEPROM)
    ll = eeprom_get_str("debug/loglevel");
+   cfg_log_show_ts = eeprom_get_bool("debug/show-ts");
 #endif
+   ll = "crazy";
+   cfg_log_show_ts = cfg_get_bool("debug.show-ts", false);
 
-   log_show_ts = eeprom_get_bool("debug/show-ts");
+   // save tui mode state so we don't trash the console...
+   tui_mode_enabled = tui_mode;
 
    if (logfile[0] == '-' && logfile[1] == '\0') {
       logfp = stdout;
@@ -341,7 +339,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    }
 
    // this is arranged so that it will return if called more than once a second
-   if (log_show_ts) {
+   if (cfg_log_show_ts) {
       update_timestamp();
    }
    // make a clean copy for callback calls to copy :P
@@ -357,7 +355,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    va_end(ap);
 
    if (logfp) {
-      if (log_show_ts) {
+      if (cfg_log_show_ts) {
          fprintf(logfp, "[%s] %s\n", latest_timestamp, log_msg);
       } else {
          fprintf(logfp, "%s\n", log_msg);
@@ -365,11 +363,10 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       fflush(logfp);
    }
 
-   if (!tui_enabled) {
-      /* Only spew to the console if logfile is closed or log.stdout == true, but avoid
-       * duplicating messages */
+   if (!tui_mode_enabled) {
+      /* Only spew to the console if logfile is closed or log.stdout == true, but avoid duplicating messages */
       if ( (!logfp || log_stdout) && (logfp != stdout) ) {
-         if (log_show_ts) {
+         if (cfg_log_show_ts) {
             fprintf(stdout, "[%s] %s\n", latest_timestamp, log_msg);
          } else {
             fprintf(stdout, "%s\n", log_msg);
@@ -385,18 +382,13 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
          if (lp->callback) {
             va_list cb_ap;
             va_copy(cb_ap, ap_c1);
-            //            fprintf(stderr, "log cb: <%p> called\n");
+//            fprintf(stderr, "log cb: <%p> called\n", lp->callback);
             lp->callback(priority, subsys, fmt, cb_ap);
             va_end(cb_ap);
          }
          lp = lp->next;
       }
    }
-// XXX: readd this
-//   const char *jp = dict2json_mkstr(VAL_STR, "log.subsys", subsys, VAL_STR,
-// "log.prio", priority, VAL_STR, "log.data", log_msg);
-//   event_emit("log.message", NULL, jp);
-//   free( (void *)jp);
    va_end(ap_c1);
 }
 

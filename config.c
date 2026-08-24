@@ -21,16 +21,13 @@ cfg_cb_list_t *cfg_callbacks = NULL;
 
 bool cfg_set_default(dict *d, const char *key, const char *val) {
    if (!key || !d) {
-      Log(LOG_WARN, "config", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);
-
+      Log(LOG_CRIT, "librustyaxe", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);
       return true;
    }
 
-//   Log(LOG_CRAZY, "config", "Setting default for dict:<%p>/%s to '%s'", d,
-// key, val);
+   Log(LOG_CRAZY, "librustyaxe", "Setting default for dict:<%p>/%s to '%s'", d, key, val);
    if (dict_add(d, key, (char *)val) != 0) {
-      Log(LOG_WARN, "config", "defcfg dict:<%p> failed to set key |%s| to val |%s| at <%p>", d, key, val, val);
-
+      Log(LOG_CRIT, "librustyaxe", "defcfg dict:<%p> failed to set key |%s| to val |%s| at <%p>", d, key, val, val);
       return true;
    }
 
@@ -39,36 +36,33 @@ bool cfg_set_default(dict *d, const char *key, const char *val) {
 
 bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
    if (!d) {
-      Log(LOG_WARN, "config", "cfg_set_defaults: NULL dict");
-
+      Log(LOG_CRIT, "librustyaxe", "cfg_set_defaults: NULL dict");
       return true;
    }
 
    if (!defaults) {
-      Log(LOG_WARN, "config", "cfg_set_defaults: NULL input");
-
+      Log(LOG_CRIT, "librustyaxe", "cfg_set_defaults: NULL input");
       return true;
    }
-   Log(LOG_CRAZY, "config", "cfg_set_defaults: Loading defaults from <%p>", defaults);
+   Log(LOG_CRAZY, "librustyaxe", "cfg_set_defaults: Loading defaults from <%p>", defaults);
 
    int i = 0;
    int warnings = 0;
    while (defaults[i].key) {
       if (!defaults[i].val) {
-         Log(LOG_CRAZY, "config", "cfg_set_defaults: Skipping key |%s| as its empty", defaults[i].key);
+         Log(LOG_CRAZY, "librustyaxe", "cfg_set_defaults: Skipping key |%s| as its empty", defaults[i].key);
          i++;
          continue;
       }
 
-//      Log(LOG_CRAZY, "config", "cfg_set_defaults: |%s| => |%s|",
-// defaults[i].key, defaults[i].val);
+      Log(LOG_CRAZY, "librustyaxe", "cfg_set_defaults: |%s| => |%s|", defaults[i].key, defaults[i].val);
       if ( cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
-         Log(LOG_WARN, "config", "cfg_set_defaults: Failed to set key: |%s|", defaults[i].key);
+         Log(LOG_WARN, "librustyaxe", "cfg_set_defaults: Failed to set key: |%s|", defaults[i].key);
          warnings++;
       }
       i++;
    }
-   Log(LOG_INFO, "config", "Imported %d default settings with %d warnings", i, warnings);
+   Log(LOG_INFO, "librustyaxe", "Imported %d default settings with %d warnings", i, warnings);
 
    return true;
 }
@@ -89,15 +83,15 @@ bool cfg_detect_and_load(const char *configs[], int num_configs) {
       }
 
       if ( !( cfg = cfg_load(fullpath) ) ) {
-         Log(LOG_CRIT, "core", "Couldn't load config \"%s\", using defaults instead", fullpath);
+         Log(LOG_CRIT, "librustyaxe", "Couldn't load config \"%s\", using defaults instead", fullpath);
       } else {
-         Log(LOG_DEBUG, "config", "Loaded config from '%s'", fullpath);
+         Log(LOG_DEBUG, "librustyaxe", "Loaded config from '%s'", fullpath);
       }
       free(fullpath);
    } else {
       // Use default settings and save it to default
       cfg = default_cfg;
-      Log(LOG_WARN, "core", "No config file found, saving defaults");
+      Log(LOG_WARN, "librustyaxe", "No config file found, saving defaults");
    }
 
    return false;
@@ -107,7 +101,7 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    if (!section || !cb) {
       return true;
    }
-   Log(LOG_DEBUG, "config", "add_cb: path=%s section=%s cb=<%p>", path, section, (void *)cb);
+   Log(LOG_DEBUG, "librustyaxe", "add_cb: path=%s section=%s cb=<%p>", path, section, (void *)cb);
 
    cfg_cb_list_t *new_cb = malloc( sizeof(cfg_cb_list_t) );
 
@@ -117,7 +111,7 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    memset( new_cb, 0, sizeof(cfg_cb_list_t) );
 
    if (!new_cb) {
-      fprintf(stderr, "OOM in cfg_add_callback\n");
+      Log(LOG_CRIT, "librustyaxe", "OOM in cfg_add_callback");
 
       return true;
    }
@@ -135,7 +129,7 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    }
    new_cb->callback = cb;
 
-   Log(LOG_DEBUG, "config", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
+   Log(LOG_DEBUG, "librustyaxe", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
 
    // store our new callback
    if (!cfg_callbacks) {
@@ -165,19 +159,19 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    if (!cbp) {
       return false;
    }
-   Log(LOG_CRIT, "config", "cfg_dispatch_callback: starting cbp=%p", cbp);
+   Log(LOG_CRIT, "librustyaxe", "cfg_dispatch_callback: starting cbp=%p", cbp);
    int i = 0;
    while (cbp && i < CONFIG_MAX_CALLBACKS) {
       if (cbp->section && fnmatch(cbp->section, section, 0) == 0) {
          if ( !cbp->path || (fnmatch(cbp->path, path, 0) == 0) ) {
-            Log(LOG_DEBUG, "config",
+            Log(LOG_DEBUG, "librustyaxe",
                "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)", cbp->callback,
                section, cbp->section, path, cbp->path);
 
             if (cbp->callback) {
                cbp->callback(path, line, section, buf);
             } else {
-               Log(LOG_WARN, "config",
+               Log(LOG_WARN, "librustyaxe",
                   "cfg_dispatch_callback: The callback at <%p> for section |%s| path |%s| doesn't have a valid function attached",
                   cbp, section, path);
             }
@@ -186,11 +180,11 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
       i++;
       prev = cbp;
       cbp = cbp->next;
-      fprintf(stderr, "prev;<%p> cbp:<%p> list:<%p>\n", prev, cbp, cfg_callbacks);
+      Log(LOG_DEBUG, "librustyaxe", "prev;<%p> cbp:<%p> list:<%p>", prev, cbp, cfg_callbacks);
    }
 
    if (i > 10) {
-      Log(LOG_WARN, "config", "%s: made %d iterations for cbp:<%p>", __FUNCTION__, i, cfg_callbacks);
+      Log(LOG_WARN, "librustyaxe", "%s: made %d iterations for cbp:<%p>", __FUNCTION__, i, cfg_callbacks);
    }
 
    return false;
@@ -205,7 +199,7 @@ dict *cfg_load(const char *path) {
    memset( this_section, 0, sizeof(this_section) );
 
    if ( !file_exists(path) ) {
-      fprintf(stderr, "Can't find config file %s\n", path);
+      Log(LOG_CRIT, "librustyaxe", "Can't find config file %s", path);
 
       return NULL;
    }
@@ -377,19 +371,19 @@ dict *cfg_load(const char *path) {
             snprintf(fullkey, sizeof(fullkey), "server:%s.%s", this_section + 7, key);
             dict_add(newcfg, fullkey, val);
          } else {
-            Log(LOG_WARN, "config", "Malformed line parsing |%s| at %s:%d", buf, path, line);
+            Log(LOG_WARN, "librustyaxe", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
       } else if ( cfg_dispatch_callback(path, line, this_section, buf) ) {
-         Log(LOG_WARN, "config", "Unknown configuration section |%s| parsing |%s| at %s:%d", this_section, buf, path,
+         Log(LOG_WARN, "librustyaxe", "Unknown configuration section |%s| parsing |%s| at %s:%d", this_section, buf, path,
             line);
          errors++;
       }
    } while ( !feof(fp) );
 
    if (errors > 0) {
-      Log(LOG_INFO, "config", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
+      Log(LOG_INFO, "librustyaxe", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
    } else {
-      Log(LOG_INFO, "config", "cfg loaded %d lines from %s with no errors", line, path);
+      Log(LOG_INFO, "librustyaxe", "cfg loaded %d lines from %s with no errors", line, path);
    }
 
    if (fp) {
@@ -401,7 +395,7 @@ dict *cfg_load(const char *path) {
 
 const char *cfg_get(const char *key) {
    if (!key) {
-      Log(LOG_WARN, "config", "got cfg_get with NULL key!");
+      Log(LOG_WARN, "librustyaxe", "got cfg_get with NULL key!");
 
       return NULL;
    }
@@ -411,15 +405,15 @@ const char *cfg_get(const char *key) {
    if (!p) {
       if (!default_cfg) {
 #if     defined(DEBUG_CONFIG)
-         Log(LOG_DEBUG, "config", "defcfg not found looking for key |%s|", key);
+         Log(LOG_DEBUG, "librustyaxe", "defcfg not found looking for key |%s|", key);
 #endif
 
          return NULL;
       }
       p = dict_get(default_cfg, key, NULL);
-      Log(LOG_DEBUG, "config", "returning default value |%s| for key |%s|", p, key);
+      Log(LOG_DEBUG, "librustyaxe", "returning default value |%s| for key |%s|", p, key);
    } else {
-      Log(LOG_CRAZY, "config", "returning user value |%s| for key |%s|", p, key);
+      Log(LOG_CRAZY, "librustyaxe", "returning user value |%s| for key |%s|", p, key);
    }
 
    return p;
@@ -433,8 +427,8 @@ int cfg_get_int(const char *key, int def) {
    return dict_get_int(cfg, key, def);
 }
 
-unsigned int cfg_get_uint(const char *key, unsigned int def) {
-   return dict_get_uint(cfg, key, def);
+unsigned long cfg_get_ulong(const char *key, unsigned long def) {
+   return dict_get_ulong(cfg, key, def);
 }
 
 // You *MUST* free the return value
@@ -498,7 +492,7 @@ bool cfg_save(dict *d, const char *path) {
    FILE *fp = fopen(path, "w");
 
    if (!fp) {
-      Log( LOG_WARN, "config", "Failed to open save file: '%s': %d:%s", path, errno, strerror(errno) );
+      Log( LOG_WARN, "librustyaxe", "Failed to open save file: '%s': %d:%s", path, errno, strerror(errno) );
 
       return true;
    }
@@ -536,12 +530,6 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    cfg = newcfg;
 
    return false;
-}
-
-// XXX: Make a function to return a dict of ONLY changes from a -> b
-dict *dict_diff(dict *a, dict *b) {
-   // XXX: Make this work
-   return NULL;
 }
 
 // Config save stuff

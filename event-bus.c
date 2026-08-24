@@ -75,6 +75,7 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
       return;
    }
 
+   Log(LOG_CRAZY, "event", "send event %s: %s", event, data);
    kv_list_t *list = kv_lookup(event_store, event);
    int evt_hits = 0;
 
@@ -104,9 +105,9 @@ void event_emit_dict(const char *event, rrconn_t *cptr, dict *data) {
    if (data) {
       jp = dict2json(data);
    }
-   event_emit(event, cptr, jp);
 
    if (jp) {
+      event_emit(event, cptr, jp);
       free( (void *)jp );
    }
 }

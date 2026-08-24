@@ -205,7 +205,7 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
    int myslot = -1;
 
    if ( ( sp = malloc( sizeof(subproc_t) ) ) == NULL ) {
-      fprintf(stderr, "subproc_create: out of memory!\n");
+      Log(LOG_CRIT, "librustyaxe", "subproc_create: out of memory!");
       exit(ENOMEM);
    }
    // and zero it!

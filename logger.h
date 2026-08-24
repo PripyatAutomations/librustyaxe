@@ -11,6 +11,7 @@
 #define	__rr_common_logger_h
 #include <stdarg.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <librustyaxe/config.h>
 
@@ -52,7 +53,7 @@ extern FILE *logfp;
 extern int log_level;
 extern void Log(logpriority_t priority, const char *subsys, const char *fmt, ...);
 extern void logger_setup(void);
-extern void logger_init(const char *logfile);
+void logger_init(const char *logfile, bool tui_mode);
 extern void hash_to_hex(char *dest, const uint8_t *hash, size_t len);
 extern char latest_timestamp[64];
 extern int update_timestamp(void);

@@ -22,7 +22,7 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
    char *buffer_name = malloc(name_len);
 
    if (buffer == NULL || buffer_name == NULL) {
-      fprintf(stderr, "rb_create: out of memory!\n");
+      Log(LOG_CRIT, "librustyaxe", "rb_create: out of memory!");
       exit(ENOMEM);
    }
    buffer->head = NULL;
@@ -62,7 +62,7 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    rb_node_t *node = malloc( sizeof(rb_node_t) );
 
    if (node == NULL) {
-      fprintf(stderr, "rb_add: out of memory!\n");
+      Log(LOG_CRIT, "librustyaxe", "rb_add: out of memory!");
       exit(ENOMEM);
    }
    node->data = data;
@@ -149,7 +149,7 @@ void **rb_get_range(rb_buffer_t *buffer, int start, int count) {
    void **array = malloc( count * sizeof(void*) );
 
    if ( (void *)array == NULL ) {
-      fprintf(stderr, "rb_get_range: out of memory!\n");
+      Log(LOG_CRIT, "librustyaxe", "rb_get_range: out of memory!");
       exit(ENOMEM);
    }
    rb_node_t *current = buffer->head;

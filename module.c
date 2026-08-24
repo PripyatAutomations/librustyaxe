@@ -103,8 +103,7 @@ bool rr_load_module(const char *name) {
    rr_module_t *mp = malloc( sizeof(rr_module_t) );
 
    if (mp == NULL) {
-      fprintf(stderr, "OOM in rr_load_module!\n");
-
+      Log(LOG_CRIT, "librustyaxe", "OOM in rr_load_module!");
       return true;
    }
    memset( mp, 0, sizeof(rr_module_t) );
