@@ -58,11 +58,11 @@ extern void hash_to_hex(char *dest, const uint8_t *hash, size_t len);
 extern char latest_timestamp[64];
 extern int update_timestamp(void);
 extern enum LogPriority log_priority_from_str(const char *priority);
+extern const char *log_priority_to_str(logpriority_t priority);
 extern void logger_end(void);
 
 // Add a callback to the Log() call
-extern bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt,
-   va_list ap) );
+extern bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap) );
 extern bool log_remove_callback(struct log_callback *log_callback);
 
 // Filters

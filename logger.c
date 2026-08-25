@@ -24,11 +24,11 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-/* This should be updated only once per second, by a call to update_timestamp from main
- * thread */
+#define	DEFAULT_LOG_LEVEL LOG_DEBUG
+
 // These are in main
 extern char latest_timestamp[64];
-extern time_t now;
+extern time_t now;			// you must provide a >= 1hz refresh rate
 static time_t last_ts_update;
 bool log_stdout = true;
 bool tui_mode_enabled = false;
@@ -44,43 +44,14 @@ const char s_prio_none[] = " NONE";
 
 // Here we define our logo priorities to be used everywhere else
 static struct log_priority log_priorities[] = {
-   {
-      .prio = LOG_AUDIT, .msg = "audit"
-   },                                                   // Auditing events
-   {
-      .prio = LOG_CRIT, .msg = "crit"
-   },                                                   // Critical problems
-   {
-      .prio = LOG_WARN, .msg = "warn"
-   },                                                   // Warnings
-   {
-      .prio = LOG_INFO, .msg = "info"
-   },                                                   // Useful information of
-                                                        // a non-important
-                                                        // nature
-   {
-      .prio = LOG_DEBUG, .msg = "debug"
-   },                                                   // Most commonly useful
-                                                        // for debugging
-                                                        // problems, a balance
-                                                        // of verbosity and
-                                                        // speed
-   {
-      .prio = LOG_CRAZY, .msg = "crazy"
-   },                                                   // Many usually useless
-                                                        // messages, which can
-                                                        // aid with debugging
-                                                        // but too noisy for
-                                                        // typical debugging use
-   {
-      .prio = LOG_BLITZKREIG, .msg = "blitz"
-   },                                                   // unmanagably noisy and
-                                                        // will slow the program
-                                                        // greatly - for
-                                                        // debugging only!
-   {
-      .prio = LOG_NONE, .msg = s_prio_none
-   }                                                    // invalid entry
+   { .prio = LOG_AUDIT, .msg = "audit" },     // Auditing events
+   { .prio = LOG_CRIT, .msg = "crit" },       // Critical issues
+   { .prio = LOG_WARN, .msg = "warn" },	      // Warnings
+   { .prio = LOG_INFO, .msg = "info" },       // Normal operational info
+   { .prio = LOG_DEBUG, .msg = "debug" },     // Debugging information
+   { .prio = LOG_CRAZY, .msg = "crazy" },     // Extreme debugging
+   { .prio = LOG_BLITZKREIG, .msg = "blitz" }, // Don't use this
+   { .prio = LOG_NONE, .msg = s_prio_none }  // Invalid
 };
 
 FILE    *logfp = NULL;
@@ -206,7 +177,6 @@ void load_log_filters_from_config(void) {
    free(copy);
 }
 
-#define	DEFAULT_LOG_LEVEL LOG_DEBUG
 
 bool debug_filter(const char *subsys, logpriority_t msg_level) {
    struct log_filter *f = log_filters, *best = NULL;

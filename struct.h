@@ -247,7 +247,6 @@ struct rrconn {
    ev_io io_watcher;
 #endif
 };
-
 typedef struct rrconn rrconn_t;
 
 //typedef bool (*irc_command_cb)(rrconn_t *cptr, irc_message_t *mp);
