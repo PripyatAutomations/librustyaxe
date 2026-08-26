@@ -239,7 +239,7 @@ extern int dict_merge(dict *dst, dict *src);
 // to dict_free() the result!
 extern dict *dict_merge_new(dict *a, dict *b);
 
-// XXX: Compare old and new configuration, yielding a dict with ONLY changes (NYI)
+// XXX: Compare old and new configuration, yielding a dict with ONLY changes
 extern dict *dict_diff(dict *a, dict *b);
 
 #endif

@@ -166,3 +166,8 @@ void format_timestamp(time_t t, char *buf, size_t buflen) {
    localtime_r(&t, &tm);   // or gmtime_r(&t, &tm) for UTC
    strftime(buf, buflen, "[%Y/%m/%d %H:%M:%S]", &tm);
 }
+
+long long timespec_diff_ms(const struct timespec *a, const struct timespec *b) {
+   return (long long)(a->tv_sec - b->tv_sec) * 1000LL +
+          (a->tv_nsec - b->tv_nsec) / 1000000LL;
+}
