@@ -1,8 +1,6 @@
 ===============
 = librustyaxe =
 ===============
-* Make log filters include toplevel in .* matches -- ws.* matches "ws" too
-
 * Finish theme support for TUI
 
 * rework Log() and tui_print_win() a little so there's a variant i can
@@ -10,4 +8,3 @@
     user interface as well as the log file
 
 * TUI: Prevent scrolling of the buffer when content is added, if not at the bottom
-

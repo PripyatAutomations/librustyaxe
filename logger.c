@@ -158,7 +158,6 @@ void load_log_filters_from_config(void) {
 
          // If pattern ends with ".*", also add plain version
          size_t len = strlen(subsys);
-
          if (len >= 2 && strcmp(subsys + len - 2, ".*") == 0) {
             char *plain = strdup(subsys);
 
