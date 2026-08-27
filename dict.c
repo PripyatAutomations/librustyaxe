@@ -428,7 +428,7 @@ void dict_free(dict *d) {
 }
 
 /** Public: get an item from a dict. Only strings are returned directly. */
-char *dict_get(dict *d, const char *key, char *def) {
+const char *dict_get(dict *d, const char *key, const char *def) {
    keypair *kp;
    unsigned hash;
 

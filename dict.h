@@ -151,7 +151,7 @@ extern int dict_add(dict *d, const char *key, const char *val);
  * returned.
  */
 /*--------------------------------------------------------------------------*/
-extern char *dict_get(dict *d, const char *key, char *defval);
+extern const char *dict_get(dict *d, const char *key, const char *defval);
 
 /*-------------------------------------------------------------------------*/
 /**
