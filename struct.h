@@ -201,6 +201,7 @@ struct rrconn {
    char token[HTTP_TOKEN_LEN + 1];   // Session token
    char  *user_agent;            // User-agent
    char user_ip[256];            // string containing the user's IP
+   int  user_port;		 // the local port of the tcp connection
    char  *cli_version;           // Client version
 #if     defined(USE_MONGOOSE)
    struct mg_connection *conn;   // Connection pointer (HTTP or WebSocket)

@@ -45,13 +45,13 @@ const char s_prio_none[] = " NONE";
 // Here we define our logo priorities to be used everywhere else
 static struct log_priority log_priorities[] = {
    { .prio = LOG_AUDIT, .msg = "audit" },     // Auditing events
-   { .prio = LOG_CRIT, .msg = "crit" },       // Critical issues
-   { .prio = LOG_WARN, .msg = "warn" },	      // Warnings
-   { .prio = LOG_INFO, .msg = "info" },       // Normal operational info
+   { .prio = LOG_CRIT,  .msg = "crit" },       // Critical issues
+   { .prio = LOG_WARN,  .msg = "warn" },	      // Warnings
+   { .prio = LOG_INFO,  .msg = "info" },       // Normal operational info
    { .prio = LOG_DEBUG, .msg = "debug" },     // Debugging information
    { .prio = LOG_CRAZY, .msg = "crazy" },     // Extreme debugging
    { .prio = LOG_BLITZKREIG, .msg = "blitz" }, // Don't use this
-   { .prio = LOG_NONE, .msg = s_prio_none }  // Invalid
+   { .prio = LOG_NONE,  .msg = s_prio_none }  // Invalid
 };
 
 FILE    *logfp = NULL;
@@ -320,7 +320,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    /* Expand the format string */
    vsnprintf(msgbuf, 511, fmt, ap);
    memset( log_msg, 0, sizeof(log_msg) );
-   snprintf(log_msg, sizeof(log_msg), "<%s.%s> %s", subsys, log_priority_to_str(priority), msgbuf);
+   snprintf(log_msg, sizeof(log_msg), "<%s@%s> %s", subsys, log_priority_to_str(priority), msgbuf);
    va_end(ap);
 
    if (logfp) {
