@@ -120,62 +120,71 @@ void log_clear_log_filters(void) {
    log_filters = NULL;
 }
 
-// Load log_filters from config string
 void load_log_filters_from_config(void) {
    const char *cfg = cfg_get_exp("log.level");
 
    if (!cfg) {
       return;
    }
-   char *copy = strdup(cfg);
 
-   // XXX: make this more graceful
-   if (copy == NULL) {
+   char *copy = strdup(cfg);
+   free((void *)cfg);
+
+   if (!copy) {
       abort();
    }
-   free( (void *)cfg );
 
    char *tok = copy;
+
    while (*tok) {
-      while ( isspace( (unsigned char)*tok ) ) {
+      while (*tok && (isspace((unsigned char)*tok) || *tok == ',')) {
          tok++;
       }
+
+      if (!*tok) {
+         break;
+      }
+
       char *end = tok;
-      while ( *end && *end != ',' && !isspace( (unsigned char)*end ) ) {
+      while (*end && !isspace((unsigned char)*end) && *end != ',') {
          end++;
       }
 
       if (*end) {
-         *end = '\0';
+         *end++ = '\0';
       }
+
       char *sep = strchr(tok, ':');
 
       if (sep) {
          *sep = '\0';
+
          const char *subsys = tok;
          const char *level_str = sep + 1;
          logpriority_t level = log_priority_from_str(level_str);
 
-         // If pattern ends with ".*", also add plain version
          size_t len = strlen(subsys);
-         if (len >= 2 && strcmp(subsys + len - 2, ".*") == 0) {
-            char *plain = strdup(subsys);
 
-            // XXX: make this fail more gracefully
-            if (plain == NULL) {
+         if (len >= 2 && strcmp(subsys + len - 2, ".*") == 0) {
+            char *plain = strndup(subsys, len - 2);
+
+            if (!plain) {
+               free(copy);
                abort();
             }
-            plain[len - 2] = '\0';
+
             log_add_filter(plain, level);
             free(plain);
          }
+
          log_add_filter(subsys, level);
       }
-      tok = end + 1;
+
+      tok = end;
    }
+
    free(copy);
 }
-
 
 bool debug_filter(const char *subsys, logpriority_t msg_level) {
    struct log_filter *f = log_filters, *best = NULL;

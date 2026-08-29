@@ -27,9 +27,6 @@ static tui_window_t *tui_windows[TUI_MAX_WINDOWS];
 static int tui_active_win = 0;
 static int tui_num_windows = 0;
 
-// XXX: remove this! it goes in rrclient NOT here
-int ws_connected = 0;
-
 ////////////////
 // Public API //
 ////////////////
@@ -207,24 +204,6 @@ tui_window_t *tui_window_focus(const char *title) {
             }
 #endif
          }
-         const char *win_color = "{bright-cyan}";
-
-         if (tw->title[0] == '&' || tw->title[0] == '#') {
-            win_color = "{bright-magenta}";
-         }
-         char connected_status[32];
-         memset( connected_status, 0, sizeof(connected_status) );
-
-         if (ws_connected == 1) {
-            snprintf(connected_status, sizeof(connected_status), "{bright-green}ONLINE{reset}");
-         } else if (ws_connected == 0) {
-            snprintf(connected_status, sizeof(connected_status), "{bright-red}offline{reset}");
-         } else if (ws_connected == -1) {
-            snprintf(connected_status, sizeof(connected_status), "{bright-yellow}trying{reset}");
-         }
-         tui_update_status(tw, "{bright-black}[%s{bright-black}] [{green}%s{bright-black}] [%s%s{bright-black}]{reset}",
-            connected_status, network, win_color, tw->title);
-
          tui_update_input_line();
 
          return tui_windows[i];
@@ -319,6 +298,5 @@ bool tui_clear_scrollback(tui_window_t *w) {
    w->scroll_offset = 0;
 
    tui_redraw_screen();
-
    return false;
 }

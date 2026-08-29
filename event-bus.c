@@ -89,17 +89,17 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
 
       if (nomatch) {
          if (cptr && cptr->chatname) {
-            Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match; firing NOMATCH", event, cptr->chatname);
+            Log(LOG_CRAZY, "event.nomatch", "Event %s from cptr:<%p> didn't match; firing NOMATCH", event, cptr->chatname);
          } else {
-            Log(LOG_DEBUG, "event", "Event %s didn't match; firing NOMATCH", event);
+            Log(LOG_CRAZY, "event.nomatch", "Event %s didn't match; firing NOMATCH", event);
          }
 
          event_fire_list(nomatch, event, cptr, data);
       } else {
-         Log(LOG_DEBUG, "event", "Event %s from cptr:<%p> didn't match anything. data: |%s|", event, cptr, data);
+         Log(LOG_CRAZY, "event.nomatch", "Event %s from cptr:<%p> didn't match anything. data: |%s|", event, cptr, data);
       }
    } else {
-      Log(LOG_CRAZY, "event", "Event %s from cptr:<%p> hit %d times", event, cptr, evt_hits);
+      Log(LOG_CRAZY, "event.match", "Event %s from cptr:<%p> hit %d times", event, cptr, evt_hits);
    }
 }
 
