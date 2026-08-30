@@ -192,7 +192,6 @@ static int dict_store(dict *d, const char *key, val_type_t type,
    keypair *slot;
    char *newkey = NULL;
    const char *newstr = NULL;
-   bool replacing = false;
 
    if (!d || !key || !val) {
       return -1;
@@ -205,6 +204,9 @@ static int dict_store(dict *d, const char *key, val_type_t type,
       return -1;
    }
 
+   /*
+    * Prepare all allocations before modifying the dictionary.
+    */
    newkey = strdup(key);
    if (!newkey) {
       return -1;
@@ -218,11 +220,37 @@ static int dict_store(dict *d, const char *key, val_type_t type,
       }
    }
 
+   /*
+    * If this is a new entry, make sure there is room before committing it.
+    * Replacements don't increase the number of used slots.
+    */
+   if (!slot->key || slot->key == DUMMY_PTR) {
+      if ((3 * (d->fill + 1)) >= (d->size * 2)) {
+         if (dict_resize(d) != 0) {
+            free( (void *)newstr);
+            free( (void *)newkey);
+            return -1;
+         }
+
+         /*
+          * Resize may have moved the slot.
+          */
+         slot = dict_lookup(d, key, hash);
+         if (!slot) {
+            free( (void *)newstr);
+            free(newkey);
+            return -1;
+         }
+      }
+   }
+
+   /*
+    * Replace an existing entry.
+    */
    if (slot->key && slot->key != DUMMY_PTR) {
       free((char *)slot->key);
       dict_free_value(slot);
       d->used--;
-      replacing = true;
    } else if (slot->key == DUMMY_PTR) {
       d->fill--;
    }
@@ -238,14 +266,7 @@ static int dict_store(dict *d, const char *key, val_type_t type,
    }
 
    d->used++;
-   if (!replacing)
-      d->fill++;
-
-   if ((3 * d->fill) >= (d->size * 2)) {
-      if (dict_resize(d) != 0) {
-         return -1;
-      }
-   }
+   d->fill++;
 
    return 0;
 }
@@ -341,66 +362,74 @@ int dict_add_double(dict *d, const char *key, double val) {
 
 /** Resize a dictionary */
 static int dict_resize(dict *d) {
-   unsigned newsize;
-   keypair      *oldtable;
-   unsigned i;
-   unsigned oldsize;
-   unsigned factor;
+   unsigned newsize = d->size;
+   unsigned factor = (d->size > DICT_BIGSZ) ? 2 : 4;
 
-   newsize = d->size;
-   /*
-    * Re-sizing factor depends on the current dict size. Small dicts will expand 4 times,
-    * bigger ones only 2 times
-    */
-   factor = (d->size > DICT_BIGSZ) ? 2 : 4;
-   while ( newsize <= (factor * d->used) ) {
+   while (newsize <= factor * d->used)
       newsize *= 2;
-   }
 
-   /* Exit early if no re-sizing needed */
-   if (newsize == d->size) {
+   if (newsize == d->size)
       return 0;
-   }
-#if DICT_DEBUG > 2
-   Log(LOG_DEBUG, "librustyaxe", "resizing %d to %d (used: %d)", d->size, newsize, d->used);
-#endif
-   /* Shuffle pointers, re-allocate new table, re-insert data */
-   oldtable = d->table;
-   d->table = calloc( newsize, sizeof(keypair) );
 
-   if ( !(d->table) ) {
-      /* Memory allocation failure */
+   keypair *oldtable = d->table;
+   unsigned oldsize = d->size;
+
+   keypair *newtable = calloc(newsize, sizeof(*newtable));
+   if (!newtable)
       return -1;
-   }
-   oldsize = d->size;
+
+   d->table = newtable;
    d->size = newsize;
    d->used = 0;
    d->fill = 0;
 
-   for (i = 0 ; i < oldsize ; i++) {
-      if ( oldtable[i].key && (oldtable[i].key != DUMMY_PTR) ) {
-         dict_add_p(d, &oldtable[i]);
+   for (unsigned i = 0; i < oldsize; i++) {
+      if (oldtable[i].key && oldtable[i].key != DUMMY_PTR) {
+         if (dict_add_p(d, &oldtable[i]) != 0) {
+            /*
+             * Restore old table. Nothing has been freed from it;
+             * newtable contains only borrowed pointers.
+             */
+            d->table = oldtable;
+            d->size = oldsize;
+
+            /*
+             * Recalculate used/fill from the old table.
+             */
+            d->used = 0;
+            d->fill = 0;
+            for (unsigned j = 0; j < oldsize; j++) {
+               if (oldtable[j].key) {
+                  d->fill++;
+                  if (oldtable[j].key != DUMMY_PTR)
+                     d->used++;
+               }
+            }
+
+            free(newtable);
+            return -1;
+         }
       }
    }
 
    free(oldtable);
-
    return 0;
 }
 
 /** Public: allocate a new dict */
 dict *dict_new(void) {
-   dict *d;
+   dict *d = calloc(1, sizeof(*d));
 
-   d = calloc( 1, sizeof(dict) );
+   if (!d)
+      return NULL;
 
-   if (!d) {
+   d->size = DICT_MIN_SZ;
+   d->table = calloc(DICT_MIN_SZ, sizeof(*d->table));
+
+   if (!d->table) {
+      free(d);
       return NULL;
    }
-   d->size = DICT_MIN_SZ;
-   d->used = 0;
-   d->fill = 0;
-   d->table = calloc( DICT_MIN_SZ, sizeof(keypair) );
 
    return d;
 }

@@ -1,5 +1,5 @@
 //
-// logger.h
+// librustyaxe/json.h:
 //    This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
@@ -7,8 +7,8 @@
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#if     !defined(__common_json_h)
-#define	__common_json_h
+#if     !defined(__librustyaxe_json_h)
+#define	__librustyaxe_json_h
 #include <stdarg.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -56,4 +56,4 @@ extern const char *dict2json_mkstr_real(int first_type, ...);
 extern void json_parse_and_flatten(const char *json, dict *dptr);
 extern dict *json2dict(const char *json);
 
-#endif // !defined(__common_json_h)
+#endif // !defined(__librustyaxe_json_h)

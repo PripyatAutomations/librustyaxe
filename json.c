@@ -538,37 +538,51 @@ static void sbuf_init(sbuf *b) {
    b->len = 0;
    b->buf = malloc(b->cap);
 
-   if (b->buf)
+   if (b->buf) {
       b->buf[0] = 0;
+   }
 }
 
-static void sbuf_putc(sbuf *b, char c) {
+static bool sbuf_putc(sbuf *b, char c) {
    if (b->len + 2 > b->cap) {
       b->cap *= 2;
-      b->buf = realloc(b->buf, b->cap);
+
+      char *tmp = realloc(b->buf, b->cap);
+      if (!tmp) {
+         return true;
+      }
+      b->buf = tmp;
    }
 
    b->buf[b->len++] = c;
    b->buf[b->len] = 0;
+   return false;
 }
 
-static void sbuf_puts(sbuf *b, const char *s) {
+static bool sbuf_puts(sbuf *b, const char *s) {
    size_t slen;
 
-   if (!s) return;
+   if (!s) {
+      return true;
+   }
 
    slen = strlen(s);
-
    if (b->len + slen + 1 > b->cap) {
-      while (b->len + slen + 1 > b->cap)
+      while (b->len + slen + 1 > b->cap) {
          b->cap *= 2;
+      }
 
-      b->buf = realloc(b->buf, b->cap);
+      char *tmp = realloc(b->buf, b->cap);
+      if (!tmp) {
+         return true;
+      }
+      b->buf = tmp;
    }
 
    memcpy(b->buf + b->len, s, slen);
    b->len += slen;
    b->buf[b->len] = 0;
+   return false;
 }
 
 static void dump_json(json_node *n, sbuf *out) {
@@ -601,17 +615,16 @@ static void dump_json(json_node *n, sbuf *out) {
 }
 
 static void free_json(json_node *n) {
-   if (!n) return;
+   while (n) {
+      json_node *next = n->next;
 
-   for (json_node *c = n->child ; c ; ) {
-      json_node *next = c->next;
-      free_json(c);
-      c = next;
+      free_json(n->child);
+      free(n->key);
+      free(n->value);
+      free(n);
+
+      n = next;
    }
-
-   free(n->key);
-   free(n->value);
-   free(n);
 }
 
 char *dict2json(dict *d) {
@@ -620,8 +633,11 @@ char *dict2json(dict *d) {
    val_type_t type;
    int rank = 0;
    json_node root = { 0 };
+   sbuf out = { 0 };
 
-   if (!d) return NULL;
+   if (!d) {
+      return NULL;
+   }
 
    while ((rank = dict_enumerate_typed(d, rank, &key, &val, &type)) >= 0) {
       if (json_insert(&root, key, &val, type) != 0) {
@@ -630,7 +646,6 @@ char *dict2json(dict *d) {
       }
    }
 
-   sbuf out;
    sbuf_init(&out);
 
    if (!out.buf) {
@@ -639,6 +654,7 @@ char *dict2json(dict *d) {
    }
 
    dump_json(&root, &out);
+
    free_json(root.child);
 
    return out.buf;
