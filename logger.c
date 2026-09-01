@@ -94,19 +94,19 @@ bool log_add_filter(const char *pattern, logpriority_t level) {
    if (f == NULL) {
       fprintf(stderr, "OOM in log_add_filter\n");
 
-      return true;
+      return false;
    }
 
    if ( ( f->pattern = strdup(pattern) ) == NULL ) {
       free(f);
 
-      return true;
+      return false;
    }
    f->level = level;
    f->next = log_filters;
    log_filters = f;
 
-   return false;
+   return true;
 }
 
 void log_clear_log_filters(void) {

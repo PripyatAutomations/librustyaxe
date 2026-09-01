@@ -22,16 +22,16 @@ cfg_cb_list_t *cfg_callbacks = NULL;
 bool cfg_set_default(dict *d, const char *key, const char *val) {
    if (!key || !d) {
       Log(LOG_CRIT, "librustyaxe", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);
-      return true;
+      return false;
    }
 
    Log(LOG_CRAZY, "librustyaxe", "Setting default for dict:<%p>/%s to '%s'", d, key, val);
    if (dict_add(d, key, (char *)val) != 0) {
       Log(LOG_CRIT, "librustyaxe", "defcfg dict:<%p> failed to set key |%s| to val |%s| at <%p>", d, key, val, val);
-      return true;
+      return false;
    }
 
-   return false;
+   return true;
 }
 
 bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
@@ -56,7 +56,7 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
       }
 
       Log(LOG_CRAZY, "librustyaxe", "cfg_set_defaults: |%s| => |%s|", defaults[i].key, defaults[i].val);
-      if ( cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
+      if ( !cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
          Log(LOG_WARN, "librustyaxe", "cfg_set_defaults: Failed to set key: |%s|", defaults[i].key);
          warnings++;
       }
@@ -494,7 +494,7 @@ bool cfg_save(dict *d, const char *path) {
    if (!fp) {
       Log( LOG_WARN, "librustyaxe", "Failed to open save file: '%s': %d:%s", path, errno, strerror(errno) );
 
-      return true;
+      return false;
    }
    dict *merged = NULL;
 
@@ -521,7 +521,7 @@ bool cfg_save(dict *d, const char *path) {
    fflush(fp);
    fclose(fp);
 
-   return false;
+   return true;
 }
 
 // XXX: This needs to compare changes and create a dict with the differences in
@@ -661,10 +661,10 @@ bool reload_event_run(const char *key) {
 // Remove a reload event from the list
 bool reload_event_remove(reload_event_t *evt) {
    if (!evt) {
-      return true;
+      return false;
    }
    // Free resources
    free(evt);
 
-   return false;
+   return true;
 }
