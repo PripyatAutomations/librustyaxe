@@ -197,6 +197,5 @@ int32_t rr_cat_parse_line(char *line) {
       return rr_cat_parse_line_real(line);
    }
 #endif
-
    return 0;
 }

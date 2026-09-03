@@ -304,7 +304,6 @@ int kv_remove(kv_store_t *store, const char *key) {
       memmove( &arr[pos], &arr[pos + 1], (list->count - pos - 1) * sizeof(kv_node_t*) );
       list->count--;
       list->ptr = arr;
-
       return 0;
    } else {
       int removed = 0;
@@ -315,7 +314,6 @@ int kv_remove(kv_store_t *store, const char *key) {
       if (removed) {
          return 0;
       }
-
       return -1;
    }
 }
@@ -340,6 +338,5 @@ kv_store_t *kv_create_and_load(kv_type_t type, size_t prefix_size, ...) {
       kv_insert(store, key, val);
    }
    va_end(ap);
-
    return store;
 }

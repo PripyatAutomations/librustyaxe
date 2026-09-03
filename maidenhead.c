@@ -28,7 +28,6 @@ static char *complete_mh(const char *locator) {
 
    if (len > 10 || len < 4) {
       Log(LOG_CRIT, "librustyaxe", "complete_mh: grid square must be between 4 and 10 digits. More digits provides more accuracy. Current length: %d. Returning NULL!", len);
-
       return NULL;
    }
 
@@ -36,7 +35,6 @@ static char *complete_mh(const char *locator) {
    if (len % 2 != 0) {
       Log(LOG_CRIT, "librustyaxe", "complete_mh: grid squares must contain an even number of digits. Your request of %d digits was invalid, returning NULL!\n\n",
          len);
-
       return NULL;
    }
    // always 'zero' strings.. This will ensure we get a full 10 digits and always clean...
@@ -45,7 +43,6 @@ static char *complete_mh(const char *locator) {
    // This copies the locator, leaving the padding (from LL55LL55LL) in place to
    // get center of the gridsquare
    memcpy(locator2, locator, len);
-
    return locator2;
 }
 
@@ -76,7 +73,6 @@ Coordinates maidenhead2latlon(const char *locator) {
    // if grid square is odd length, return error
    if ( (len % 2) != 0 ) {
       Log(LOG_CRIT, "librustyaxe", "maidenhead2latlon: grid squares must be 4-10 digits (A-Z, 0-9) long and even length.");
-
       return c;
    }
 
@@ -86,7 +82,6 @@ Coordinates maidenhead2latlon(const char *locator) {
       if ( ( lp = complete_mh(locator) ) == NULL ) {
          // Invalid (uneven length?) grid square passed
          Log(LOG_CRIT, "librustyaxe", "maidenhead2latlon: grid squares must be 4-10 digits (A-Z, 0-9) long and even length.\n");
-
          return c;
       }
    }
@@ -108,7 +103,6 @@ Coordinates maidenhead2latlon(const char *locator) {
    extsquare = (lp[6] - '0') / 120.0;
    precsquare = (toupper(lp[8]) - 'A') / 2880.0;
    c.longitude = (field + square + subsquare + extsquare + precsquare - 180);
-
    return c;
 }
 
@@ -161,7 +155,6 @@ const char *latlon2maidenhead(Coordinates *c) {
    }
 
    locator[i * 2] = 0;
-
    return locator;
 }
 
@@ -175,9 +168,8 @@ double calculateBearing(double lat1, double lon1, double lat2, double lon2) {
    double x = cos( deg2rad(lat1) ) * sin( deg2rad(lat2) ) - sin( deg2rad(lat1) ) *
               cos( deg2rad(lat2) ) * cos(dLon);
    double bearing = atan2(y, x);
-   bearing = fmod(bearing + 2 * M_PI, 2 * M_PI);  // Convert to positive value
+   bearing = fmod(bearing + 2 * M_PI, 2 * M_PI);   // Convert to positive value
    bearing = bearing * 180.0 / M_PI;               // Convert to degrees
-
    return bearing;
 }
 
@@ -189,6 +181,5 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
               sin(dLon / 2) * sin(dLon / 2);
    double c = 2 * atan2( sqrt(a), sqrt(1 - a) );
    double distance = RADIUS_EARTH * c;
-
    return distance;
 }
