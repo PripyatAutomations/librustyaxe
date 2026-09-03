@@ -29,6 +29,9 @@ extern void tui_redraw_screen(void);
 extern void tui_redraw_clock(void);
 
 extern char **tui_completion_cb(const char*text, int start, int end);
+extern bool tui_register_completion_provider(char **(*fn)(const char *line, const char *word));
+extern bool tui_unregister_completion_provider(char **(*fn)(const char *line, const char *word));
+extern bool tui_do_completion(tui_window_t *win);
 extern int tui_rows(void);
 extern int tui_cols(void);
 extern void tui_draw_input(tui_window_t *w, int term_rows);

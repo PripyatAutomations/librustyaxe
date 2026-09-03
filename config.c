@@ -209,6 +209,12 @@ dict *cfg_load(const char *path) {
       fprintf(stderr, "OOM in cfg_load?!\n");
       exit(EXIT_FAILURE);
    }
+
+   // Point the global cfg at the dict being built so section callbacks
+   // (which dict_add() into cfg) write into the dict we will return.
+   // Without this, keys added by callbacks during load are lost.
+   cfg = newcfg;
+
    FILE *fp = fopen(path, "r");
 
    if (!fp) {
@@ -436,6 +442,91 @@ const char *cfg_get_exp(const char *key) {
    return dict_get_exp(cfg, key);
 }
 
+// ---------------------------------------------------------------
+// Config save callbacks
+// ---------------------------------------------------------------
+cfg_save_cb_entry_t *cfg_save_callbacks = NULL;
+
+bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
+   if (!callback) {
+      Log(LOG_WARN, "config.save", "Attempt to add NULL save callback");
+      return true;
+   }
+
+   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks; cbp; cbp = cbp->next) {
+      if (cbp->callback == callback) {
+         Log(LOG_DEBUG, "config.save", "Save callback |%s| already registered", name ? name : "unnamed");
+         return false;
+      }
+   }
+
+   cfg_save_cb_entry_t *cb = malloc(sizeof(cfg_save_cb_entry_t));
+
+   if (!cb) {
+      fprintf(stderr, "OOM in cfg_add_save_callback!\n");
+      abort();
+   }
+   memset(cb, 0, sizeof(cfg_save_cb_entry_t));
+   cb->name = name;
+   cb->callback = callback;
+   cb->next = NULL;
+
+   if (!cfg_save_callbacks) {
+      cfg_save_callbacks = cb;
+   } else {
+      cfg_save_cb_entry_t *p = cfg_save_callbacks;
+
+      while (p->next) {
+         p = p->next;
+      }
+      p->next = cb;
+   }
+   Log(LOG_DEBUG, "config.save", "Registered save callback |%s| at <%p>", name ? name : "unnamed", callback);
+
+   return false;
+}
+
+bool cfg_remove_save_callback(cfg_save_cb_t callback) {
+   if (!callback) {
+      return true;
+   }
+
+   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks, *prev = NULL; cbp; prev = cbp, cbp = cbp->next) {
+      if (cbp->callback == callback) {
+         if (prev) {
+            prev->next = cbp->next;
+         } else {
+            cfg_save_callbacks = cbp->next;
+         }
+         free(cbp);
+         return false;
+      }
+   }
+   Log(LOG_WARN, "config.save", "Save callback at <%p> not found for removal", callback);
+
+   return true;
+}
+
+// Returns true if any save callback failed
+bool cfg_run_save_callbacks(FILE *fp, const char *path) {
+   if (!fp || !path) {
+      return true;
+   }
+
+   bool errors = false;
+
+   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks; cbp; cbp = cbp->next) {
+      Log(LOG_DEBUG, "config.save", "Running save callback |%s| at <%p>", cbp->name ? cbp->name : "unnamed", cbp->callback);
+
+      if (cbp->callback(fp, path)) {
+         Log(LOG_WARN, "config.save", "Save callback |%s| reported errors saving %s", cbp->name ? cbp->name : "unnamed", path);
+         errors = true;
+      }
+   }
+
+   return errors;
+}
+
 static void cfg_print_servers(dict *d, FILE *fp) {
    if (!d || !fp) {
       return;
@@ -461,7 +552,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
       if ( name_len >= sizeof(name) ) {
          continue;
       }
-      strlcpy(name, name_start, name_len);
+      strlcpy(name, name_start, name_len + 1);
       name[name_len] = '\0';
 
       if ( dict_get(seen, name, NULL) ) {
@@ -501,14 +592,19 @@ bool cfg_save(dict *d, const char *path) {
    // Right-side argument overrides defaults
    merged = dict_merge_new(default_cfg, d);
 
-   // Dump general settings (skip server: keys)
+   // Keys handled by module-owned sections or fixed writers are skipped in
+   // the [general] dump.  Anything in a module section callback is emitted
+   // by that module's save callback.
    fprintf(fp, "[general]\n");
    int rank = 0;
    const char *key;
    char *val;
    while ( ( rank = dict_enumerate(merged, rank, &key, &val) ) >= 0 ) {
       if (strncmp(key, "server:", 7) == 0) {
-         continue;
+         continue;   // Emitted by the server save callback
+      }
+      if (strncmp(key, "network.", 8) == 0) {
+         continue;   // Emitted by the network save callback
       }
       fprintf(fp, "%s=%s\n", key, val ? val : "");
    }
@@ -517,6 +613,9 @@ bool cfg_save(dict *d, const char *path) {
 
    // Print the server sections
    cfg_print_servers(d, fp);
+
+   // Let registered modules emit their own sections (network:autojoin, etc)
+   cfg_run_save_callbacks(fp, path);
 
    fflush(fp);
    fclose(fp);

@@ -181,12 +181,12 @@ struct rrconn {
    time_t connected;             // when was the socket connected?
    time_t session_expiry;        // When does the session expire?
    time_t session_start;         // When did they login?
-   time_t last_heard;            // when a last valid message was heard from
-                                 // client
+   time_t last_cat;	         // Last rigctl message acted on
+   time_t last_chat;		 // Last chat message received
+   time_t last_heard;            // when a last valid message was heard from client
    time_t last_ping;             // If client is pending timeout, this will
                                  // contain the time a ping was sent to check
-                                 // for
-                                 // dead connection
+                                 // for dead connection
    time_t last_cat_update;                      // Last time we sent a cat message
    http_user_t *user;            // pointer to http user, once login is sent. DO
                                  // NOT TRUST IF authenticated != true!

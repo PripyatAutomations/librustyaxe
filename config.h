@@ -48,6 +48,22 @@ struct reload_event {
 };
 typedef struct reload_event reload_event_t;
 
+// Config save callbacks:
+//    Modules that own non-dict config data (parsed [server:*], [network:*]
+//    sections, runtime state, etc.) register a save callback.  When the
+//    config is saved, each callback is invoked with the output FILE * and
+//    writes its own sections.  Return false on success, true on error.
+typedef bool (*cfg_save_cb_t)(FILE *fp, const char *path);
+
+struct cfg_save_cb_entry {
+   const char *name;           // Module name for logging
+   cfg_save_cb_t callback;
+   struct cfg_save_cb_entry *next;
+};
+typedef struct cfg_save_cb_entry cfg_save_cb_entry_t;
+
+extern cfg_save_cb_entry_t *cfg_save_callbacks;
+
 // Data storage dicts
 extern dict *cfg;                        // Main configuration
 extern dict *default_cfg;                // Default configuration
@@ -66,6 +82,11 @@ extern bool cfg_apply_new(dict *oldcfg, dict *newcfg);
 
 // Save the dict into a file
 extern bool cfg_save(dict *d, const char *path);
+
+// Register a callback to emit module-owned config sections during cfg_save
+extern bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback);
+extern bool cfg_remove_save_callback(cfg_save_cb_t callback);
+extern bool cfg_run_save_callbacks(FILE *fp, const char *path);
 
 // Create a new config
 extern bool cfg_detect_and_load(const char *configs[], int num_configs);
