@@ -41,6 +41,49 @@ static int term_rows = 24;   // default lines
 static int term_cols = 80;   // default width
 static char status_line[STATUS_LEN];
 
+static int tui_line_rows(const char *s, int width) {
+   int rows = 1;
+   int col = 0;
+
+   if (!s || width <= 0) {
+      return 1;
+   }
+
+   while (*s) {
+      if (*s == '\033' && *(s + 1) == '[') {
+         s += 2;
+
+         while (*s && !(*s >= '@' && *s <= '~')) {
+            s++;
+         }
+
+         if (*s) {
+            s++;
+         }
+
+         continue;
+      }
+
+      if (*s == '\n') {
+         rows++;
+         col = 0;
+         s++;
+         continue;
+      }
+
+      col++;
+
+      if (col > width) {
+         rows++;
+         col = 1;
+      }
+
+      s++;
+   }
+
+   return rows;
+}
+
 // Read the terminal size and update our size to match
 static void update_term_size(void) {
    struct winsize ws;
@@ -146,6 +189,8 @@ void tui_redraw_screen(void) {
    } else {
       printf(" [%-*s]", term_cols, w->title);
    }
+
+#if	0
    // --- Log area ---
    int log_area_rows = term_rows - 3;  // top + bottom + input
    int filled = (w->log_count > log_area_rows) ? log_area_rows : w->log_count;
@@ -187,7 +232,138 @@ void tui_redraw_screen(void) {
          term_clrtoeol();
       }
    }
+#endif	// 0
+   // --- Log area ---
+   int log_area_rows = term_rows - 3;
+   int total_rows = 0;
 
+   // Find the total number of physical terminal rows occupied by the
+   // messages currently in the ring buffer.
+   int oldest = (w->log_head + LOG_LINES - w->log_count) % LOG_LINES;
+
+   for (int i = 0 ; i < w->log_count ; i++) {
+      int idx = (oldest + i) % LOG_LINES;
+
+      if (w->buffer[idx]) {
+         total_rows += tui_line_rows(w->buffer[idx], term_cols);
+      }
+   }
+
+   // scroll_offset is now measured in physical terminal rows.
+   int max_scroll = total_rows > log_area_rows
+                  ? total_rows - log_area_rows
+                  : 0;
+
+   if (w->scroll_offset < 0) {
+      w->scroll_offset = 0;
+   } else if (w->scroll_offset > max_scroll) {
+      w->scroll_offset = max_scroll;
+   }
+
+   // This is the physical row, counting from the oldest message, that
+   // should appear at the top of the log area.
+   int target_row = total_rows - log_area_rows - w->scroll_offset;
+
+   if (target_row < 0) {
+      target_row = 0;
+   }
+
+   // Find the message containing target_row.
+   int start = oldest;
+   int skip_rows = target_row;
+
+   for (int i = 0 ; i < w->log_count ; i++) {
+      int idx = (oldest + i) % LOG_LINES;
+
+      if (!w->buffer[idx]) {
+         continue;
+      }
+
+      int message_rows = tui_line_rows(w->buffer[idx], term_cols);
+
+      if (skip_rows < message_rows) {
+         start = idx;
+         break;
+      }
+
+      skip_rows -= message_rows;
+   }
+
+   int row = 2;
+
+   // Render messages starting at 'start'.  skip_rows tells us how many
+   // physical wrapped rows to skip inside the first message.
+   bool first_message = true;
+
+   for (int i = 0 ; i < w->log_count && row < term_rows - 1 ; i++) {
+      int idx = (start + i) % LOG_LINES;
+
+      if (!w->buffer[idx]) {
+         continue;
+      }
+
+      const char *p = w->buffer[idx];
+
+      while (*p && row < term_rows - 1) {
+         int col = 0;
+         const char *line_start = p;
+         const char *last_break = p;
+
+         while (*p && col < term_cols) {
+            if (*p == '\033' && *(p + 1) == '[') {
+               p += 2;
+
+               while (*p && !(*p >= '@' && *p <= '~')) {
+                  p++;
+               }
+
+               if (*p) {
+                  p++;
+               }
+
+               continue;
+            }
+
+            if (*p == '\n') {
+               break;
+            }
+
+            col++;
+            last_break = ++p;
+         }
+
+         bool explicit_newline = (*p == '\n');
+
+         // If this is the first message and we need to skip physical rows,
+         // discard this wrapped row without printing it.
+         if (first_message && skip_rows > 0) {
+            skip_rows--;
+         } else {
+            printf("\033[%d;1H", row++);
+
+            if (explicit_newline) {
+               fwrite(line_start, 1, p - line_start, stdout);
+               p++;
+            } else {
+               fwrite(line_start, 1, last_break - line_start, stdout);
+            }
+
+            term_clrtoeol();
+         }
+
+         // Once we've rendered/skipped the first physical row, normal
+         // rendering continues.
+         if (first_message && skip_rows == 0) {
+            first_message = false;
+         }
+      }
+   }
+
+   // Fill remaining log space with blanks
+   while (row < term_rows - 1) {
+      printf("\033[%d;1H", row++);
+      term_clrtoeol();
+   }
    // Fill remaining log space with blanks
    while (row < term_rows - 1) {
       printf("\033[%d;1H", row++);

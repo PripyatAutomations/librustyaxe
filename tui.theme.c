@@ -23,178 +23,68 @@
 bool cfg_tui_colors = true;
 
 static const ansi_entry_t ansi_table[] = {
-   {
-      "reset", "\033[0m"
-   },
-
-   // Attributes
-   {
-      "bold", "\033[1m"
-   },
-   {
-      "dim", "\033[2m"
-   },
-   {
-      "italic", "\033[3m"
-   },
-   {
-      "underline", "\033[4m"
-   },
-   {
-      "blink", "\033[5m"
-   },
-   {
-      "reverse", "\033[7m"
-   },
-   {
-      "hidden", "\033[8m"
-   },
-   {
-      "strike", "\033[9m"
-   },
-   {
-      "bold-off", "\033[22m"
-   },                                // turns off bold/dim
-   {
-      "dim-off", "\033[22m"
-   },                                // same as bold-off
-   {
-      "italic-off", "\033[23m"
-   },                                // turns off italic
-   {
-      "underline-off", "\033[24m"
-   },                                // turns off underline
-   {
-      "blink-off", "\033[25m"
-   },                                // turns off blink
-   {
-      "reverse-off", "\033[27m"
-   },                                // turns off reverse/inverse
-   {
-      "hidden-off", "\033[28m"
-   },                                // turns off hidden
-   {
-      "strike-off", "\033[29m"
-   },                                // turns off strike-through
-
+   { "reset", "\033[0m" },
+// Attributes
+   { "bold", "\033[1m" },
+   { "dim", "\033[2m" },
+   { "italic", "\033[3m" },
+   { "underline", "\033[4m" },
+   { "blink", "\033[5m" },
+   { "reverse", "\033[7m" },
+   { "hidden", "\033[8m" },
+   { "strike", "\033[9m" },
+   { "bold-off", "\033[22m" },                                // turns off bold/dim
+   { "dim-off", "\033[22m" },                                // same as bold-off
+   { "italic-off", "\033[23m" },                                // turns off italic
+   { "underline-off", "\033[24m" },                                // turns off underline
+   { "blink-off", "\033[25m" },                                // turns off blink
+   { "reverse-off", "\033[27m" },                                // turns off reverse/inverse
+   { "hidden-off", "\033[28m" },                                // turns off hidden
+   { "strike-off", "\033[29m" },                                // turns off strike-through
    // Normal foreground colors
-   {
-      "black", "\033[30m"
-   },
-   {
-      "red", "\033[31m"
-   },
-   {
-      "green", "\033[32m"
-   },
-   {
-      "yellow", "\033[33m"
-   },
-   {
-      "brown", "\033[38;5;94m"
-   },                                    // mIRC-style brown
-   {
-      "blue", "\033[34m"
-   },
-   {
-      "magenta", "\033[35m"
-   },
-   {
-      "cyan", "\033[36m"
-   },
-   {
-      "white", "\033[37m"
-   },
-   {
-      "orange", "\033[38;5;208m"
-   },                                    // mIRC-style orange
+   { "black", "\033[30m" },
+   { "red", "\033[31m" },
+   { "green", "\033[32m" },
+   { "yellow", "\033[33m" },
+   { "brown", "\033[38;5;94m" },                                    // mIRC-style brown
+   { "blue", "\033[34m" },
+   { "magenta", "\033[35m" },
+   { "cyan", "\033[36m" },
+   { "white", "\033[37m" },
+   { "orange", "\033[38;5;208m" },                                    // mIRC-style orange
 
    // Bright foreground colors
-   {
-      "bright-black", "\033[90m"
-   },                                    // ensure bright-black exists
-   {
-      "bright-red", "\033[91m"
-   },
-   {
-      "bright-green", "\033[92m"
-   },
-   {
-      "bright-yellow", "\033[93m"
-   },
-   {
-      "bright-blue", "\033[94m"
-   },
-   {
-      "bright-magenta", "\033[95m"
-   },
-   {
-      "bright-cyan", "\033[96m"
-   },
-   {
-      "bright-white", "\033[97m"
-   },
+   { "bright-black", "\033[90m" },                                    // ensure bright-black exists
+   { "bright-red", "\033[91m" },
+   { "bright-green", "\033[92m" },
+   { "bright-yellow", "\033[93m" },
+   { "bright-blue", "\033[94m" },
+   { "bright-magenta", "\033[95m" },
+   { "bright-cyan", "\033[96m" },
+   { "bright-white", "\033[97m" },
 
    // Background colors
-   {
-      "bg-black", "\033[40m"
-   },
-   {
-      "bg-red", "\033[41m"
-   },
-   {
-      "bg-green", "\033[42m"
-   },
-   {
-      "bg-yellow", "\033[43m"
-   },
-   {
-      "bg-brown", "\033[48;5;94m"
-   },
-   {
-      "bg-blue", "\033[44m"
-   },
-   {
-      "bg-magenta", "\033[45m"
-   },
-   {
-      "bg-cyan", "\033[46m"
-   },
-   {
-      "bg-white", "\033[47m"
-   },
-   {
-      "bg-orange", "\033[48;5;208m"
-   },
+   { "bg-black", "\033[40m" },
+   { "bg-red", "\033[41m" },
+   { "bg-green", "\033[42m" },
+   { "bg-yellow", "\033[43m" },
+   { "bg-brown", "\033[48;5;94m" },
+   { "bg-blue", "\033[44m" },
+   { "bg-magenta", "\033[45m" },
+   { "bg-cyan", "\033[46m" },
+   { "bg-white", "\033[47m" },
+   { "bg-orange", "\033[48;5;208m" },
 
    // Bright backgrounds
-   {
-      "bg-bright-black", "\033[100m"
-   },
-   {
-      "bg-bright-red", "\033[101m"
-   },
-   {
-      "bg-bright-green", "\033[102m"
-   },
-   {
-      "bg-bright-yellow", "\033[103m"
-   },
-   {
-      "bg-bright-blue", "\033[104m"
-   },
-   {
-      "bg-bright-magenta", "\033[105m"
-   },
-   {
-      "bg-bright-cyan", "\033[106m"
-   },
-   {
-      "bg-bright-white", "\033[107m"
-   },
-
-   {
-      NULL, NULL
+   { "bg-bright-black", "\033[100m" },
+   { "bg-bright-red", "\033[101m" },
+   { "bg-bright-green", "\033[102m" },
+   { "bg-bright-yellow", "\033[103m" },
+   { "bg-bright-blue", "\033[104m" },
+   { "bg-bright-magenta", "\033[105m" },
+   { "bg-bright-cyan", "\033[106m" },
+   { "bg-bright-white", "\033[107m" },
+   { NULL, NULL
    }
 };
 
@@ -271,7 +161,6 @@ char *tui_colorize_string(const char *in) {
       }
    }
    *o = '\0';
-
    return out;
 }
 
@@ -381,7 +270,6 @@ char *irc_to_tui_colors(const char *in) {
       p++;
    }
    *o = '\0';
-
    return out;
 }
 
