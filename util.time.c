@@ -35,12 +35,15 @@ const char *get_chat_ts(time_t ts) {
    // If this is "live now", allow caching per second
    if (ts == 0 || ts >= now) {
       if (chat_ts_updated == now) {
-         return chat_ts;    // use cached string
+         return chat_ts;
       }
+
       chat_ts_updated = now;
       ts = now;
    }
+
    struct tm tmsg, tcurr;
+
    localtime_r(&ts, &tmsg);
    localtime_r(&now, &tcurr);
 
@@ -48,9 +51,14 @@ const char *get_chat_ts(time_t ts) {
    if (tmsg.tm_year == tcurr.tm_year &&
        tmsg.tm_yday == tcurr.tm_yday) {
       strftime(chat_ts, sizeof(chat_ts),
-         "{bright-black}[{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ", &tmsg);
+         "{bright-black}[{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ",
+         &tmsg);
    } else {
-      strftime(chat_ts, sizeof(chat_ts), "%a %b %d %H:%M:%S", &tmsg);
+      // Include the date for messages before today
+      strftime(chat_ts, sizeof(chat_ts),
+         "{bright-black}[{cyan}%Y-%m-%d{bright-black} "
+         "{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ",
+         &tmsg);
    }
 
    return chat_ts;

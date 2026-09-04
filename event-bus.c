@@ -91,7 +91,6 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
          } else {
             Log(LOG_CRAZY, "event.nomatch", "Event %s didn't match; firing NOMATCH", event);
          }
-
          event_fire_list(nomatch, event, cptr, data);
       } else {
          Log(LOG_CRAZY, "event.nomatch", "Event %s from cptr:<%p> didn't match anything. data: |%s|", event, cptr, data);
