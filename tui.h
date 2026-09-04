@@ -50,4 +50,6 @@ extern const char *history_prev(void);
 extern const char *history_next(void);
 extern void history_add(const char *line);
 
+#include <librustyaxe/tui.completion.h>
+
 #endif // !defined(__librustyaxe_tui_h)

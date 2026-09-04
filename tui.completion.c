@@ -49,9 +49,8 @@ extern int cursor_pos;
 // ---------------------------------------------------------------
 
 #define TUI_MAX_COMPLETION_PROVIDERS 8
-#define TUI_MAX_COMPLETIONS_SHOWN 32
 
-typedef char **(*tui_completion_provider_t)(const char *line, const char *word);
+//typedef char **(*tui_completion_provider_t)(const char *line, const char *word);
 
 static tui_completion_provider_t completion_providers[TUI_MAX_COMPLETION_PROVIDERS];
 static int completion_provider_count = 0;
@@ -90,7 +89,7 @@ bool tui_unregister_completion_provider(tui_completion_provider_t fn) {
 
 // Collect matches from all registered providers.  Returns a
 // NULL-terminated malloc'd array of malloc'd strings.
-static char **completion_collect(const char *line, const char *word) {
+char **completion_collect(const char *line, const char *word) {
    if (!word || !*word) {
       return NULL;
    }
@@ -123,7 +122,7 @@ static char **completion_collect(const char *line, const char *word) {
    return matches;
 }
 
-static void completion_free(char **matches) {
+void completion_free(char **matches) {
    if (!matches) {
       return;
    }
