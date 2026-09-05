@@ -1,4 +1,4 @@
-//      This is part of rustyrig-fw.
+Ok//      This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
 // Unit tests for librustyaxe/util.time.c
@@ -14,11 +14,18 @@
 time_t now;
 
 static int failures = 0;
-#define CHECK(cond) do { \
-   if (!(cond)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } \
-} while (0)
+#define CHECK(cond)                                                      \
+   do                                                                    \
+   {                                                                     \
+      if (!(cond))                                                       \
+      {                                                                  \
+         fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+         failures++;                                                     \
+      }                                                                  \
+   } while (0)
 
-static void test_dhms2time_t(void) {
+static void test_dhms2time_t(void)
+{
    CHECK(dhms2time_t(NULL) == 0);
    CHECK(dhms2time_t("") == 0);
    CHECK(dhms2time_t("90s") == 90);
@@ -34,7 +41,8 @@ static void test_dhms2time_t(void) {
    CHECK(dhms2time_t("5sx") == 5);
 }
 
-static void test_time_t2dhms(void) {
+static void test_time_t2dhms(void)
+{
    char *s;
 
    s = time_t2dhms(0);
@@ -65,9 +73,10 @@ static void test_time_t2dhms(void) {
    free(s);
 }
 
-static void test_format_timestamp(void) {
+static void test_format_timestamp(void)
+{
    char buf[64];
-   time_t t = 875000000;   // 1997-09-24 (UTC); localtime may shift, so just check shape
+   time_t t = 875000000; // 1997-09-24 (UTC); localtime may shift, so just check shape
    format_timestamp(t, buf, sizeof(buf));
    CHECK(strlen(buf) == 20);
    CHECK(buf[0] == '[' && buf[19] == ']');
@@ -79,28 +88,31 @@ static void test_format_timestamp(void) {
    CHECK(strlen(tiny) < 4);
 }
 
-static void test_timespec_diff_ms(void) {
-   struct timespec a = { .tv_sec = 10, .tv_nsec = 500000000 };
-   struct timespec b = { .tv_sec = 10, .tv_nsec = 0 };
+static void test_timespec_diff_ms(void)
+{
+   struct timespec a = {.tv_sec = 10, .tv_nsec = 500000000};
+   struct timespec b = {.tv_sec = 10, .tv_nsec = 0};
    CHECK(timespec_diff_ms(&a, &b) == 500);
    CHECK(timespec_diff_ms(&b, &a) == -500);
 
-   struct timespec c = { .tv_sec = 12, .tv_nsec = 250000000 };
+   struct timespec c = {.tv_sec = 12, .tv_nsec = 250000000};
    CHECK(timespec_diff_ms(&c, &a) == 1750);
 
    // Sub-millisecond truncation
-   struct timespec d = { .tv_sec = 0, .tv_nsec = 999999 };
-   struct timespec z = { .tv_sec = 0, .tv_nsec = 0 };
+   struct timespec d = {.tv_sec = 0, .tv_nsec = 999999};
+   struct timespec z = {.tv_sec = 0, .tv_nsec = 0};
    CHECK(timespec_diff_ms(&d, &z) == 0);
 }
 
-int main(void) {
+int main(void)
+{
    test_dhms2time_t();
    test_time_t2dhms();
    test_format_timestamp();
    test_timespec_diff_ms();
 
-   if (failures > 0) {
+   if (failures > 0)
+   {
       fprintf(stderr, "%s: %d failure(s)\n", __FILE__, failures);
       return 1;
    }
