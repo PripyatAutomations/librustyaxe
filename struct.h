@@ -188,6 +188,7 @@ struct rrconn {
                                  // contain the time a ping was sent to check
                                  // for dead connection
    time_t last_cat_update;                      // Last time we sent a cat message
+   time_t noob_cooldown;         // Noobs can't TX until this time (noob.cool-down)
    http_user_t *user;            // pointer to http user, once login is sent. DO
                                  // NOT TRUST IF authenticated != true!
    char nonce[HTTP_TOKEN_LEN + 1];   // Authentication nonce - only used between
