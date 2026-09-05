@@ -310,9 +310,28 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       return;
    }
    va_start(ap, fmt);
+   va_copy(ap_c1, ap);
+
+   // Call registered callbacks even if this message is filtered from the
+   // console/logfile below, e.g. for auditing; the callback can check
+   // log_level itself if it only wants messages that would be shown
+   if (log_callbacks) {
+      struct log_callback *lp = log_callbacks;
+      while (lp) {
+         if (lp->callback) {
+            va_list cb_ap;
+            va_copy(cb_ap, ap_c1);
+            lp->callback(priority, subsys, fmt, cb_ap);
+            va_end(cb_ap);
+         }
+         lp = lp->next;
+      }
+   }
 
    if ( debug_filter(subsys, priority) ) {
 //      fprintf(stderr, "skip %s:%d\n", subsys, priority);
+      va_end(ap_c1);
+      va_end(ap);
       return;
    }
 
@@ -320,9 +339,6 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (cfg_log_show_ts) {
       update_timestamp();
    }
-   // make a clean copy for callback calls to copy :P
-   va_copy(ap_c1, ap);
-
    /* clear the message buffer */
    memset( msgbuf, 0, sizeof(msgbuf) );
 
@@ -353,20 +369,6 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       }
    }
 
-   // if there are registered log callbacks, call them
-   if (log_callbacks) {
-      struct log_callback *lp = log_callbacks;
-      while (lp) {
-         if (lp->callback) {
-            va_list cb_ap;
-            va_copy(cb_ap, ap_c1);
-//            fprintf(stderr, "log cb: <%p> called\n", lp->callback);
-            lp->callback(priority, subsys, fmt, cb_ap);
-            va_end(cb_ap);
-         }
-         lp = lp->next;
-      }
-   }
    va_end(ap_c1);
 }
 

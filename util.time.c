@@ -118,7 +118,12 @@ time_t dhms2time_t(const char *str) {
          }
       }
 
-      ptr++;   // Move to the next character
+      // Skip an unrecognized unit so we can't loop forever on garbage input
+      if (strchr("ywdhms", unit) == NULL) {
+         ptr++;
+      }
+
+      ptr++;   // Move past the unit to the next character
    }
    free(copy);   // Free the memory allocated for the copy
 
