@@ -16,7 +16,6 @@
 #if     defined(USE_MONGOOSE)
 #include <ext/libmongoose/mongoose.h>
 #endif
-#include <librustyaxe/cat.h>
 #include <librustyaxe/subproc.h>
 #include <librustyaxe/config.h>
 #include <librustyaxe/daemon.h>
