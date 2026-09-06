@@ -28,6 +28,11 @@ extern bool tui_update_status(tui_window_t *win, const char *fmt, ...);
 extern void tui_redraw_screen(void);
 extern void tui_redraw_clock(void);
 
+// Defer redraws while printing multiple lines (i.e. help), then flush once
+extern int redraw_defer_count;
+extern void tui_redraw_defer(void);
+extern void tui_redraw_flush(void);
+
 extern char **tui_completion_cb(const char*text, int start, int end);
 extern bool tui_register_completion_provider(char **(*fn)(const char *line, const char *word));
 extern bool tui_unregister_completion_provider(char **(*fn)(const char *line, const char *word));

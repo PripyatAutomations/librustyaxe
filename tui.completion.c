@@ -45,7 +45,7 @@ extern int cursor_pos;
 // or NULL if it has nothing to offer.  The library does no matching
 // of its own - it merely merges provider results, completes the
 // common prefix and lists candidates.  The TUI library owns the
-// returned memory. 
+// returned memory.
 // ---------------------------------------------------------------
 
 #define TUI_MAX_COMPLETION_PROVIDERS 8
@@ -90,7 +90,7 @@ bool tui_unregister_completion_provider(tui_completion_provider_t fn) {
 // Collect matches from all registered providers.  Returns a
 // NULL-terminated malloc'd array of malloc'd strings.
 char **completion_collect(const char *line, const char *word) {
-   if (!word || !*word) {
+   if (!word) {
       return NULL;
    }
 
@@ -148,15 +148,19 @@ bool tui_do_completion(tui_window_t *win) {
    }
 
    int word_len = cursor_pos - start;
+   char word[TUI_INPUTLEN];
 
-   if (word_len <= 0) {
+   /* An empty word is allowed when the cursor sits directly after a space,
+    * so providers can complete a full argument list (i.e. /server<space>TAB)
+    */
+   if (word_len < 0 || (word_len == 0 && !(cursor_pos > 0 && input_buf[cursor_pos - 1] == ' ') ) ) {
       return false;
    }
 
-   char word[TUI_INPUTLEN];
-
-   memcpy(word, &input_buf[start], word_len);
-   word[word_len] = '\0';
+   if (word_len > 0) {
+      memcpy(word, &input_buf[start], word_len);
+   }
+   word[word_len > 0 ? word_len : 0] = '\0';
 
    char **matches = completion_collect(input_buf, word);
 

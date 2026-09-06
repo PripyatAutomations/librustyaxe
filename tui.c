@@ -163,6 +163,22 @@ bool tui_fini(void) {
    return false;
 }
 
+// While deferred, tui_vprint() skips the per-line full redraw; the caller
+// flushes once when done printing a batch (i.e. /help)
+int redraw_defer_count = 0;
+
+void tui_redraw_defer(void) {
+   redraw_defer_count++;
+}
+
+void tui_redraw_flush(void) {
+   if (redraw_defer_count <= 0) {
+      return;
+   }
+   redraw_defer_count = 0;
+   tui_redraw_screen();
+}
+
 void tui_redraw_screen(void) {
    if (!tui_enabled) {
       return;

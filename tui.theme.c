@@ -309,7 +309,10 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
       win->log_count++;
    }
 
-   tui_redraw_screen();
+   // Skip the per-line redraw while a batch is deferred (see tui_redraw_defer)
+   if (redraw_defer_count == 0) {
+      tui_redraw_screen();
+   }
 }
 
 void tui_print(tui_window_t *win, const char *fmt, ...) {
