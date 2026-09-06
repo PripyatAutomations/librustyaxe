@@ -6,7 +6,6 @@
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-// XXX: ToDo: support logging to a a few places -- syslog console flash (file)
 //
 #include <stddef.h>
 #include <stdarg.h>
@@ -93,7 +92,6 @@ bool log_add_filter(const char *pattern, logpriority_t level) {
 
    if (f == NULL) {
       fprintf(stderr, "OOM in log_add_filter\n");
-
       return false;
    }
 
@@ -294,7 +292,6 @@ int update_timestamp(void) {
    } else {
       return 1;
    }
-
    return 0;
 }
 
@@ -368,7 +365,6 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
          fflush(stdout);
       }
    }
-
    va_end(ap_c1);
 }
 
@@ -420,6 +416,5 @@ bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *su
       // first entry, pop it at the top of the list
       log_callbacks = newcb;
    }
-
    return false;
 }
