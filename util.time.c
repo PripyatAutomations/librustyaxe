@@ -184,3 +184,15 @@ long long timespec_diff_ms(const struct timespec *a, const struct timespec *b) {
    return (long long)(a->tv_sec - b->tv_sec) * 1000LL +
           (a->tv_nsec - b->tv_nsec) / 1000000LL;
 }
+////////////////////////////
+// Monotonic milliseconds //
+////////////////////////////
+long long mono_ms(void) {
+   struct timespec ts;
+
+   if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+      return 0;
+   }
+
+   return ( (long long)ts.tv_sec * 1000 ) + ( ts.tv_nsec / 1000000 );
+}

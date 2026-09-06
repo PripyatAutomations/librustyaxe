@@ -16,4 +16,8 @@ extern char *time_t2dhms(time_t seconds);
 extern void format_timestamp(time_t t, char *buf, size_t buflen);
 extern long long timespec_diff_ms(const struct timespec *a, const struct timespec *b);
 
+// Monotonic milliseconds since an arbitrary epoch: safe for latency
+// measurement (immune to wall-clock jumps), wraps ~292k years
+extern long long mono_ms(void);
+
 #endif // !defined(__util_time_h)

@@ -166,6 +166,7 @@ struct rrconn {
    bool ghost;                   // Is the session a ghost?
    bool is_ws;                   // Flag to indicate if it's a WebSocket client
    bool is_ptt;                  // Is the user keying up ANY attached rig?
+   char ptt_vfo;                 // VFO letter ('A'...) they keyed, 0 if none
    bool sent_login;                             // have we sent login?
    bool is_server;                              // is this a server? If so, we'll send
                                                 // relayed commands to it
@@ -174,7 +175,8 @@ struct rrconn {
                                  // chat/etc
                                  // for comfort
    int ping_attempts;            // How many times have we tried to ping the
-                                 // client without answer?
+                                  // client without answer?
+   int latency_ms;               // Last measured RTT to this client (ms)
    int ptt_session;              // Set when PTT has been raised
    u_int32_t user_flags;         // Bit flags for user features, permissions,
                                  // etc.
