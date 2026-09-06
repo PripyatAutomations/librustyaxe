@@ -309,6 +309,22 @@ dict *cfg_load(const char *path) {
       /////////////////////////////
       // parse the line contents //
       /////////////////////////////
+      // A leading '\' escapes the comment characters (#, ;, //) so e.g.
+      // CSS selectors like '#chat-view' can be used in config sections.
+      // We unescape in place here, before any comment processing.
+      if (*skip == '\\' && (skip[1] == '#' || skip[1] == ';' ||
+                            (skip[1] == '/' && skip[2] == '/') || skip[1] == '\\') ) {
+         memmove(skip, skip + 1, strlen(skip));        // shift left incl. NUL
+         // Unescape any further occurrences in the line (e.g. 'a \# b \# c')
+         for (char *p = skip; *p; p++) {
+            if (*p == '\\' && (p[1] == '#' || p[1] == ';' || p[1] == '\\')) {
+               memmove(p, p + 1, strlen(p));
+            }
+         }
+         // recompute end pointer after the shifts
+         end = buf + strlen(buf) - 1;
+      }
+
       if (*skip == '*' && *(skip + 1) == '/') {
          in_comment = false;
          continue;
