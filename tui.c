@@ -23,10 +23,8 @@
 #include <errno.h>
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
-#include <ev.h>
 
-ev_io stdin_watcher;
-void stdin_ev_cb(EV_P_ ev_io *w, int revents);
+extern void tui_keys_init(void);         // tui.keys.c
 
 extern char input_buf[TUI_INPUTLEN];
 extern int input_len;
@@ -127,7 +125,7 @@ int tui_cols(void) {
    return term_cols;
 }
 
-extern void tui_keys_init(struct ev_loop *loop);         // tui.keys.c
+extern void tui_keys_init(void);         // tui.keys.c
 
 char *s_status_offline = NULL;
 
@@ -149,8 +147,7 @@ bool tui_init(void) {
    // force raw input mode
    tui_raw_mode(true);
 
-   struct ev_loop *loop = EV_DEFAULT;
-   tui_keys_init(loop);
+   tui_keys_init();
 
    tui_window_update_topline("Chikin r tasty");
    // draw the initial screen

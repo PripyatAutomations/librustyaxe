@@ -6,6 +6,9 @@
  * restarting process If a process has crashed more than cfg:supervisor/max-crashes in the
  * last cfg:supervisor/max-crash-time then don't bother respawning it.. XXX: Add more
  * error checking!
+ *
+ * NB: process exit detection is done by polling via subproc_check_all() from the
+ * periodic timer, rather than with an event loop (formerly libev ev_child watchers).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,77 +21,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 //#include <termbox2/termbox2.h>
-#include <ev.h>
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
 //extern TextArea *msgbox;
 //extern int y;         // from ui.c
 static int max_subprocess = 0;
-//struct ev_loop *loop = NULL;
 
 // this shouldn't be exported as we'll soon provide utility functions for it
 static subproc_t *children[MAX_SUBPROC];
-
-static void subproc_cb(EV_P_ ev_child *w, int revents) {
-   // remove the watcher
-   ev_child_stop(EV_A_ w);
-
-   // log the event
-   log_send(mainlog, LOG_CRIT, "subproc: process %d exited with status %d\n", w->rpid, w->rstatus);
-
-   // Find subproc in children[] that matches
-   int i;
-   subproc_t *p = NULL;
-
-   for (i = 0 ; i < MAX_SUBPROC ; i++) {
-      if (children[i] == NULL) {
-         continue;
-      }
-
-      // is this our match?
-      if (children[i]->pid == w->rpid) {
-         p = children[i];
-         break;
-      }
-   }
-
-   // This setting will cause the periodic timer to restart the process soon...
-   if (p != NULL) {
-      p->restart_time = 0;
-      p->needs_restarted = true;
-   }
-}
-
-static void stdin_cb(EV_P_ ev_io *w, int revents) {
-   if (EV_ERROR & revents) {
-      log_send(mainlog, LOG_CRIT, "Error event in stdin watcher");
-
-      return;
-   }
-   log_send(mainlog, LOG_DEBUG, "stdin: write waiting");
-//    ev_io_stop(loop, w);
-}
-
-static void stdout_cb(EV_P_ ev_io *w, int revents) {
-   if (EV_ERROR & revents) {
-      log_send(mainlog, LOG_CRIT, "Error event in stdout watcher");
-
-      return;
-   }
-   log_send(mainlog, LOG_DEBUG, "stdout: read waiting");
-//    ev_io_stop(loop, w);
-}
-
-static void stderr_cb(EV_P_ ev_io *w, int revents) {
-   if (EV_ERROR & revents) {
-      log_send(mainlog, LOG_CRIT, "Error event in stderr watcher");
-
-      return;
-   }
-   log_send(mainlog, LOG_DEBUG, "stderr: read waiting");
-//    ev_io_stop(loop, w);
-}
 
 bool subproc_start(int slot) {
    subproc_t *p = NULL;
@@ -107,11 +48,6 @@ bool subproc_start(int slot) {
       return false;
    }
 
-   // setup evloop pointer if not done yet
-   if (loop == NULL) {
-//      loop = EV_DEFAULT;
-   }
-
    // well look here! we have a commandline to execute!
    if ( (p->argc > 0) && (p->argv[0] != NULL) ) {
       int saved_errno = 0;
@@ -119,8 +55,6 @@ bool subproc_start(int slot) {
 
       // XXX: we'll play with this a bit but if it doesn't work out, we'll teach
       // callsign-lookupd about sockets.
-      // XXX: it shouldn't be too awful as we have libev to save us the dreadful
-      // bits...
       // create the pipes for stdio
       if (pipe(p->_stdin) == -1 || pipe(p->_stdout) == -1 || pipe(p->_stderr) == -1) {
          log_send( mainlog, LOG_CRIT, "subproc_start(%d): pipe() failed: %d: %s", slot, errno, strerror(errno) );
@@ -165,27 +99,10 @@ bool subproc_start(int slot) {
          close(p->_stdout[1]);           // close write end of stdout of parent
          close(p->_stderr[1]);           // close write end of stderr of parent
 
-#if     0
-         // setup ev_io watchers
-//         ev_io_init(&p->stdin_watcher, stdin_cb, p->_stdin[1], EV_WRITE);
-         ev_io_init(&p->stdout_watcher, stdout_cb, p->_stdout[0], EV_READ);
-         ev_io_init(&p->stderr_watcher, stderr_cb, p->_stderr[0], EV_READ);
-//         ev_io_start(loop, &p->stdin_watcher);
-         ev_io_start(loop, &p->stdout_watcher);
-         ev_io_start(loop, &p->stderr_watcher);
-#endif
-
          // succesful start, disable pending restarts
          p->pid = pid;
          p->needs_restarted = 0;
          p->restart_time = 0;
-
-#if     0
-         // enable child process watcher in libev, so we can track when it
-         // dies...
-         ev_child_init(&p->watcher, subproc_cb, pid, 0);
-         ev_child_start(loop, &p->watcher);
-#endif
       }
    }
 

@@ -22,7 +22,9 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 #include <librustyaxe/termkey.h>
-#include <ev.h>
+#include <glib.h>
+#include <glib-unix.h>
+#include <fcntl.h>
 
 extern int tui_window_swap(int c, int key);
 extern int handle_alt_left(int c, int key);
@@ -215,26 +217,27 @@ void handle_enter_key(tui_window_t *win, int cursor)
 }
 
 //////////////
-static TermKey *tk;
-
 bool (*tui_readline_cb)(const char *input) = NULL;
 
 static TermKey *tk = NULL;
-static ev_io stdin_watcher;
+static guint stdin_watch_id = 0;
 
-void stdin_ev_cb(EV_P_ ev_io *w, int revents);
+// GLib fd source: called when stdin is readable
+static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data);
 
-void tui_keys_init(struct ev_loop *loop)
+void tui_keys_init(void)
 {
    tk = termkey_new(STDIN_FILENO, TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW);
    termkey_set_canonflags(tk, TERMKEY_CANON_DELBS);
    termkey_set_flags(tk, termkey_get_flags(tk) | TERMKEY_FLAG_NOTERMIOS);
-   //   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
-   ev_io_init(&stdin_watcher, stdin_ev_cb, STDIN_FILENO, EV_READ);
-   ev_io_start(loop, &stdin_watcher);
+
+   // stdin must be non-blocking for the GLib fd source
+   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
+
+   stdin_watch_id = g_unix_fd_add(STDIN_FILENO, G_IO_IN, stdin_ev_cb, NULL);
 }
 
-void stdin_ev_cb(EV_P_ ev_io *w, int revents)
+static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
 {
    TermKeyResult res;
    TermKeyKey key;
@@ -250,7 +253,7 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents)
 
       if (res == TERMKEY_RES_AGAIN)
       {
-         return;
+         return TRUE;
       }
       tui_window_t *win = tui_active_window();
 
@@ -639,4 +642,6 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents)
          tui_update_input_line();
       }
    }
+
+   return G_SOURCE_CONTINUE;
 }

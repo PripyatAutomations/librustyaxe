@@ -41,8 +41,6 @@
 #define	AUTOJOIN_LEN 1024        // auto-join channels
 #define	USER_HASHSZ 127 // prime number
 
-#include <ev.h>
-
 typedef struct rrconn rrconn_t;
 typedef struct irc_command irc_command_t;
 
@@ -246,9 +244,6 @@ struct rrconn {
           rx_packets;                           // Packets we've received
 #ifdef  USE_MONGOOSE
    struct mg_connection *mg;
-#endif
-#ifdef  USE_LIBEV
-   ev_io io_watcher;
 #endif
 };
 typedef struct rrconn rrconn_t;
