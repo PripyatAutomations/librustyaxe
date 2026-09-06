@@ -642,10 +642,109 @@ bool cfg_save(dict *d, const char *path) {
    return true;
 }
 
-// XXX: This needs to compare changes and create a dict with the differences in
-// it
+/* PARITY: rustyrig-www/js/webui.config.js */
 bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
-   cfg = newcfg;
+   if (!newcfg) {
+      Log(LOG_WARN, "librustyaxe", "cfg_apply_new: newcfg is NULL, ignoring");
+      return true;
+   }
+
+   int rank = 0;
+   const char *key;
+   dict_value_t val;
+   val_type_t type;
+   int changed = 0, added = 0, removed = 0;
+
+   /* Full swap into the live cfg dict: add/update everything in newcfg,
+      remove everything in oldcfg that's gone from newcfg. */
+
+   // Add/update every key from the new config in the live config
+   while ( ( rank = dict_enumerate_typed(newcfg, rank, &key, &val, &type) ) >= 0 ) {
+      const char *oldval = NULL;
+      const char *newval = NULL;
+
+      if (oldcfg) {
+         oldval = dict_get(oldcfg, key, NULL);
+      }
+
+      if (type == VAL_STR) {
+         newval = val.s;
+      }
+
+      if (oldcfg && oldval && newval && strcmp(oldval, newval) == 0) {
+         continue;   // Unchanged
+      }
+
+      // Replace the value in the live config
+      dict_add(cfg, key, newval);
+
+      if (oldcfg && oldval) {
+         Log(LOG_DEBUG, "cfg.reload", "cfg_apply_new: '%s' changed: '%s' => '%s'",
+             key, oldval, newval ? newval : "");
+         changed++;
+      } else {
+         Log(LOG_DEBUG, "cfg.reload", "cfg_apply_new: '%s' added: '%s'",
+             key, newval ? newval : "");
+         added++;
+      }
+
+      // Run any reload callbacks registered for this key
+      reload_event_run(key);
+   }
+
+   // Remove keys from the live config that no longer exist in the new config
+   rank = 0;
+   const char *rkey;
+   char *rval;
+
+   while ( ( rank = dict_enumerate(cfg, rank, &rkey, &rval) ) >= 0 ) {
+      if (!dict_get(newcfg, rkey, NULL)) {
+         Log(LOG_DEBUG, "cfg.reload", "cfg_apply_new: '%s' removed", rkey);
+         dict_del(cfg, rkey);
+         removed++;
+         reload_event_run(rkey);
+         rank = 0;   // Restart enumeration, the dict may have rebalanced
+      }
+   }
+
+   Log(LOG_INFO, "cfg.reload", "cfg_apply_new: %d added, %d changed, %d removed",
+       added, changed, removed);
+
+   // Free the old config dict if it isn't the live one
+   if (oldcfg && oldcfg != cfg) {
+      dict_free(oldcfg);
+   }
+
+   // Free the temporary new dict -- its values were copied into cfg
+   dict_free(newcfg);
+
+   return false;
+}
+
+/*
+ * Reload a config file into the global cfg dict.
+ * The caller may pass a specific config file name; if NULL, the currently
+ * loaded config_file is re-read.
+ */
+bool cfg_reload(const char *filename) {
+   const char *path = filename ? filename : config_file;
+
+   if (!path) {
+      Log(LOG_WARN, "librustyaxe", "cfg_reload: No config file to reload");
+      return true;
+   }
+
+   Log(LOG_WARN, "librustyaxe", "cfg_reload: Starting config reload from %s", path);
+
+   dict *newcfg = cfg_load(path);
+
+   if (!newcfg) {
+      Log(LOG_CRIT, "librustyaxe", "cfg_reload: Failed to load config from %s", path);
+      return true;
+   }
+
+   cfg_apply_new(cfg, newcfg);
+   Log(LOG_INFO, "librustyaxe", "cfg_reload: Finished reloading config from %s", path);
 
    return false;
 }

@@ -66,6 +66,7 @@ extern cfg_save_cb_entry_t *cfg_save_callbacks;
 
 // Data storage dicts
 extern dict *cfg;                        // Main configuration
+extern const char *config_file;         // Path of the currently loaded config file
 extern dict *default_cfg;                // Default configuration
 extern dict *pipelines;                  // fwdsp/rrgtk pipelines
 
@@ -79,6 +80,9 @@ extern dict *cfg_load(const char *path);
 
 // Apply new configuration to the oldcfg dict
 extern bool cfg_apply_new(dict *oldcfg, dict *newcfg);
+
+// Reload a config file (or the last-loaded one if filename is NULL) into the global cfg dict
+extern bool cfg_reload(const char *filename);
 
 // Save the dict into a file
 extern bool cfg_save(dict *d, const char *path);
