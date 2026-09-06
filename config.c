@@ -606,6 +606,9 @@ bool cfg_save(dict *d, const char *path) {
       if (strncmp(key, "network.", 8) == 0) {
          continue;   // Emitted by the network save callback
       }
+      if (strcmp(key, "ui.gtk.css") == 0) {
+         continue;   // Multi-line: emitted by the [gtk-css] save callback
+      }
       fprintf(fp, "%s=%s\n", key, val ? val : "");
    }
    // Release the memory used
