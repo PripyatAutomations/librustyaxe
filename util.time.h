@@ -20,4 +20,8 @@ extern long long timespec_diff_ms(const struct timespec *a, const struct timespe
 // measurement (immune to wall-clock jumps), wraps ~292k years
 extern long long mono_ms(void);
 
+// Monotonic microseconds since an arbitrary epoch: real-usec resolution for
+// RTT measurement (immune to wall-clock jumps)
+extern long long mono_us(void);
+
 #endif // !defined(__util_time_h)

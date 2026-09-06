@@ -196,3 +196,16 @@ long long mono_ms(void) {
 
    return ( (long long)ts.tv_sec * 1000 ) + ( ts.tv_nsec / 1000000 );
 }
+
+////////////////////////////
+// Monotonic microseconds //
+////////////////////////////
+long long mono_us(void) {
+   struct timespec ts;
+
+   if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+      return 0;
+   }
+
+   return ( (long long)ts.tv_sec * 1000000 ) + ( ts.tv_nsec / 1000 );
+}
