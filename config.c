@@ -7,6 +7,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <sys/stat.h>
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
@@ -21,13 +22,13 @@ cfg_cb_list_t *cfg_callbacks = NULL;
 
 bool cfg_set_default(dict *d, const char *key, const char *val) {
    if (!key || !d) {
-      Log(LOG_CRIT, "librustyaxe", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);
+      Log(LOG_CRIT, "cfg", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);
       return false;
    }
 
-   Log(LOG_CRAZY, "librustyaxe", "Setting default for dict:<%p>/%s to '%s'", d, key, val);
+   Log(LOG_CRAZY, "cfg", "Setting default for dict:<%p>/%s to '%s'", d, key, val);
    if (dict_add(d, key, (char *)val) != 0) {
-      Log(LOG_CRIT, "librustyaxe", "defcfg dict:<%p> failed to set key |%s| to val |%s| at <%p>", d, key, val, val);
+      Log(LOG_CRIT, "cfg", "defcfg dict:<%p> failed to set key |%s| to val |%s| at <%p>", d, key, val, val);
       return false;
    }
 
@@ -36,33 +37,33 @@ bool cfg_set_default(dict *d, const char *key, const char *val) {
 
 bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
    if (!d) {
-      Log(LOG_CRIT, "librustyaxe", "cfg_set_defaults: NULL dict");
+      Log(LOG_CRIT, "cfg", "cfg_set_defaults: NULL dict");
       return true;
    }
 
    if (!defaults) {
-      Log(LOG_CRIT, "librustyaxe", "cfg_set_defaults: NULL input");
+      Log(LOG_CRIT, "cfg", "cfg_set_defaults: NULL input");
       return true;
    }
-   Log(LOG_CRAZY, "librustyaxe", "cfg_set_defaults: Loading defaults from <%p>", defaults);
+   Log(LOG_DEBUG, "cfg", "cfg_set_defaults: Loading defaults from <%p>", defaults);
 
    int i = 0;
    int warnings = 0;
    while (defaults[i].key) {
       if (!defaults[i].val) {
-         Log(LOG_CRAZY, "librustyaxe", "cfg_set_defaults: Skipping key |%s| as its empty", defaults[i].key);
+         Log(LOG_CRAZY, "cfg", "cfg_set_defaults: Skipping key |%s| as its empty", defaults[i].key);
          i++;
          continue;
       }
 
-      Log(LOG_CRAZY, "librustyaxe", "cfg_set_defaults: |%s| => |%s|", defaults[i].key, defaults[i].val);
+      Log(LOG_CRAZY, "cfg", "cfg_set_defaults: |%s| => |%s|", defaults[i].key, defaults[i].val);
       if ( !cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
-         Log(LOG_WARN, "librustyaxe", "cfg_set_defaults: Failed to set key: |%s|", defaults[i].key);
+         Log(LOG_WARN, "cfg", "cfg_set_defaults: Failed to set key: |%s|", defaults[i].key);
          warnings++;
       }
       i++;
    }
-   Log(LOG_INFO, "librustyaxe", "Imported %d default settings with %d warnings", i, warnings);
+   Log(LOG_INFO, "cfg", "Imported %d default settings with %d warnings", i, warnings);
 
    return true;
 }
@@ -78,22 +79,23 @@ bool cfg_detect_and_load(const char *configs[], int num_configs) {
    }
 
    if (fullpath) {
+      // save the path for later use
       if ( ( config_file = strdup(fullpath) ) == NULL ) {
          abort();
       }
 
       if ( !( cfg = cfg_load(fullpath) ) ) {
-         Log(LOG_CRIT, "librustyaxe", "Couldn't load config \"%s\", using defaults instead", fullpath);
+         Log(LOG_CRIT, "cfg", "Couldn't load config \"%s\", using defaults instead", fullpath);
+         cfg = default_cfg;
       } else {
-         Log(LOG_DEBUG, "librustyaxe", "Loaded config from '%s'", fullpath);
+         Log(LOG_DEBUG, "cfg", "Loaded config from '%s'", fullpath);
       }
       free(fullpath);
    } else {
       // Use default settings and save it to default
       cfg = default_cfg;
-      Log(LOG_WARN, "librustyaxe", "No config file found, saving defaults");
+      Log(LOG_CRIT, "cfg", "No config file found, saving defaults");
    }
-
    return false;
 }
 
@@ -101,17 +103,16 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    if (!section || !cb) {
       return true;
    }
-   Log(LOG_DEBUG, "librustyaxe", "add_cb: path=%s section=%s cb=<%p>", path, section, (void *)cb);
+   Log(LOG_DEBUG, "cfg", "add_cb: path=%s section=%s cb=<%p>", path, section, (void *)cb);
 
    cfg_cb_list_t *new_cb = malloc( sizeof(cfg_cb_list_t) );
-
    if (new_cb == NULL) {
       abort();
    }
-   memset( new_cb, 0, sizeof(cfg_cb_list_t) );
 
+   memset( new_cb, 0, sizeof(cfg_cb_list_t) );
    if (!new_cb) {
-      Log(LOG_CRIT, "librustyaxe", "OOM in cfg_add_callback");
+      Log(LOG_CRIT, "cfg", "OOM in cfg_add_callback");
 
       return true;
    }
@@ -129,7 +130,7 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    }
    new_cb->callback = cb;
 
-   Log(LOG_DEBUG, "librustyaxe", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
+   Log(LOG_DEBUG, "cfg", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
 
    // store our new callback
    if (!cfg_callbacks) {
@@ -159,19 +160,19 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    if (!cbp) {
       return false;
    }
-   Log(LOG_CRIT, "librustyaxe", "cfg_dispatch_callback: starting cbp=%p", cbp);
+   Log(LOG_DEBUG, "cfg", "cfg_dispatch_callback: starting cbp=%p", cbp);
    int i = 0;
    while (cbp && i < CONFIG_MAX_CALLBACKS) {
       if (cbp->section && fnmatch(cbp->section, section, 0) == 0) {
          if ( !cbp->path || (fnmatch(cbp->path, path, 0) == 0) ) {
-            Log(LOG_DEBUG, "librustyaxe",
+            Log(LOG_CRAZY, "cfg",
                "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)", cbp->callback,
                section, cbp->section, path, cbp->path);
 
             if (cbp->callback) {
                cbp->callback(path, line, section, buf);
             } else {
-               Log(LOG_WARN, "librustyaxe",
+               Log(LOG_CRIT, "cfg",
                   "cfg_dispatch_callback: The callback at <%p> for section |%s| path |%s| doesn't have a valid function attached",
                   cbp, section, path);
             }
@@ -180,11 +181,11 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
       i++;
       prev = cbp;
       cbp = cbp->next;
-      Log(LOG_DEBUG, "librustyaxe", "prev;<%p> cbp:<%p> list:<%p>", prev, cbp, cfg_callbacks);
+      Log(LOG_CRAZY, "cfg", "prev;<%p> cbp:<%p> list:<%p>", prev, cbp, cfg_callbacks);
    }
 
    if (i > 10) {
-      Log(LOG_WARN, "librustyaxe", "%s: made %d iterations for cbp:<%p>", __FUNCTION__, i, cfg_callbacks);
+      Log(LOG_WARN, "cfg", "%s: made (%d) iterations for cbp:<%p> for |%s| and probably could be optimized", __FUNCTION__, i, cfg_callbacks, cbp->path);
    }
 
    return false;
@@ -199,7 +200,7 @@ dict *cfg_load(const char *path) {
    memset( this_section, 0, sizeof(this_section) );
 
    if ( !file_exists(path) ) {
-      Log(LOG_CRIT, "librustyaxe", "Can't find config file %s", path);
+      Log(LOG_CRIT, "cfg", "Can't find config file %s", path);
 
       return NULL;
    }
@@ -393,19 +394,19 @@ dict *cfg_load(const char *path) {
             snprintf(fullkey, sizeof(fullkey), "server:%s.%s", this_section + 7, key);
             dict_add(newcfg, fullkey, val);
          } else {
-            Log(LOG_WARN, "librustyaxe", "Malformed line parsing |%s| at %s:%d", buf, path, line);
+            Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
       } else if ( cfg_dispatch_callback(path, line, this_section, buf) ) {
-         Log(LOG_WARN, "librustyaxe", "Unknown configuration section |%s| parsing |%s| at %s:%d", this_section, buf, path,
+         Log(LOG_CRIT, "cfg", "Unknown configuration section |%s| parsing |%s| at %s:%d", this_section, buf, path,
             line);
          errors++;
       }
    } while ( !feof(fp) );
 
    if (errors > 0) {
-      Log(LOG_INFO, "librustyaxe", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
+      Log(LOG_INFO, "cfg", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
    } else {
-      Log(LOG_INFO, "librustyaxe", "cfg loaded %d lines from %s with no errors", line, path);
+      Log(LOG_INFO, "cfg", "cfg loaded %d lines from %s with no errors", line, path);
    }
 
    if (fp) {
@@ -417,8 +418,7 @@ dict *cfg_load(const char *path) {
 
 const char *cfg_get(const char *key) {
    if (!key) {
-      Log(LOG_WARN, "librustyaxe", "got cfg_get with NULL key!");
-
+      Log(LOG_CRIT, "cfg", "got cfg_get with NULL key!");
       return NULL;
    }
    const char *p = dict_get(cfg, key, NULL);
@@ -426,16 +426,13 @@ const char *cfg_get(const char *key) {
    // nope! try default
    if (!p) {
       if (!default_cfg) {
-#if     defined(DEBUG_CONFIG)
-         Log(LOG_DEBUG, "librustyaxe", "defcfg not found looking for key |%s|", key);
-#endif
-
+         Log(LOG_CRAZY, "cfg", "defcfg not found looking for key |%s|", key);
          return NULL;
       }
       p = dict_get(default_cfg, key, NULL);
-      Log(LOG_DEBUG, "librustyaxe", "returning default value |%s| for key |%s|", p, key);
+      Log(LOG_CRAZY, "cfg", "returning default value |%s| for key |%s|", p, key);
    } else {
-      Log(LOG_CRAZY, "librustyaxe", "returning user value |%s| for key |%s|", p, key);
+      Log(LOG_CRAZY, "cfg", "returning user value |%s| for key |%s|", p, key);
    }
 
    return p;
@@ -465,13 +462,13 @@ cfg_save_cb_entry_t *cfg_save_callbacks = NULL;
 
 bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
    if (!callback) {
-      Log(LOG_WARN, "config.save", "Attempt to add NULL save callback");
+      Log(LOG_WARN, "cfg", "Attempt to add NULL save callback");
       return true;
    }
 
    for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks; cbp; cbp = cbp->next) {
       if (cbp->callback == callback) {
-         Log(LOG_DEBUG, "config.save", "Save callback |%s| already registered", name ? name : "unnamed");
+         Log(LOG_WARN, "cfg", "Save callback |%s| already registered", name ? name : "unnamed");
          return false;
       }
    }
@@ -497,7 +494,7 @@ bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
       }
       p->next = cb;
    }
-   Log(LOG_DEBUG, "config.save", "Registered save callback |%s| at <%p>", name ? name : "unnamed", callback);
+   Log(LOG_DEBUG, "cfg", "Registered save callback |%s| at <%p>", name ? name : "unnamed", callback);
 
    return false;
 }
@@ -518,7 +515,7 @@ bool cfg_remove_save_callback(cfg_save_cb_t callback) {
          return false;
       }
    }
-   Log(LOG_WARN, "config.save", "Save callback at <%p> not found for removal", callback);
+   Log(LOG_CRIT, "cfg", "Save callback at <%p> not found for removal", callback);
 
    return true;
 }
@@ -532,10 +529,10 @@ bool cfg_run_save_callbacks(FILE *fp, const char *path) {
    bool errors = false;
 
    for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks; cbp; cbp = cbp->next) {
-      Log(LOG_DEBUG, "config.save", "Running save callback |%s| at <%p>", cbp->name ? cbp->name : "unnamed", cbp->callback);
+      Log(LOG_DEBUG, "cfg", "Running save callback |%s| at <%p>", cbp->name ? cbp->name : "unnamed", cbp->callback);
 
       if (cbp->callback(fp, path)) {
-         Log(LOG_WARN, "config.save", "Save callback |%s| reported errors saving %s", cbp->name ? cbp->name : "unnamed", path);
+         Log(LOG_CRIT, "cfg", "Save callback |%s| reported errors saving %s", cbp->name ? cbp->name : "unnamed", path);
          errors = true;
       }
    }
@@ -596,10 +593,31 @@ static void cfg_print_servers(dict *d, FILE *fp) {
 }
 
 bool cfg_save(dict *d, const char *path) {
+   // Back up the existing config before we overwrite it, so a bad save
+   // doesn't destroy the working config. Saved as <path>.YYYYmmddHHMMSS.
+   if (file_exists(path)) {
+      time_t now = time(NULL);
+      struct tm tm_buf;
+      localtime_r(&now, &tm_buf);
+      char backup[PATH_MAX];
+
+      if (snprintf(backup, sizeof(backup), "%s.%04d%02d%02d%02d%02d%02d",
+         path, tm_buf.tm_year + 1900, tm_buf.tm_mon + 1, tm_buf.tm_mday,
+         tm_buf.tm_hour, tm_buf.tm_min, tm_buf.tm_sec) > 0) {
+
+         if (rename(path, backup) == 0) {
+            Log(LOG_INFO, "cfg", "Saved previous config as '%s'", backup);
+         } else {
+            Log(LOG_WARN, "cfg", "Failed to back up config '%s' to '%s': %d:%s",
+               path, backup, errno, strerror(errno));
+         }
+      }
+   }
+
    FILE *fp = fopen(path, "w");
 
    if (!fp) {
-      Log( LOG_WARN, "librustyaxe", "Failed to open save file: '%s': %d:%s", path, errno, strerror(errno) );
+      Log( LOG_CRIT, "cfg", "Failed to open save file: '%s': %d:%s", path, errno, strerror(errno) );
 
       return false;
    }
@@ -645,7 +663,7 @@ bool cfg_save(dict *d, const char *path) {
 /* PARITY: rustyrig-www/js/webui.config.js */
 bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    if (!newcfg) {
-      Log(LOG_WARN, "librustyaxe", "cfg_apply_new: newcfg is NULL, ignoring");
+      Log(LOG_CRIT, "cfg", "cfg_apply_new: newcfg is NULL, ignoring");
       return true;
    }
 
@@ -679,11 +697,11 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
       dict_add(cfg, key, newval);
 
       if (oldcfg && oldval) {
-         Log(LOG_DEBUG, "cfg.reload", "cfg_apply_new: '%s' changed: '%s' => '%s'",
+         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' changed: '%s' => '%s'",
              key, oldval, newval ? newval : "");
          changed++;
       } else {
-         Log(LOG_DEBUG, "cfg.reload", "cfg_apply_new: '%s' added: '%s'",
+         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' added: '%s'",
              key, newval ? newval : "");
          added++;
       }
@@ -699,7 +717,7 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
 
    while ( ( rank = dict_enumerate(cfg, rank, &rkey, &rval) ) >= 0 ) {
       if (!dict_get(newcfg, rkey, NULL)) {
-         Log(LOG_DEBUG, "cfg.reload", "cfg_apply_new: '%s' removed", rkey);
+         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' removed", rkey);
          dict_del(cfg, rkey);
          removed++;
          reload_event_run(rkey);
@@ -707,7 +725,7 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
       }
    }
 
-   Log(LOG_INFO, "cfg.reload", "cfg_apply_new: %d added, %d changed, %d removed",
+   Log(LOG_INFO, "cfg", "cfg_apply_new: %d added, %d changed, %d removed",
        added, changed, removed);
 
    // Free the old config dict if it isn't the live one
@@ -730,21 +748,21 @@ bool cfg_reload(const char *filename) {
    const char *path = filename ? filename : config_file;
 
    if (!path) {
-      Log(LOG_WARN, "librustyaxe", "cfg_reload: No config file to reload");
+      Log(LOG_CRIT, "cfg", "cfg_reload: No config file to reload");
       return true;
    }
 
-   Log(LOG_WARN, "librustyaxe", "cfg_reload: Starting config reload from %s", path);
+   Log(LOG_INFO, "cfg", "cfg_reload: Starting config reload from %s", path);
 
    dict *newcfg = cfg_load(path);
 
    if (!newcfg) {
-      Log(LOG_CRIT, "librustyaxe", "cfg_reload: Failed to load config from %s", path);
+      Log(LOG_CRIT, "cfg", "cfg_reload: Failed to load config from %s", path);
       return true;
    }
 
    cfg_apply_new(cfg, newcfg);
-   Log(LOG_INFO, "librustyaxe", "cfg_reload: Finished reloading config from %s", path);
+   Log(LOG_INFO, "cfg", "cfg_reload: Finished reloading config from %s", path);
 
    return false;
 }
@@ -764,7 +782,7 @@ if (homedir && empty_config) {
 #endif
 
    if ( !file_exists(pathbuf) ) {
-      Log(LOG_CRIT, "main", "Saving default config to %s since it doesn't exist", pathbuf);
+      Log(LOG_WARN, "main", "Saving default config to %s since it doesn't exist", pathbuf);
       cfg_save(cfg, pathbuf);
       config_file = pathbuf;
    }
@@ -818,14 +836,14 @@ bool reload_event_list(const char *key) {
    }
    reload_event_t *r = reload_events;
 
-   Log(LOG_DEBUG, "cfg.reload", "****** rel dump ******\n");
+   Log(LOG_DEBUG, "cfg", "****** rel dump ******\n");
    r = reload_event_find(key, NULL);
    while (r) {
-      Log(LOG_DEBUG, "cfg.reload", "* %s has callback at <%p>: %s\n", r->key, r->callback,
+      Log(LOG_DEBUG, "cfg", "* %s has callback at <%p>: %s\n", r->key, r->callback,
          r->note ? r->note : "*** No note ***");
       r = r->next;
    }
-   Log(LOG_DEBUG, "cfg.reload", "**********************\n");
+   Log(LOG_DEBUG, "cfg", "**********************\n");
 
    return false;
 }
@@ -848,7 +866,7 @@ reload_event_t *reload_event_find( const char *key, bool (*callback) () ) {
       if (callback && r->callback && callback == r->callback) {
          match_cb = true;
       }
-      Log(LOG_CRAZY, "cfg.reload", "reload_event_find matched entry at <%p>, key: %s <%p>, callback:%s <%p>", r,
+      Log(LOG_DEBUG, "cfg", "reload_event_find matched entry at <%p>, key: %s <%p>, callback:%s <%p>", r,
          (match_key ? "true" : "false"), r->key, (match_cb ? "true" : "false"), r->callback);
 
       // If (no key or key matches) and (no callback or callback matches),
@@ -868,7 +886,7 @@ bool reload_event_run(const char *key) {
    reload_event_t *rl = reload_event_find(key, NULL);
 
    if (rl) {
-      Log(LOG_CRAZY, "cfg.reload", "reload: run callback at <%p> for key '%s'", rl->callback, key);
+      Log(LOG_DEBUG, "cfg", "reload: run callback at <%p> for key '%s'", rl->callback, key);
       rl->callback(key);
    }
 
