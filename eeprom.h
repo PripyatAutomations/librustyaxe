@@ -10,6 +10,8 @@
 #if     !defined(__rr_eeprom_h)
 #define	__rr_eeprom_h
 
+#ifdef	USE_EEPROM
+
 // This will prevent loading with a newer EEPROM version and someday will force
 // an upgrade if older
 #define	MY_EEPROM_VER 1
@@ -124,5 +126,7 @@ extern uint32_t eeprom_fd;
 extern u_int8_t         *eeprom_mmap;
 extern size_t eeprom_size;
 #endif // defined(HOST_POSIX)
+
+#endif	// USE_EEPROM
 
 #endif // !defined(__rr_eeprom_h)

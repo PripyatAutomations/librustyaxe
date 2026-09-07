@@ -42,18 +42,15 @@ extern char *dict2json(dict *d);
 extern dict *dict_new_ext(int first_type, ...);
 extern void dict_import_real(dict *d, int first_type, ...);
 extern void dict_import_va(dict *d, int first_type, va_list ap);
-
 #define	dict_import(d, ...) dict_import_va( (d), __VA_ARGS__, VAL_END )
-
 extern char *json_escape(const char *s);
 extern char *json_unescape(const char *s);
 
-// XXX: Rework these eventually to use be static inline bit to wrap normal
-// string versions of these... You must free ->ptr when you are done or memory
-// will be leaked
-extern const char *dict2json_mkstr_real(int first_type, ...);
-#define	dict2json_mkstr(...) dict2json_mkstr_real(__VA_ARGS__, VAL_END)
 extern void json_parse_and_flatten(const char *json, dict *dptr);
 extern dict *json2dict(const char *json);
+
+// Turn type/key/val pairs into just -- You *MUST* free the returned string!
+extern const char *dict2json_mkstr_real(int first_type, ...);
+#define	dict2json_mkstr(...) dict2json_mkstr_real(__VA_ARGS__, VAL_END)
 
 #endif // !defined(__librustyaxe_json_h)

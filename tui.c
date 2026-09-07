@@ -9,8 +9,6 @@
 //
 // Generic multi-screen ('windows') text user interface stuff
 //
-// XXX: Need to remove rrclient-specific crap from here asap
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -58,7 +56,6 @@ static int tui_line_rows(const char *s, int width) {
          if (*s) {
             s++;
          }
-
          continue;
       }
 
@@ -203,49 +200,6 @@ void tui_redraw_screen(void) {
       printf(" [%-*s]", term_cols, w->title);
    }
 
-#if	0
-   // --- Log area ---
-   int log_area_rows = term_rows - 3;  // top + bottom + input
-   int filled = (w->log_count > log_area_rows) ? log_area_rows : w->log_count;
-   int start = (w->log_head + LOG_LINES - w->scroll_offset - filled) % LOG_LINES;
-
-   int row = 2;  // first row for logs
-
-   for (int i = 0 ; i < filled && row < term_rows - 1 ; i++) {
-      int idx = (start + i) % LOG_LINES;
-
-      if (!w->buffer[idx]) {
-         continue;
-      }
-      const char *p = w->buffer[idx];
-      while (*p && row < term_rows - 1) {
-         int col = 0;
-         const char *line_start = p;
-         const char *last_break = p;
-
-         // Count visible chars, skip ANSI
-         while (*p && col < term_cols) {
-            if (*p == '\033' && *(p + 1) == '[') {
-               p++;
-               while (*p && *p != 'm') {
-                  p++;
-               }
-
-               if (*p) {
-                  p++;
-               }
-            } else {
-               col++;
-               last_break = ++p;
-            }
-         }
-         // Print slice
-         printf("\033[%d;1H", row++);
-         fwrite(line_start, 1, last_break - line_start, stdout);
-         term_clrtoeol();
-      }
-   }
-#endif	// 0
    // --- Log area ---
    int log_area_rows = term_rows - 3;
    int total_rows = 0;

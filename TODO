@@ -1,5 +1,46 @@
-===============
-= librustyaxe =
-===============
 * Finish theme support for TUI
 * TUI: Prevent scrolling of the buffer when content is added, if not at the bottom
+
+*: Merge cfg_get_* and eeprom_get_* so we have just cfg_get_*
+  - we should just load the whole eeprom into the config dict at startup???
+  - deal with debug.* vs log.* keys that need merged
+
+*: Make modules able to register their event handlers on loading
+
+*: Ensure modules are completely freed and unloaded. Use dicts or memblocks for internal storage
+
+*: Add memblocks, simple allocator who maintains small allocations (replace malloc,realloc,free,etc) with page tracking for release on module unload
+
+*: IRC protocol will be used to link sites, with large messages enabled (16k)
+
+* track rx bytes & tx bytes in the session
+	- all
+	- text, media (binary)
+
+* Implement ALERT message that pops up for all users (for shutdown, overheat, SWR alerts).
+
+* User management
+  - Add/edit users
+  - Reset password
+  - User change own password
+
+* CW-U and CW-L
+   - CW is centered on the CW dial freq; CW-L is center and width below; CW-R is center and width above
+
+[CAT]
+* Implement control over unix pipes or a file in posix mode
+
+* Implement control over stm32 serial over usb
+
+* Merge rr_cat_cmd and CATCommandTable
+
+[logger]
+* Add support for masking out messages such as '-*.noisy'
+
+? Add support for rate limiting messages by subsys major (first dot)
+
+[config]
+* Make config exporter put a comment with the description and default value, if found in defconfig, for each key saved.
+
+[Porting]
+minimal inet_ntop() for non-posix
