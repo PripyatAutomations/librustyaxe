@@ -37,6 +37,15 @@ static int term_rows = 24;   // default lines
 static int term_cols = 80;   // default width
 static char status_line[STATUS_LEN];
 
+// SSH_TTY is set when we're running over an SSH session: remote terminals
+// are bandwidth-sensitive, so the clock drops the seconds (HH:MM only) and
+// the client only repaints when the screen actually changes.
+bool tui_over_ssh = false;
+
+bool tui_is_over_ssh(void) {
+   return tui_over_ssh;
+}
+
 static int tui_line_rows(const char *s, int width) {
    int rows = 1;
    int col = 0;
@@ -128,6 +137,9 @@ char *s_status_offline = NULL;
 
 bool tui_init(void) {
    update_term_size();
+
+   // Detect an SSH session: HH:MM clock & fewer repaints (see tui_over_ssh)
+   tui_over_ssh = (getenv("SSH_TTY") != NULL);
 
    // set SIGnal WINdow CHange handler
    signal(SIGWINCH, sigwinch_handler);
@@ -356,14 +368,22 @@ void tui_redraw_clock(void) {
    localtime_r(&t, &tm);
 
    // Move cursor to second-to-last row, far-right minus visible width + 1
-   int clock_visible_len = 10;  // [HH:MM:SS]
+   int clock_visible_len = (tui_over_ssh ? 7 : 10);  // [HH:MM] vs [HH:MM:SS]
    int col = width - clock_visible_len;   // 0-based index for the first char
 
    if (col > 0) {
       char clock_tagged[128];
-      snprintf(clock_tagged, sizeof(clock_tagged),
-         "{bright-black}[{cyan}%02d{bright-black}:{cyan}%02d{bright-black}:{cyan}%02d{bright-black}]{reset}",
-         tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+      if (tui_over_ssh) {
+         // SSH session: HH:MM only, so we can redraw far less often
+         snprintf(clock_tagged, sizeof(clock_tagged),
+            "{bright-black}[{cyan}%02d{bright-black}:{cyan}%02d{bright-black}]{reset}",
+            tm.tm_hour, tm.tm_min);
+      } else {
+         snprintf(clock_tagged, sizeof(clock_tagged),
+            "{bright-black}[{cyan}%02d{bright-black}:{cyan}%02d{bright-black}:{cyan}%02d{bright-black}]{reset}",
+            tm.tm_hour, tm.tm_min, tm.tm_sec);
+      }
       char *clock_colored = tui_colorize_string(clock_tagged);
 
       printf("\033[s");  // save cursor
