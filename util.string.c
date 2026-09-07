@@ -36,25 +36,34 @@ char *escape_html(const char *input) {
    char *p = output;
 
    for (size_t i = 0 ; i < len ; i++) {
+      size_t remain = buf_size - (size_t)(p - output);
+
       switch (input[i]) {
          case '<': {
-            p += snprintf(p, (p - output), "&lt;"); break;
+            p += snprintf(p, remain, "&lt;"); break;
          }
          case '>': {
-            p += snprintf(p, (p - output), "&gt;"); break;
+            p += snprintf(p, remain, "&gt;"); break;
          }
          case '&': {
-            p += snprintf(p, (p - output), "&amp;"); break;
+            p += snprintf(p, remain, "&amp;"); break;
          }
          case '"': {
-            p += snprintf(p, (p - output), "&quot;"); break;
+            p += snprintf(p, remain, "&quot;"); break;
          }
          case '\'': {
-            p += snprintf(p, (p - output), "&#39;"); break;
+            p += snprintf(p, remain, "&#39;"); break;
          }
          default: {
             *p++ = input[i]; break;
          }
+      }
+
+      // snprintf returns the untruncated length; clamp the pointer if the
+      // buffer filled so we never write past the end
+      if (p >= output + buf_size) {
+         p = output + buf_size - 1;
+         break;
       }
    }
 
@@ -80,6 +89,8 @@ void unescape_html(char *s) {
             *w++ = '"'; r += 6;
          } else if ( !strncmp(r, "&#39;", 5) ) {
             *w++ = '\''; r += 5;
+         } else if ( !strncmp(r, "&nbsp;", 6) ) {
+            *w++ = ' '; r += 6;
          } else {
             *w++ = *r++;  // unknown entity, copy literally
          }
