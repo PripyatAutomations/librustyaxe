@@ -150,9 +150,9 @@ struct http_user {
    char email[USER_EMAIL_LEN + 1];                       // Email address
    char privs[USER_PRIV_LEN + 1];                        // privileges string?
    bool enabled;                                         // Is the user enabled?
-   int max_clones;                                       // maximum allowed
+   int max_sessions;                                       // maximum allowed
                                                          // sessions
-   int clones;                                           // active logins
+   int sessions;                                           // active logins
    int is_muted;                                         // is this user muted?
 };
 typedef struct http_user http_user_t;
