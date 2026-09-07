@@ -6,7 +6,9 @@ librustyaxe ?= ../librustyaxe.so
 librustyaxe_objs += config.o
 #librustyaxe_objs += daemon.o
 librustyaxe_objs += dict.o
+ifeq (${USE_EEPROM},true)
 librustyaxe_objs += eeprom.o
+endif
 librustyaxe_objs += event-bus.o
 librustyaxe_objs += io.o
 #librustyaxe_objs += io.serial.o
