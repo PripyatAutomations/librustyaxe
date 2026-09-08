@@ -103,7 +103,6 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    if (!section || !cb) {
       return true;
    }
-   Log(LOG_DEBUG, "cfg", "add_cb: path=%s section=%s cb=<%p>", path, section, (void *)cb);
 
    cfg_cb_list_t *new_cb = malloc( sizeof(cfg_cb_list_t) );
    if (new_cb == NULL) {
@@ -160,20 +159,17 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    if (!cbp) {
       return false;
    }
-   Log(LOG_DEBUG, "cfg", "cfg_dispatch_callback: starting cbp=%p", cbp);
    int i = 0;
    while (cbp && i < CONFIG_MAX_CALLBACKS) {
       if (cbp->section && fnmatch(cbp->section, section, 0) == 0) {
          if ( !cbp->path || (fnmatch(cbp->path, path, 0) == 0) ) {
-            Log(LOG_CRAZY, "cfg",
-               "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)", cbp->callback,
+            Log(LOG_CRAZY, "cfg", "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)", cbp->callback,
                section, cbp->section, path, cbp->path);
 
             if (cbp->callback) {
                cbp->callback(path, line, section, buf);
             } else {
-               Log(LOG_CRIT, "cfg",
-                  "cfg_dispatch_callback: The callback at <%p> for section |%s| path |%s| doesn't have a valid function attached",
+               Log(LOG_CRIT, "cfg", "cfg_dispatch_callback: The callback at <%p> for section |%s| path |%s| doesn't have a valid function attached",
                   cbp, section, path);
             }
          }
@@ -889,7 +885,6 @@ bool reload_event_run(const char *key) {
       Log(LOG_DEBUG, "cfg", "reload: run callback at <%p> for key '%s'", rl->callback, key);
       rl->callback(key);
    }
-
    return false;
 }
 
@@ -900,6 +895,5 @@ bool reload_event_remove(reload_event_t *evt) {
    }
    // Free resources
    free(evt);
-
    return true;
 }
