@@ -207,15 +207,20 @@ dict *cfg_load(const char *path) {
       exit(EXIT_FAILURE);
    }
 
-   // Point the global cfg at the dict being built so section callbacks
-   // (which dict_add() into cfg) write into the dict we will return.
-   // Without this, keys added by callbacks during load are lost.
+   // Temporarily point the global cfg at the dict being built so section
+   // callbacks (which dict_add() into cfg) write into the dict we will
+   // return. We must restore the previous value before returning -- callers
+   // like cfg_reload() rely on cfg still being the live config dict, and
+   // dict_free()ing newcfg would otherwise leave cfg dangling.
+   dict *saved_cfg = cfg;
+
    cfg = newcfg;
 
    FILE *fp = fopen(path, "r");
 
    if (!fp) {
       free(newcfg);
+      cfg = saved_cfg;
       fprintf( stderr, "Failed to open config %s: %d:%s\n", path, errno, strerror(errno) );
 
       return NULL;
@@ -408,6 +413,11 @@ dict *cfg_load(const char *path) {
    if (fp) {
       fclose(fp);
    }
+
+   // Restore the global cfg pointer. Callers decide what to do with newcfg:
+   // initial load takes ownership of it, cfg_reload() merges it into the
+   // live cfg and frees it.
+   cfg = saved_cfg;
 
    return newcfg;
 }
@@ -713,11 +723,22 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
 
    while ( ( rank = dict_enumerate(cfg, rank, &rkey, &rval) ) >= 0 ) {
       if (!dict_get(newcfg, rkey, NULL)) {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' removed", rkey);
-         dict_del(cfg, rkey);
+         /* dict_del() frees the stored key, so we must work on a copy:
+            rkey would otherwise dangle for the Log/reload_event_run calls
+            below (and any callbacks they trigger). */
+         char *rkcopy = strdup(rkey);
+
+         if (!rkcopy) {
+            Log(LOG_CRIT, "cfg", "cfg_apply_new: strdup failed removing '%s'", rkey);
+            rank = 0;
+            continue;
+         }
+         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' removed", rkcopy);
+         dict_del(cfg, rkcopy);
          removed++;
-         reload_event_run(rkey);
-         rank = 0;   // Restart enumeration, the dict may have rebalanced
+         reload_event_run(rkcopy);
+         free(rkcopy);
+         rank = 0;   // Restart enumeration, the dict may have been modified
       }
    }
 
