@@ -12,6 +12,7 @@
 #define	EVENT_NOMATCH "NOMATCH"
 
 static kv_store_t *event_store = NULL;
+static kv_store_t *event_binary_store = NULL;
 
 static void event_fire_list(kv_list_t *list, const char *event, rrconn_t *cptr, const char *data) {
    if (!list) {
@@ -25,9 +26,24 @@ static void event_fire_list(kv_list_t *list, const char *event, rrconn_t *cptr, 
    }
 }
 
+static void event_fire_binary_list(kv_list_t *list, const char *event, rrconn_t *cptr, const void *data, size_t len) {
+   if (!list) {
+      return;
+   }
+
+   for (size_t i = 0 ; i < list->count ; i++) {
+      event_binary_listener_t *l = ( (void **)list->ptr )[i];
+      Log(LOG_CRAZY, "event", "Firing binary event %s from cptr:<%p> with data:<%p> len %zu user:%s", event, cptr, data, len, l->user);
+      l->cb(event, data, len, cptr, l->user);
+   }
+}
+
 void event_init(void) {
    if (!event_store) {
       event_store = kv_create(65536, KV_BST);
+   }
+   if (!event_binary_store) {
+      event_binary_store = kv_create(1024, KV_BST);
    }
 }
 
@@ -66,6 +82,68 @@ void event_on(const char *event, event_cb_t cb, void *user) {
       abort();
    }
    ( (void**)list->ptr )[list->count++] = l;
+}
+
+/* subscribe to binary events */
+void event_on_binary(const char *event, event_binary_cb_t cb, void *user) {
+   if (!event_binary_store || !event || !cb) {
+      return;
+   }
+
+   kv_list_t *list = kv_lookup(event_binary_store, event);
+
+   if (!list) {
+      list = calloc( 1, sizeof(*list) );
+
+      // XXX: Make this more graceful
+      if (!list) {
+         abort();
+      }
+      list->type = KV_ARRAY;
+      kv_insert(event_binary_store, event, list);
+   }
+
+   event_binary_listener_t *l = calloc( 1, sizeof(*l) );
+
+   // XXX: make this more graceful
+   if (!l) {
+      abort();
+   }
+   l->cb = cb;
+   l->user = user;
+
+   list->ptr = realloc( list->ptr, sizeof(void*) * (list->count + 1) );
+
+   // XXX: make this more graceful
+   if (!list->ptr) {
+      abort();
+   }
+   ( (void**)list->ptr )[list->count++] = l;
+}
+
+void event_register_binary(const char *event, event_binary_cb_t cb, void *user) {
+   event_on_binary(event, cb, user);
+}
+
+void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size_t len) {
+   if (!event_binary_store || !event) {
+      return;
+   }
+
+   Log(LOG_CRAZY, "event", "send binary event %s: %zu bytes", event, len);
+   kv_list_t *list = kv_lookup(event_binary_store, event);
+   int evt_hits = 0;
+
+   if (list) {
+      evt_hits = list->count;
+      event_fire_binary_list(list, event, cptr, data, len);
+   }
+
+   if (evt_hits == 0) {
+      Log(LOG_CRAZY, "event.nomatch", "Binary event %s from cptr:<%p> didn't match anything (%zu bytes)", event, cptr, len);
+   } else {
+      Log(LOG_CRAZY, "event.match", "Binary event %s from cptr:<%p> hit %d times", event, cptr, evt_hits);
+   }
 }
 
 void event_emit(const char *event, rrconn_t *cptr, const char *data) {
@@ -145,6 +223,10 @@ void event_off(const char *event, event_cb_t cb, void *user) {
 
 /* optional cleanup */
 void event_shutdown(void) {
+   if (event_binary_store) {
+      kv_destroy(event_binary_store);
+      event_binary_store = NULL;
+   }
    if (!event_store) {
       return;
    }
