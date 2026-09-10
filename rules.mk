@@ -4,6 +4,7 @@ LDFLAGS +=$(call pkgconfig, --libs tinfo)
 librustyaxe ?= ../librustyaxe.so
 # !ls *.c|sed 's/.c$/.o/g'|sed 's/^/librustyaxe_objs += /g'
 librustyaxe_objs += config.o
+librustyaxe_objs += color.o
 #librustyaxe_objs += daemon.o
 librustyaxe_objs += dict.o
 ifeq (${USE_EEPROM},true)

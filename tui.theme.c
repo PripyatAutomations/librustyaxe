@@ -18,6 +18,7 @@
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <librustyaxe/core.h>
+#include <librustyaxe/color.h>
 #include <librrprotocol/rrprotocol.h>
 
 bool cfg_tui_colors = true;
@@ -175,6 +176,61 @@ char *tui_colorize_string(const char *in) {
 
          // if TUI colors are enabled, insert them
          if (cfg_tui_colors) {
+            // Hex color support: {#rgb}, {#rrggbb}, {#rrggbb:fallback} and
+            // bg- prefixed variants. Picks truecolor/256/named based on what
+            // the terminal reports, falling back to the :named tag (or the
+            // nearest of the 16 base colors) when high color is unavailable.
+            char hexbuf[16], fbbuf[64];
+            bool hex_bg = false;
+
+            if (color_tag_parse(key, hexbuf, sizeof(hexbuf), fbbuf, sizeof(fbbuf), &hex_bg) ) {
+               static int cap = -1;   // 2 = truecolor, 1 = 256color, 0 = 16
+
+               if (cap < 0) {
+                  const char *ct = getenv("COLORTERM");
+
+                  if (ct && (strcasecmp(ct, "truecolor") == 0 || strcasecmp(ct, "24bit") == 0) ) {
+                     cap = 2;
+                  } else {
+                     const char *t = getenv("TERM");
+                     cap = (t && strstr(t, "256color") ) ? 1 : 0;
+                  }
+               }
+
+               int hr = 0, hg = 0, hb = 0;
+               color_parse_hex(hexbuf, &hr, &hg, &hb);
+
+               if (cap == 2) {
+                  o += sprintf(o, "\033[%d;2;%d;%d;%dm", (hex_bg ? 48 : 38), hr, hg, hb);
+               } else if (cap == 1) {
+                  int n = color_rgb_to_ansi256(hr, hg, hb);
+                  if (n >= 0) {
+                     o += sprintf(o, "\033[%d;5;%dm", (hex_bg ? 48 : 38), n);
+                  }
+               } else {
+                  // 16-color terminal: use the explicit :fallback if given,
+                  // else the nearest base color
+                  const char *fb = (fbbuf[0] ? fbbuf : color_nearest_named(hr, hg, hb) );
+                  const char *code = ansi_code(fb);
+
+                  if (!code && !fbbuf[0]) {
+                     // nearest_named returned a name ansi_code() should know
+                  }
+                  if (code) {
+                     if (hex_bg) {
+                        // convert fg code (30-97) to bg code (40-107)
+                        const char *p2 = strchr(code, '[');
+                        int n2 = p2 ? atoi(p2 + 1) : 0;
+                        o += sprintf(o, "\033[%dm", n2 + 10);
+                     } else {
+                        o += sprintf(o, "%s", code);
+                     }
+                  }
+               }
+               p = end + 1;
+               continue;
+            }
+
             // look up ANSI escape; theme-config tags (headers, completion,...)
             // resolve through ui.theme.<tag> if not a literal color name
             const ansi_entry_t *ae;
