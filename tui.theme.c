@@ -112,6 +112,37 @@ static const char *ansi_code(const char *tag) {
    return NULL;
 }
 
+// Resolve a theme-configurable tag (e.g. "headers", "completion") through
+// cfg:ui.theme.<tag>. Values may be bare ("cyan") or braced ("{cyan}", as
+// they appear in message templates). Returns NULL if there is no such key
+// or the value doesn't resolve to an ANSI tag. One level deep only, so a
+// bogus config can't loop us.
+static const char *theme_ansi_code(const char *tag) {
+   char key[80];
+
+   if (!tag || !*tag || strlen(tag) > 32) {
+      return NULL;
+   }
+   snprintf(key, sizeof(key), "ui.theme.%s", tag);
+   const char *val = cfg_get(key);
+   if (!val || !*val) {
+      return NULL;
+   }
+   // Strip surrounding braces if present
+   char clean[64];
+   size_t vlen = strlen(val);
+   if (vlen >= 2 && val[0] == '{' && val[vlen - 1] == '}') {
+      vlen -= 2;
+      if (vlen >= sizeof(clean)) {
+         vlen = sizeof(clean) - 1;
+      }
+      memcpy(clean, val + 1, vlen);
+      clean[vlen] = '\0';
+      val = clean;
+   }
+   return ansi_code(val);
+}
+
 char *tui_colorize_string(const char *in) {
    if (!in) {
       return NULL;
@@ -144,13 +175,20 @@ char *tui_colorize_string(const char *in) {
 
          // if TUI colors are enabled, insert them
          if (cfg_tui_colors) {
-            // look up ANSI escape
+            // look up ANSI escape; theme-config tags (headers, completion,...)
+            // resolve through ui.theme.<tag> if not a literal color name
             const ansi_entry_t *ae;
 
             for (ae = ansi_table ; ae->tag ; ae++) {
                if (strcmp(ae->tag, key) == 0) {
                   o += sprintf(o, "%s", ae->code);
                   break;
+               }
+            }
+            if (!ae->tag) {
+               const char *code = theme_ansi_code(key);
+               if (code) {
+                  o += sprintf(o, "%s", code);
                }
             }
          }
