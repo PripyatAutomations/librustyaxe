@@ -1,4 +1,4 @@
-// tui.completion.c
+// librustyaxe/tui.completion.c: tab completion support
 //    This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
