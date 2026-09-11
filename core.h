@@ -39,6 +39,7 @@
 #include <librustyaxe/util.file.h>
 #include <librustyaxe/util.math.h>
 #include <librustyaxe/util.string.h>
+#include <librustyaxe/util.mem.h>
 #include <librustyaxe/util.time.h>
 
 static inline bool toggle(bool *v) {

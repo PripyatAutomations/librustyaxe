@@ -36,17 +36,9 @@ static int kv_array_bsearch(kv_node_t **arr, size_t count, const char *key) {
 
 static kv_node_t *bst_insert(kv_node_t *node, const char *key, void *val) {
    if (!node) {
-      kv_node_t *n = calloc( 1, sizeof(*n) );
+      kv_node_t *n = xcalloc(1, sizeof(*n));
 
-      // XXX: make this more graceful
-      if (n == NULL) {
-         abort();
-      }
-      n->key = strdup(key);
-
-      if (n->key == NULL) {
-         abort();
-      }
+      n->key = xstrdup(key);
       n->value = val;
 
       return n;
@@ -129,7 +121,7 @@ static kv_node_t *bst_remove(kv_node_t *node, const char *key, int *removed) {
          succ = succ->left;
       }
       free(node->key);
-      node->key = strdup(succ->key);
+      node->key = xstrdup(succ->key);
       node->value = succ->value;
       node->right = bst_remove(node->right, succ->key, removed);
    }
@@ -209,9 +201,11 @@ int kv_insert(kv_store_t *store, const char *key, void *val) {
       int pos = kv_array_bsearch(arr, list->count, suffix);
 
       if (pos >= 0) {
-         // XXX: Look into this as it's triggering a warning in scan-build for
-         // NULL ptr deref
-         arr[pos]->value = val;
+         // bsearch can't deref here unless pos >= 0 and the array is sane;
+         // be explicit so scan-build can prove the deref is safe
+         if (arr && arr[pos]) {
+            arr[pos]->value = val;
+         }
 
          return 0;
       }
@@ -229,16 +223,9 @@ int kv_insert(kv_store_t *store, const char *key, void *val) {
       }
       memmove( &arr[pos + 1], &arr[pos], (list->count - pos) * sizeof(kv_node_t*) );
 
-      kv_node_t *node = calloc( 1, sizeof(*node) );
+      kv_node_t *node = xcalloc(1, sizeof(*node));
 
-      if (node == NULL) {
-         abort();
-      }
-      node->key = strdup(suffix);
-
-      if (node->key == NULL) {
-         abort();
-      }
+      node->key = xstrdup(suffix);
       node->value = val;
       arr[pos] = node;
       list->count++;

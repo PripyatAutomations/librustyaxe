@@ -56,31 +56,16 @@ void event_on(const char *event, event_cb_t cb, void *user) {
    kv_list_t *list = kv_lookup(event_store, event);
 
    if (!list) {
-      list = calloc( 1, sizeof(*list) );
-
-      // XXX: Make this more graceful
-      if (!list) {
-         abort();
-      }
+      list = xcalloc(1, sizeof(*list));
       list->type = KV_ARRAY;
       kv_insert(event_store, event, list);
    }
 
-   event_listener_t *l = calloc( 1, sizeof(*l) );
-
-   // XXX: make this more graceful
-   if (!l) {
-      abort();
-   }
+   event_listener_t *l = xcalloc(1, sizeof(*l));
    l->cb = cb;
    l->user = user;
 
-   list->ptr = realloc( list->ptr, sizeof(void*) * (list->count + 1) );
-
-   // XXX: make this more graceful
-   if (!list->ptr) {
-      abort();
-   }
+   list->ptr = xrealloc(list->ptr, sizeof(void*) * (list->count + 1));
    ( (void**)list->ptr )[list->count++] = l;
 }
 
@@ -93,31 +78,16 @@ void event_on_binary(const char *event, event_binary_cb_t cb, void *user) {
    kv_list_t *list = kv_lookup(event_binary_store, event);
 
    if (!list) {
-      list = calloc( 1, sizeof(*list) );
-
-      // XXX: Make this more graceful
-      if (!list) {
-         abort();
-      }
+      list = xcalloc(1, sizeof(*list));
       list->type = KV_ARRAY;
       kv_insert(event_binary_store, event, list);
    }
 
-   event_binary_listener_t *l = calloc( 1, sizeof(*l) );
-
-   // XXX: make this more graceful
-   if (!l) {
-      abort();
-   }
+   event_binary_listener_t *l = xcalloc(1, sizeof(*l));
    l->cb = cb;
    l->user = user;
 
-   list->ptr = realloc( list->ptr, sizeof(void*) * (list->count + 1) );
-
-   // XXX: make this more graceful
-   if (!list->ptr) {
-      abort();
-   }
+   list->ptr = xrealloc(list->ptr, sizeof(void*) * (list->count + 1));
    ( (void**)list->ptr )[list->count++] = l;
 }
 

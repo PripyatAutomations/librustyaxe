@@ -36,6 +36,7 @@ librustyaxe_objs += tui.completion.o
 librustyaxe_objs += util.file.o
 librustyaxe_objs += util.math.o
 librustyaxe_objs += util.string.o
+librustyaxe_objs += util.mem.o
 librustyaxe_objs += util.time.o
 
 librustyaxe_headers := $(wildcard inc/librustyaxe/*.h)
