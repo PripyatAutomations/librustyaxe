@@ -30,6 +30,7 @@ extern int cursor_pos;
 
 // Is the TUI enabled?
 bool tui_enabled = true;
+bool cfg_tui_use_mouse;
 
 // These get updated by update_term_size() on SIGWINCH (terminal resize) and in
 // tui_init()
@@ -137,6 +138,8 @@ char *s_status_offline = NULL;
 
 bool tui_init(void) {
    update_term_size();
+   cfg_tui_colors = cfg_get_bool("tui.use-color", true);
+   cfg_tui_use_mouse = cfg_get_bool("tui.use-mouse", true);
 
    // Detect an SSH session: HH:MM clock & fewer repaints (see tui_over_ssh)
    tui_over_ssh = (getenv("SSH_TTY") != NULL);
@@ -148,7 +151,6 @@ bool tui_init(void) {
    char *s_status_offline = tui_colorize_string("{bright-black}[{red}OFFLINE{bright-black}]{reset}");
    snprintf(status_line, STATUS_LEN, "%s", s_status_offline);
    free(s_status_offline);
-   cfg_tui_colors = cfg_get_bool("tui.use-color", true);
 
    // set up windowing
    tui_window_init();
@@ -162,6 +164,13 @@ bool tui_init(void) {
    // draw the initial screen
    tui_redraw_screen();
 
+   // Enable mouse support
+   if (cfg_tui_use_mouse) {
+      printf("\033[?1000h");   /* mouse button reporting */
+      printf("\033[?1002h");   /* button + drag reporting */
+      printf("\033[?1006h");   /* SGR extended mouse encoding */
+      fflush(stdout);
+   }
    printf("\033[%d;1H", term_rows);
    fflush(stdout);
 
@@ -169,6 +178,12 @@ bool tui_init(void) {
 }
 
 bool tui_fini(void) {
+   if (cfg_tui_use_mouse) {
+      printf("\033[?1006l");
+      printf("\033[?1002l");
+      printf("\033[?1000l");
+      fflush(stdout);
+   }
    return false;
 }
 
