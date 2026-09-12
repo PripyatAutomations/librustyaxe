@@ -11,7 +11,7 @@
 //   @date    Apr 2011
 //   @brief   Dictionary object
 //   @note    Heavily modified by rustyaxe; added support for multiple types,
-// conversions, etc
+// conversions, etc - all bugs are mine not his!
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

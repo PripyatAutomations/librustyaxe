@@ -1,3 +1,20 @@
+//
+// librustyaxe/config.c: Flexible configuration handling inspired by ini files
+//    This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
+//
+// Do not pay money for this, except donations to the project, if you wish to.
+// The software is not for sale. It is freely available, always.
+//
+// Licensed under MIT license, if built without mongoose or GPL if built with.
+//
+// Features:
+//	defconfig:	Default configuration values stored in one place
+//	load/save:	Can save configuration from memory
+//	extendible:	Register load/save callbacks
+//	variable expansion: Support for %{key} expansion in _exp() versions
+//	reload events:	Dispatch events to your callback if reloaded
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,9 +31,7 @@
 extern defconfig_t defcfg[];
 
 const char *config_file = NULL;
-dict *cfg = NULL;                        // User configuration values from
-                                         // config
-                                         // file / ui
+dict *cfg = NULL;
 dict *default_cfg = NULL;                // Hard-coded defaults (defcfg.c)
 cfg_cb_list_t *cfg_callbacks = NULL;
 
@@ -197,11 +212,10 @@ dict *cfg_load(const char *path) {
 
    if ( !file_exists(path) ) {
       Log(LOG_CRIT, "cfg", "Can't find config file %s", path);
-
       return NULL;
    }
-   dict *newcfg = dict_new();
 
+   dict *newcfg = dict_new();
    if (!newcfg) {
       fprintf(stderr, "OOM in cfg_load?!\n");
       exit(EXIT_FAILURE);
@@ -213,24 +227,20 @@ dict *cfg_load(const char *path) {
    // like cfg_reload() rely on cfg still being the live config dict, and
    // dict_free()ing newcfg would otherwise leave cfg dangling.
    dict *saved_cfg = cfg;
-
    cfg = newcfg;
 
    FILE *fp = fopen(path, "r");
-
    if (!fp) {
       free(newcfg);
       cfg = saved_cfg;
       fprintf( stderr, "Failed to open config %s: %d:%s\n", path, errno, strerror(errno) );
-
       return NULL;
    }
    fseek(fp, 0, SEEK_SET);
 
    bool in_comment = false;
-   do{
+   do {
       memset( buf, 0, sizeof(buf) );
-
       if ( !fgets(buf, sizeof(buf) - 1, fp) ) {
          fclose(fp);
          fp = NULL;
@@ -418,7 +428,6 @@ dict *cfg_load(const char *path) {
    // initial load takes ownership of it, cfg_reload() merges it into the
    // live cfg and frees it.
    cfg = saved_cfg;
-
    return newcfg;
 }
 

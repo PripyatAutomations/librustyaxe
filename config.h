@@ -66,7 +66,7 @@ extern cfg_save_cb_entry_t *cfg_save_callbacks;
 
 // Data storage dicts
 extern dict *cfg;                        // Main configuration
-extern const char *config_file;         // Path of the currently loaded config file
+extern const char *config_file;          // Path of the currently loaded config file
 extern dict *default_cfg;                // Default configuration
 extern dict *pipelines;                  // fwdsp/rrgtk pipelines
 
