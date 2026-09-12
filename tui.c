@@ -297,6 +297,8 @@ void tui_redraw_screen(void) {
       }
 
       const char *p = w->buffer[idx];
+      char active_sgr[64] = "";   // last SGR seen, so wrapped rows re-apply it
+      int rows_done = 0;
 
       while (*p && row < term_rows - 1) {
          int col = 0;
@@ -305,6 +307,8 @@ void tui_redraw_screen(void) {
 
          while (*p && col < term_cols) {
             if (*p == '\033' && *(p + 1) == '[') {
+               const char *estart = p;
+
                p += 2;
 
                while (*p && !(*p >= '@' && *p <= '~')) {
@@ -313,6 +317,15 @@ void tui_redraw_screen(void) {
 
                if (*p) {
                   p++;
+               }
+
+               // Remember the last complete SGR sequence; a wrapped row must
+               // re-apply the color in effect where the previous row ended
+               if (p[-1] == 'm' && (size_t)(p - estart) < sizeof(active_sgr)) {
+                  size_t elen = p - estart;
+
+                  memcpy(active_sgr, estart, elen);
+                  active_sgr[elen] = '\0';
                }
 
                continue;
@@ -335,6 +348,11 @@ void tui_redraw_screen(void) {
          } else {
             printf("\033[%d;1H", row++);
 
+            // Continuation of a wrapped row: restore the active color first
+            if (rows_done > 0 && active_sgr[0]) {
+               fputs(active_sgr, stdout);
+            }
+
             if (explicit_newline) {
                fwrite(line_start, 1, p - line_start, stdout);
                p++;
@@ -342,8 +360,12 @@ void tui_redraw_screen(void) {
                fwrite(line_start, 1, last_break - line_start, stdout);
             }
 
+            // Reset attributes so colors don't bleed into the next line
+            fputs("\033[0m", stdout);
             term_clrtoeol();
          }
+
+         rows_done++;
 
          // Once we've rendered/skipped the first physical row, normal
          // rendering continues.

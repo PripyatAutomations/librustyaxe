@@ -211,13 +211,53 @@ bool tui_do_completion(tui_window_t *win) {
       return false;
    }
 
-   // Ambiguous: complete the common prefix and list the candidates
-   for (int i = 0; i < nmatch && i < TUI_MAX_COMPLETIONS_SHOWN; i++) {
-      tui_print(win, "  %s", matches[i]);
-   }
+   // Ambiguous: complete the common prefix and list the candidates in a
+   // multi-column layout across a few lines instead of one per line.
+   {
+      int maxlen = 0;
+      int nshown = nmatch > TUI_MAX_COMPLETIONS_SHOWN ? TUI_MAX_COMPLETIONS_SHOWN : nmatch;
 
-   if (nmatch > TUI_MAX_COMPLETIONS_SHOWN) {
-      tui_print(win, "  ... and %d more", nmatch - TUI_MAX_COMPLETIONS_SHOWN);
+      for (int i = 0; i < nshown; i++) {
+         int l = (int)strlen(matches[i]);
+
+         if (l > maxlen) {
+            maxlen = l;
+         }
+      }
+
+      // Each column is the entry plus two spaces of gutter; always at least one
+      int cols = maxlen > 0 ? (tui_cols() - 2) / (maxlen + 2) : 1;
+
+      if (cols < 1) {
+         cols = 1;
+      }
+
+      int rows = (nshown + cols - 1) / cols;
+
+      for (int r = 0; r < rows; r++) {
+         char line[1024];
+         size_t pos = 0;
+
+         pos += snprintf(line + pos, sizeof(line) - pos, "  ");
+
+         for (int c = 0; c < cols; c++) {
+            int idx = c * rows + r;   // column-major so matches read down each column
+
+            if (idx >= nshown) {
+               break;
+            }
+            pos += snprintf(line + pos, sizeof(line) - pos, "%-*s  ", maxlen, matches[idx]);
+
+            if (pos >= sizeof(line) - 1) {
+               break;
+            }
+         }
+         tui_print(win, "%s", line);
+      }
+
+      if (nmatch > TUI_MAX_COMPLETIONS_SHOWN) {
+         tui_print(win, "  ... and %d more", nmatch - TUI_MAX_COMPLETIONS_SHOWN);
+      }
    }
    completion_free(matches);
    return false;
