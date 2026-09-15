@@ -43,7 +43,10 @@ void event_init(void) {
       event_store = kv_create(65536, KV_BST);
    }
    if (!event_binary_store) {
-      event_binary_store = kv_create(1024, KV_BST);
+      // kvstore indexes by the first two bytes of a key, yielding a full
+      // uint16_t range.  A smaller table silently rejects registrations such
+      // as "media.frame.audio" (prefix 0x6d65), so use the standard size.
+      event_binary_store = kv_create(DEFAULT_PREFIX_SIZE, KV_BST);
    }
 }
 
