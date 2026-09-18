@@ -162,7 +162,10 @@ bool tui_do_completion(tui_window_t *win) {
    }
    word[word_len > 0 ? word_len : 0] = '\0';
 
-   char **matches = completion_collect(input_buf, word);
+   char prefix[TUI_INPUTLEN];
+   memcpy(prefix, input_buf, cursor_pos);
+   prefix[cursor_pos] = '\0';
+   char **matches = completion_collect(prefix, word);
 
    if (!matches || !matches[0]) {
       completion_free(matches);
