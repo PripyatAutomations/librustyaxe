@@ -141,8 +141,11 @@ bool tui_init(void) {
    cfg_tui_colors = cfg_get_bool("tui.use-color", true);
    cfg_tui_use_mouse = cfg_get_bool("tui.use-mouse", true);
 
-   // Detect an SSH session: HH:MM clock & fewer repaints (see tui_over_ssh)
-   tui_over_ssh = (getenv("SSH_TTY") != NULL);
+   // Don't unset it if -T is used
+   if (!tui_over_ssh) {
+      // Detect an SSH session: HH:MM clock & fewer repaints (see tui_over_ssh)
+      tui_over_ssh = (getenv("SSH_TTY") != NULL);
+   }
 
    // set SIGnal WINdow CHange handler
    signal(SIGWINCH, sigwinch_handler);
