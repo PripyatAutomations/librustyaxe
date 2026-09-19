@@ -433,6 +433,38 @@ void tui_redraw_screen(void) {
    tui_update_input_line();
 }
 
+void tui_redraw_topline(void) {
+   if (!tui_enabled) {
+      return;
+   }
+   update_term_size();
+   tui_window_t *w = tui_active_window();
+   if (!w) {
+      return;
+   }
+
+   char *topline = topline_renderer ? topline_renderer(w) : NULL;
+   if (!topline) {
+      topline = tui_colorize_string(w->status_line);
+   }
+   printf("\033[s\033[1;1H");
+   putchar(' ');
+   tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
+   printf("\033[u");
+   free(topline);
+   fflush(stdout);
+}
+
+void tui_redraw_statusline(void) {
+   if (!tui_enabled) {
+      return;
+   }
+   update_term_size();
+   printf("\033[s\033[%d;1H%-*s\033[u", term_rows - 1, term_cols, status_line);
+   tui_redraw_clock();
+   fflush(stdout);
+}
+
 void tui_redraw_clock(void) {
    if (!tui_enabled) {
       return;
@@ -501,7 +533,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       free(colored);
       status_line[sizeof(status_line) - 1] = '\0';
    }
-   tui_redraw_screen();
+   tui_redraw_statusline();
 
    return false;
 }

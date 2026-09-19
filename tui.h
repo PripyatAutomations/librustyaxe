@@ -26,6 +26,8 @@ extern bool tui_set_rl_cb( bool (*cb) (int argc, char **argv) );
 // These force redrawing of an area of the screen
 extern bool tui_update_status(tui_window_t *win, const char *fmt, ...);
 extern void tui_redraw_screen(void);
+extern void tui_redraw_topline(void);
+extern void tui_redraw_statusline(void);
 extern void tui_redraw_clock(void);
 
 // Optional application renderer for the TOP row. Return an allocated,
