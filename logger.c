@@ -229,7 +229,7 @@ void logger_init(const char *logfile, bool tui_mode) {
    cfg_log_show_ts = eeprom_get_bool("debug/show-ts");
 #endif
    ll = "crazy";
-   cfg_log_show_ts = cfg_get_bool("debug.show-ts", false);
+   cfg_log_show_ts = cfg_get_bool("debug.show-ts", true);
 
    // save tui mode state so we don't trash the console...
    tui_mode_enabled = tui_mode;
