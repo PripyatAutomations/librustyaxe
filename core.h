@@ -27,7 +27,6 @@
 #include <librustyaxe/io.serial.h>
 #include <librustyaxe/io.socket.h>
 #include <librrprotocol/irc.h>
-#include <librustyaxe/kvstore.h>
 #include <librustyaxe/json.h>
 #include <librustyaxe/list.h>
 #include <librustyaxe/logger.h>

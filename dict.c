@@ -1352,3 +1352,23 @@ dict *dict_diff(dict *a, dict *b) {
 
    return diff;
 }
+
+int dict_add_ptr(dict *d, const char *key, void *val) {
+   dict_value_t v = { .p = val };
+
+   return dict_store(d, key, VAL_PTR, &v);
+}
+
+void *dict_get_ptr(dict *d, const char *key, void *def) {
+   keypair *kp;
+
+   if (!dict_get_kp(d, key, &kp)) {
+      return def;
+   }
+
+   if (kp->val_type != VAL_PTR) {
+      return def;
+   }
+
+   return kp->val.p;
+}

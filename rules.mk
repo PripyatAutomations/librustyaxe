@@ -15,7 +15,6 @@ librustyaxe_objs += io.o
 #librustyaxe_objs += io.serial.o
 #librustyaxe_objs += io.socket.o
 librustyaxe_objs += json.o
-librustyaxe_objs += kvstore.o
 librustyaxe_objs += list.o
 librustyaxe_objs += logger.o
 librustyaxe_objs += maidenhead.o

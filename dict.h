@@ -242,4 +242,10 @@ extern dict *dict_merge_new(dict *a, dict *b);
 // XXX: Compare old and new configuration, yielding a dict with ONLY changes
 extern dict *dict_diff(dict *a, dict *b);
 
+// Retrieve values, converting types if needed
+extern void *dict_get_ptr(dict *d, const char *key, void *def);
+
+// Store values with their native types
+extern int dict_add_ptr(dict *d, const char *key, void *val);
+
 #endif
