@@ -296,7 +296,7 @@ int update_timestamp(void) {
 }
 
 void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
-   char msgbuf[513];
+   char msgbuf[16385];
    char ts_log_msg[1025];
    char log_msg[769];
    va_list ap, ap_c1;
@@ -340,7 +340,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    memset( msgbuf, 0, sizeof(msgbuf) );
 
    /* Expand the format string */
-   vsnprintf(msgbuf, 511, fmt, ap);
+   vsnprintf(msgbuf, sizeof(msgbuf) - 1, fmt, ap);
    memset( log_msg, 0, sizeof(log_msg) );
    snprintf(log_msg, sizeof(log_msg), "<%s@%s> %s", subsys, log_priority_to_str(priority), msgbuf);
    va_end(ap);
