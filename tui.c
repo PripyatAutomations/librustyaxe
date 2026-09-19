@@ -37,6 +37,45 @@ bool cfg_tui_use_mouse;
 static int term_rows = 24;   // default lines
 static int term_cols = 80;   // default width
 static char status_line[STATUS_LEN];
+static char *(*topline_renderer)(tui_window_t *win);
+
+void tui_set_topline_renderer(char *(*renderer)(tui_window_t *win)) {
+   topline_renderer = renderer;
+}
+
+// Keep the top row on one physical line. Preserve SGR colors, but do not
+// permit embedded controls to move the cursor. Count UTF-8 bytes conservatively
+// against the column budget and never cut a multibyte character in half.
+static void tui_print_topline(const char *text, int columns) {
+   const unsigned char *p = (const unsigned char *)text;
+   while (p && *p && columns > 0) {
+      if (p[0] == '\033' && p[1] == '[') {
+         const unsigned char *end = p + 2;
+         while (*end && !(*end >= '@' && *end <= '~')) end++;
+         if (!*end) break;
+         if (*end == 'm') fwrite(p, 1, end - p + 1, stdout);
+         p = end + 1;
+         continue;
+      }
+      if (*p < 32 || *p == 127) {
+         putchar(' ');
+         p++;
+         columns--;
+         continue;
+      }
+      size_t len = 1;
+      if (*p >= 0xc2 && *p <= 0xf4) {
+         size_t expected = *p < 0xe0 ? 2 : (*p < 0xf0 ? 3 : 4);
+         while (len < expected && p[len] && (p[len] & 0xc0) == 0x80) len++;
+         if (len != expected) { p += len; continue; }
+      }
+      if (len > (size_t)columns) break;
+      fwrite(p, 1, len, stdout);
+      p += len;
+      columns -= (int)len;
+   }
+   printf("\033[0m\033[K");
+}
 
 // SSH_TTY is set when we're running over an SSH session: remote terminals
 // are bandwidth-sensitive, so the clock drops the seconds (HH:MM only) and
@@ -222,13 +261,11 @@ void tui_redraw_screen(void) {
    // --- Top status line ---
    printf("\033[1;1H");
 
-   if (w->status_line) {
-      char *colored = tui_colorize_string(w->status_line);
-      printf(" %-*s", visible_length(colored), colored);
-      free(colored);
-   } else {
-      printf(" [%-*s]", term_cols, w->title);
-   }
+   char *topline = topline_renderer ? topline_renderer(w) : NULL;
+   if (!topline) topline = tui_colorize_string(w->status_line);
+   putchar(' ');
+   tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
+   free(topline);
 
    // --- Log area ---
    int log_area_rows = term_rows - 3;
@@ -514,7 +551,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             if ( varlen >= sizeof(varspec) ) {
                varlen = sizeof(varspec) - 1;
             }
-            strlcpy(varspec, src + 2, varlen);
+            memcpy(varspec, src + 2, varlen);
             varspec[varlen] = '\0';
 
             // Split on ':' → varname:default

@@ -28,6 +28,10 @@ extern bool tui_update_status(tui_window_t *win, const char *fmt, ...);
 extern void tui_redraw_screen(void);
 extern void tui_redraw_clock(void);
 
+// Optional application renderer for the TOP row. Return an allocated,
+// colorized string (freed by the TUI), or NULL to use the window's topic.
+extern void tui_set_topline_renderer(char *(*renderer)(tui_window_t *win));
+
 // True when running in an SSH session (SSH_TTY set): clock shows HH:MM and
 // callers should only repaint on actual changes instead of once a second
 extern bool tui_is_over_ssh(void);
