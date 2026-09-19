@@ -22,6 +22,7 @@
 #ifdef _WIN32
 #define	WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <direct.h>
 #endif
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
@@ -100,6 +101,49 @@ bool is_file(const char *path) {
    }
 
    return false;
+}
+
+bool mkdir_p(const char *path) {
+   if (!path || !*path) {
+      errno = EINVAL;
+      return false;
+   }
+
+   char *work = strdup(path);
+   if (!work) {
+      errno = ENOMEM;
+      return false;
+   }
+
+   for (char *p = work; ; p++) {
+      bool separator = (*p == '/' || *p == '\\');
+      if (*p != '\0' && !separator) {
+         continue;
+      }
+
+      char saved = *p;
+      *p = '\0';
+      if (*work && strcmp(work, ".") != 0) {
+#ifdef _WIN32
+         int rv = _mkdir(work);
+#else
+         int rv = mkdir(work, 0755);
+#endif
+         if (rv != 0 && (errno != EEXIST || !is_dir(work))) {
+            *p = saved;
+            free(work);
+            return false;
+         }
+      }
+      *p = saved;
+
+      if (saved == '\0') {
+         break;
+      }
+   }
+
+   free(work);
+   return true;
 }
 
 char *expand_path(const char *path) {

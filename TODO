@@ -1,6 +1,7 @@
 * Add dialogs/buttons to the TUI!
 
 * Finish theme support for TUI
+
 * TUI: Prevent scrolling of the buffer when content is added, if not at the bottom
 
 *: Merge cfg_get_* and eeprom_get_* so we have just cfg_get_*

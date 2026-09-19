@@ -15,6 +15,7 @@ extern bool is_dir(const char *path);
 extern bool is_link(const char *path);
 extern bool is_fifo(const char *path);
 extern bool is_file(const char *path);
+extern bool mkdir_p(const char *path);
 extern char *expand_path(const char *path);
 extern char *find_file_by_list(const char *files[], int file_count);
 
