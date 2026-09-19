@@ -420,11 +420,6 @@ void tui_redraw_screen(void) {
       printf("\033[%d;1H", row++);
       term_clrtoeol();
    }
-   // Fill remaining log space with blanks
-   while (row < term_rows - 1) {
-      printf("\033[%d;1H", row++);
-      term_clrtoeol();
-   }
    // --- Bottom status line ---
    printf("\033[%d;1H", term_rows - 1);
    printf("%-*s", term_cols, status_line);
