@@ -42,7 +42,7 @@ librustyaxe_headers := $(wildcard inc/librustyaxe/*.h)
 librustyaxe_src = $(wildcard librustyaxe/*.c)
 
 real_librustyaxe_objs := $(foreach x, ${librustyaxe_objs}, ${BUILD_DIR}/librustyaxe/${x})
-extra_clean += ${real_librustyaxe_objs} ${librustyaxe}
+extra_clean += ${real_librustyaxe_objs} ${librustyaxe} librustyaxe.so.0
 
 libs += ${librustyaxe}
 
@@ -55,7 +55,8 @@ ${BUILD_DIR}/librustyaxe/.timestamp:
 ${librustyaxe}: ${BUILD_DIR}/librustyaxe/.timestamp ${real_librustyaxe_objs} ${librustyaxe_headers} GNUmakefile
 	@${RM} -f $@
 	@echo "[link] $@ from $(words ${real_librustyaxe_objs}) objects"
-	@${CC} ${LIB_LDFLAGS} -o $@ ${real_librustyaxe_objs}  -lm -lev -ltinfo ${LDFLAGS}|| exit 2
+	@${CC} ${LIB_LDFLAGS} -Wl,-soname,librustyaxe.so.0 -o $@ ${real_librustyaxe_objs}  -lm -ltinfo ${LDFLAGS}|| exit 2
+	@ln -sf librustyaxe.so librustyaxe.so.0
 
 ${BUILD_DIR}/librustyaxe/%.o:librustyaxe/%.c GNUmakefile ${librustyaxe_headers}
 	@${RM} $@
