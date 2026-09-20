@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdint.h>
+#include <time.h>
 
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
@@ -32,7 +34,66 @@ typedef struct event_entry {
 
    event_binary_listener_t *binary_listeners;
    size_t binary_listener_count;
+#ifdef USE_PROFILING
+   uint64_t emit_count;
+#endif
 } event_entry_t;
+
+static dict *event_store = NULL;
+static pthread_mutex_t event_lock = PTHREAD_MUTEX_INITIALIZER;
+
+#ifdef USE_PROFILING
+typedef struct {
+   const char *event;
+   uint64_t count;
+} event_profile_row_t;
+
+static time_t event_profile_last_dump;
+
+static int event_profile_compare(const void *a, const void *b) {
+   const event_profile_row_t *left = a;
+   const event_profile_row_t *right = b;
+   if (left->count < right->count) return 1;
+   if (left->count > right->count) return -1;
+   return strcmp(left->event, right->event);
+}
+
+static void event_profile_dump_locked(void) {
+   const time_t current = time(NULL);
+   if (event_profile_last_dump && current - event_profile_last_dump < 300) {
+      return;
+   }
+   event_profile_last_dump = current;
+
+   size_t capacity = event_store ? event_store->used : 0;
+   event_profile_row_t *rows = capacity ? xcalloc(capacity, sizeof(*rows)) : NULL;
+   size_t used = 0;
+   int rank = 0;
+   const char *key = NULL;
+   dict_value_t value;
+   val_type_t type;
+
+   while (event_store && rows &&
+          (rank = dict_enumerate_typed(event_store, rank, &key, &value, &type)) >= 0) {
+      if (type == VAL_PTR && value.p) {
+         event_entry_t *entry = value.p;
+         if (entry->emit_count) {
+            rows[used].event = key;
+            rows[used].count = entry->emit_count;
+            used++;
+         }
+      }
+   }
+   qsort(rows, used, sizeof(*rows), event_profile_compare);
+   Log(LOG_INFO, "profile", "Event dispatch counts (cumulative):");
+   size_t limit = used < 32 ? used : 32;
+   for (size_t i = 0; i < limit; i++) {
+      Log(LOG_INFO, "profile", "  %s: %llu", rows[i].event,
+         (unsigned long long)rows[i].count);
+   }
+   free(rows);
+}
+#endif
 
 typedef struct queued_event {
    event_cb_t cb;
@@ -54,10 +115,6 @@ typedef struct queued_binary_event {
 
    rrconn_t *cptr;
 } queued_binary_event_t;
-
-static dict *event_store = NULL;
-static pthread_mutex_t event_lock = PTHREAD_MUTEX_INITIALIZER;
-
 
 /*
  * Look up an event entry.
@@ -524,6 +581,13 @@ void event_emit(
       event_entry_t *entry =
          event_lookup_locked(event);
 
+#ifdef USE_PROFILING
+      if (entry) {
+         entry->emit_count++;
+         event_profile_dump_locked();
+      }
+#endif
+
       snapshot = event_snapshot_locked(
          entry,
          &count
@@ -623,6 +687,13 @@ void event_emit_binary(
    if (event_store) {
       event_entry_t *entry =
          event_lookup_locked(event);
+
+#ifdef USE_PROFILING
+      if (entry) {
+         entry->emit_count++;
+         event_profile_dump_locked();
+      }
+#endif
 
       snapshot = event_binary_snapshot_locked(
          entry,

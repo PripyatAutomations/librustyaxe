@@ -227,16 +227,10 @@ struct rrconn {
    // Comma-separated WebSocket chat rooms this session has joined.
    char rooms[AUTOJOIN_LEN];
 
-   // This is a little ugly, but this stores pointers to the users associated
-   // with elmer/noob system
+   // This is a little ugly, but this stores pointers to the users associated with elmer/noob system
    union {
-      rrconn_t *elmers[HTTP_MAX_ELMERS];       // pointer(s) to elmers
-      // who have accepted to
-      // babysit user (if
-      // noob)
-      rrconn_t *noobs[HTTP_MAX_NOOBS];         // pointer(s) to noobs
-      // this user is
-      // babysitting
+      rrconn_t *elmers[HTTP_MAX_ELMERS];       // pointer(s) to elmers who have accepted to babysit noob user
+      rrconn_t *noobs[HTTP_MAX_NOOBS];         // pointer(s) to noobs this user is babysitting
    } en_data;
    rrconn_t *next;     // pointer to next client in list
    server_cfg_t *server;                        // server config data (if a client)
