@@ -23,6 +23,16 @@ extern bool tui_enabled;
 extern bool tui_init(void);
 extern bool tui_set_rl_cb( bool (*cb) (int argc, char **argv) );
 
+/* Host-owned key actions.  The TUI only recognizes and dispatches these
+ * bindings; the application supplies the behavior. */
+typedef bool (*tui_hotkey_cb_t)(tui_window_t *win, unsigned key, unsigned modifiers,
+   void *user_data);
+extern bool tui_hotkey_register(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback,
+   void *user_data);
+extern bool tui_hotkey_unregister(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback,
+   void *user_data);
+extern bool tui_hotkey_dispatch(tui_window_t *win, unsigned key, unsigned modifiers);
+
 // These force redrawing of an area of the screen
 extern bool tui_update_status(tui_window_t *win, const char *fmt, ...);
 extern void tui_redraw_screen(void);

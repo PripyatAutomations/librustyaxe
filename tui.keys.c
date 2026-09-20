@@ -222,6 +222,55 @@ bool (*tui_readline_cb)(const char *input) = NULL;
 static TermKey *tk = NULL;
 static guint stdin_watch_id = 0;
 
+#define TUI_HOTKEY_MAX 32
+struct tui_hotkey_binding {
+   unsigned key;
+   unsigned modifiers;
+   tui_hotkey_cb_t callback;
+   void *user_data;
+};
+static struct tui_hotkey_binding hotkeys[TUI_HOTKEY_MAX];
+
+bool tui_hotkey_register(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback,
+   void *user_data) {
+   if (!callback) return false;
+   for (unsigned i = 0; i < TUI_HOTKEY_MAX; i++) {
+      if (hotkeys[i].callback && hotkeys[i].key == key && hotkeys[i].modifiers == modifiers) {
+         hotkeys[i] = (struct tui_hotkey_binding){ key, modifiers, callback, user_data };
+         return true;
+      }
+   }
+   for (unsigned i = 0; i < TUI_HOTKEY_MAX; i++) {
+      if (!hotkeys[i].callback) {
+         hotkeys[i] = (struct tui_hotkey_binding){ key, modifiers, callback, user_data };
+         return true;
+      }
+   }
+   return false;
+}
+
+bool tui_hotkey_unregister(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback,
+   void *user_data) {
+   for (unsigned i = 0; i < TUI_HOTKEY_MAX; i++) {
+      if (hotkeys[i].callback == callback && hotkeys[i].user_data == user_data &&
+          hotkeys[i].key == key && hotkeys[i].modifiers == modifiers) {
+         hotkeys[i].callback = NULL;
+         return true;
+      }
+   }
+   return false;
+}
+
+bool tui_hotkey_dispatch(tui_window_t *win, unsigned key, unsigned modifiers) {
+   for (unsigned i = 0; i < TUI_HOTKEY_MAX; i++) {
+      if (hotkeys[i].callback && hotkeys[i].key == key &&
+          (modifiers & hotkeys[i].modifiers) == hotkeys[i].modifiers) {
+         return hotkeys[i].callback(win, key, modifiers, hotkeys[i].user_data);
+      }
+   }
+   return false;
+}
+
 // GLib fd source: called when stdin is readable
 static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data);
 
@@ -301,17 +350,27 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
       //      Log(LOG_DEBUG, "tui.key", "key: type=%d code=%d mod=%d c=%d", key.type,
       // key.code.codepoint, key.modifiers, c);
       // --- Hotkeys / special keys ---
+      // Ctrl-Space is reported as a control character by some terminals and
+      // as a literal space with the CTRL modifier by others.
+      if (key.type == TERMKEY_TYPE_UNICODE && (key.modifiers & TERMKEY_KEYMOD_CTRL) &&
+          (key.code.codepoint == 0 || key.code.codepoint == ' ')) {
+         handled = tui_hotkey_dispatch(win, key.code.codepoint, key.modifiers);
+      }
       if (key.type == TERMKEY_TYPE_KEYSYM)
       {
          switch (key.code.sym)
          {
          case TERMKEY_SYM_ENTER:
          {
-            handle_enter_key(win, 0);
-            input_len = 0;
-            cursor_pos = 0;
-            memset(input_buf, 0, sizeof(input_buf));
-            handled = 1;
+            if (key.modifiers & TERMKEY_KEYMOD_ALT) {
+               handled = tui_hotkey_dispatch(win, key.code.sym, key.modifiers);
+            } else {
+               handle_enter_key(win, 0);
+               input_len = 0;
+               cursor_pos = 0;
+               memset(input_buf, 0, sizeof(input_buf));
+               handled = 1;
+            }
             break;
          }
 
