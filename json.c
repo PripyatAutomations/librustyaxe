@@ -814,7 +814,11 @@ dict *json2dict(const char *json) {
    if (!d) return NULL;
 
    const char *res = json_parse_value(json, "", d);
-   if (!res) {
+   /* A websocket message must contain exactly one JSON value.  Previously
+    * trailing bytes were silently ignored, which made truncated or
+    * concatenated frames look like valid dictionaries and sent the failure
+    * much later through the event bus. */
+   if (!res || *skip_ws(res) != '\0') {
       dict_free(d);
       return NULL;
    }

@@ -224,6 +224,8 @@ struct rrconn {
    // Codecs advertised by this connection in media.cmd=capab.  The server
    // uses this when validating shared media-channel selections.
    char media_codecs[256];
+   // Comma-separated WebSocket chat rooms this session has joined.
+   char rooms[AUTOJOIN_LEN];
 
    // This is a little ugly, but this stores pointers to the users associated
    // with elmer/noob system
