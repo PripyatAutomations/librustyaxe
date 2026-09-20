@@ -25,6 +25,8 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <limits.h>
+#include <libgen.h>
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
@@ -202,7 +204,23 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    return false;
 }
 
-dict *cfg_load(const char *path) {
+static dict *cfg_load_depth(const char *path, unsigned depth);
+
+static bool cfg_merge_dict(dict *dst, dict *src) {
+   int rank = 0;
+   const char *key = NULL;
+   char *val = NULL;
+
+   while ((rank = dict_enumerate(src, rank, &key, &val)) >= 0) {
+      if (dict_add(dst, key, val) != 0) {
+         Log(LOG_WARN, "cfg", "Unable to merge included key |%s|", key);
+         return true;
+      }
+   }
+   return false;
+}
+
+static dict *cfg_load_depth(const char *path, unsigned depth) {
    int line = 0, errors = 0;
    char buf[32768];
    char *end, *skip, *key, *val;
@@ -260,6 +278,88 @@ dict *cfg_load(const char *path) {
       }
 
       if ( (end - skip) < 0 ) {
+         continue;
+      }
+
+      // Includes are processed inline. Values from the included file are
+      // copied into the current dictionary, so entries later in this file
+      // retain normal last-value-wins behavior. A leading ! makes an include
+      // optional; a missing mandatory include is a fatal configuration error.
+      bool optional_include = (*skip == '!' && strncasecmp(skip + 1, "include", 7) == 0);
+      bool mandatory_include = (*skip == '.' && strncasecmp(skip + 1, "include", 7) == 0);
+      if (!in_comment && (optional_include || mandatory_include) &&
+          (skip[8] == '\0' || skip[8] == ' ' || skip[8] == '\t' || skip[8] == '=')) {
+         bool optional = optional_include;
+         char *include_path = skip + 8;
+         while (*include_path == ' ' || *include_path == '\t' || *include_path == '=') {
+            include_path++;
+         }
+         if (*include_path == '"' || *include_path == '\'') {
+            char quote = *include_path++;
+            char *close = strrchr(include_path, quote);
+            if (close) {
+               *close = '\0';
+            }
+         }
+         if (!*include_path) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Empty optional !include at %s:%d", path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Empty mandatory .include at %s:%d", path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+            continue;
+         }
+         if (depth >= 4) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Maximum !include depth reached at %s:%d (limit 4)", path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Maximum .include depth reached at %s:%d (limit 4)", path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+            continue;
+         }
+
+         char resolved[PATH_MAX];
+         if (include_path[0] == '/') {
+            snprintf(resolved, sizeof(resolved), "%s", include_path);
+         } else {
+            char parent[PATH_MAX];
+            snprintf(parent, sizeof(parent), "%s", path);
+            char *dir = dirname(parent);
+            snprintf(resolved, sizeof(resolved), "%s/%s", dir, include_path);
+         }
+         if (!file_exists(resolved)) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
+               continue;
+            }
+            Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
+            exit(EXIT_FAILURE);
+         }
+         dict *included = cfg_load_depth(resolved, depth + 1);
+         if (!included) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+         } else {
+            if (cfg_merge_dict(newcfg, included)) {
+               if (!optional) {
+                  Log(LOG_CRIT, "cfg", "Unable to merge mandatory include %s", resolved);
+                  dict_free(included);
+                  exit(EXIT_FAILURE);
+               }
+               Log(LOG_INFO, "cfg", "Unable to merge optional include %s", resolved);
+               errors++;
+            }
+            dict_free(included);
+         }
          continue;
       }
       // Handle line continuations
@@ -407,6 +507,30 @@ dict *cfg_load(const char *path) {
          } else {
             Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
+      } else if (strncasecmp(this_section, "callsign-lookup", 15) == 0 &&
+                 this_section[15] == '\0') {
+         key = NULL;
+         val = NULL;
+         char *eq = strchr(skip, '=');
+         char fullkey[256];
+
+         if (eq) {
+            *eq = '\0';
+            key = skip;
+            val = eq + 1;
+            while (*val == ' ' || *val == '\t') {
+               val++;
+            }
+            while (*key && (key[strlen(key) - 1] == ' ' || key[strlen(key) - 1] == '\t')) {
+               key[strlen(key) - 1] = '\0';
+            }
+            if (*key) {
+               snprintf(fullkey, sizeof(fullkey), "callsign-lookup.%s", key);
+               dict_add(newcfg, fullkey, val);
+            }
+         } else {
+            Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
+         }
       } else if ( cfg_dispatch_callback(path, line, this_section, buf) ) {
          Log(LOG_CRIT, "cfg", "Unknown configuration section |%s| parsing |%s| at %s:%d", this_section, buf, path,
             line);
@@ -429,6 +553,10 @@ dict *cfg_load(const char *path) {
    // live cfg and frees it.
    cfg = saved_cfg;
    return newcfg;
+}
+
+dict *cfg_load(const char *path) {
+   return cfg_load_depth(path, 0);
 }
 
 const char *cfg_get(const char *key) {
