@@ -17,6 +17,7 @@
 #include <ext/libmongoose/mongoose.h>
 #endif
 #include <librustyaxe/subproc.h>
+#include <librustyaxe/rr_subproc.h>
 #include <librustyaxe/config.h>
 #include <librustyaxe/daemon.h>
 #include <librustyaxe/dict.h>
