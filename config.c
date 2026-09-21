@@ -525,7 +525,30 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
                key[strlen(key) - 1] = '\0';
             }
             if (*key) {
-               snprintf(fullkey, sizeof(fullkey), "callsign-lookup.%s", key);
+               snprintf(fullkey, sizeof(fullkey), "callsign-lookup:%s", key);
+               dict_add(newcfg, fullkey, val);
+            }
+         } else {
+            Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
+         }
+      } else if (strncasecmp(this_section, "site", 4) == 0 &&
+                 this_section[4] == '\0') {
+         key = NULL;
+         val = NULL;
+         char *eq = strchr(skip, '=');
+         char fullkey[256];
+         if (eq) {
+            *eq = '\0';
+            key = skip;
+            val = eq + 1;
+            while (*val == ' ' || *val == '\t') {
+               val++;
+            }
+            while (*key && (key[strlen(key) - 1] == ' ' || key[strlen(key) - 1] == '\t')) {
+               key[strlen(key) - 1] = '\0';
+            }
+            if (*key) {
+               snprintf(fullkey, sizeof(fullkey), "site:%s", key);
                dict_add(newcfg, fullkey, val);
             }
          } else {
