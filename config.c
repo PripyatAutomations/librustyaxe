@@ -449,7 +449,10 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       } else if (*skip == '[' && *end == ']') {
          size_t section_len = sizeof(this_section);
          size_t skip_len = strlen(skip);
-         size_t copy_len = skip_len > 1 ? skip_len - 1 : 0;
+         // Copy only the text between the opening and closing brackets.
+         // The previous -1 length copied the closing ']' into section names,
+         // producing keys such as server:localhost].server.url.
+         size_t copy_len = skip_len > 2 ? skip_len - 2 : 0;
          if (copy_len >= section_len) {
             copy_len = section_len - 1;
          }
