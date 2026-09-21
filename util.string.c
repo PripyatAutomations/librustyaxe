@@ -149,16 +149,17 @@ int split_args(char *line, char ***argv_out) {
       }
 
       if (argc >= cap) {
-         cap *= 2;
-
-         if ( (cap <= 0) ) {
-            argv = realloc( argv, cap * sizeof(char *) );
-
-            if (argv == NULL) {
-               // OOM ;(
-               abort();
-            }
+         if (cap > INT_MAX / 2) {
+            free(argv);
+            abort();
          }
+         cap *= 2;
+         char **tmp = realloc(argv, (size_t)cap * sizeof(char *) );
+         if (!tmp) {
+            free(argv);
+            abort();
+         }
+         argv = tmp;
       }
       argv[argc++] = p;
       while ( *p && !isspace( (unsigned char)*p ) ) {

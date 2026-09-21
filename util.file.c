@@ -159,7 +159,7 @@ char *expand_path(const char *path) {
    if (!home || !*home) {
       home = ".";
    }
-   if (strlen(home) > 1024) return NULL;
+   if (!home || strlen(home) > 1024) return NULL;
    int home_allocated = 0;
    const char *drive = NULL;
    const char *path_part = NULL;

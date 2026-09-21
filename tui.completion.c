@@ -23,8 +23,8 @@
 
 // Shared input line state, owned by tui.keys.c
 extern char input_buf[TUI_INPUTLEN];
-extern int input_len;
-extern int cursor_pos;
+extern int tui_input_len;
+extern int tui_cursor_pos;
 
 /*
  *  completion:
@@ -96,7 +96,6 @@ char **completion_collect(const char *line, const char *word) {
 
    char **matches = NULL;
    size_t count = 0;
-   size_t len = strlen(word);
 
    for (int i = 0; i < completion_provider_count; i++) {
       char **sub = completion_providers[i](line, word);
@@ -133,27 +132,27 @@ void completion_free(char **matches) {
    free(matches);
 }
 
-// Called from tui.keys.c on TAB.  Operates on input_buf/cursor_pos/input_len.
+// Called from tui.keys.c on TAB.  Operates on input_buf/tui_cursor_pos/tui_input_len.
 // Returns true if the input line changed.
 bool tui_do_completion(tui_window_t *win) {
-   if (cursor_pos == 0) {
+   if (tui_cursor_pos == 0) {
       return false;
    }
 
    // Find the start of the word before the cursor
-   int start = cursor_pos;
+   int start = tui_cursor_pos;
 
    while (start > 0 && input_buf[start - 1] != ' ') {
       start--;
    }
 
-   int word_len = cursor_pos - start;
+   int word_len = tui_cursor_pos - start;
    char word[TUI_INPUTLEN];
 
    /* An empty word is allowed when the cursor sits directly after a space,
     * so providers can complete a full argument list (i.e. /server<space>TAB)
     */
-   if (word_len < 0 || (word_len == 0 && !(cursor_pos > 0 && input_buf[cursor_pos - 1] == ' ') ) ) {
+   if (word_len < 0 || (word_len == 0 && !(tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] == ' ') ) ) {
       return false;
    }
 
@@ -163,8 +162,8 @@ bool tui_do_completion(tui_window_t *win) {
    word[word_len > 0 ? word_len : 0] = '\0';
 
    char prefix[TUI_INPUTLEN];
-   memcpy(prefix, input_buf, cursor_pos);
-   prefix[cursor_pos] = '\0';
+   memcpy(prefix, input_buf, tui_cursor_pos);
+   prefix[tui_cursor_pos] = '\0';
    char **matches = completion_collect(prefix, word);
 
    if (!matches || !matches[0]) {
@@ -199,14 +198,14 @@ bool tui_do_completion(tui_window_t *win) {
       }
 
       if (start + pl < TUI_INPUTLEN) {
-         memmove(&input_buf[start + pl], &input_buf[cursor_pos], input_len - cursor_pos + 1);
+         memmove(&input_buf[start + pl], &input_buf[tui_cursor_pos], tui_input_len - tui_cursor_pos + 1);
          memcpy(&input_buf[start], matches[0], nmatch == 1 ? pl - 1 : pl);
 
          if (nmatch == 1) {
             input_buf[start + pl - 1] = ' ';
          }
-         input_len += (int)pl - word_len;
-         cursor_pos = start + pl;
+         tui_input_len += (int)pl - word_len;
+         tui_cursor_pos = start + pl;
          completion_free(matches);
          return true;
       }

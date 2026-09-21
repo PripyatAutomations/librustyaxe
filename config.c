@@ -56,12 +56,12 @@ bool cfg_set_default(dict *d, const char *key, const char *val) {
 bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
    if (!d) {
       Log(LOG_CRIT, "cfg", "cfg_set_defaults: NULL dict");
-      return true;
+      return false;
    }
 
    if (!defaults) {
       Log(LOG_CRIT, "cfg", "cfg_set_defaults: NULL input");
-      return true;
+      return false;
    }
    Log(LOG_DEBUG, "cfg", "cfg_set_defaults: Loading defaults from <%p>", defaults);
 
@@ -114,12 +114,12 @@ bool cfg_detect_and_load(const char *configs[], int num_configs) {
       cfg = default_cfg;
       Log(LOG_CRIT, "cfg", "No config file found, saving defaults");
    }
-   return false;
+   return true;
 }
 
 bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    if (!section || !cb) {
-      return true;
+      return false;
    }
 
    cfg_cb_list_t *new_cb = malloc( sizeof(cfg_cb_list_t) );
@@ -131,7 +131,7 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    if (!new_cb) {
       Log(LOG_CRIT, "cfg", "OOM in cfg_add_callback");
 
-      return true;
+      return false;
    }
 
    if (path) {
@@ -165,7 +165,7 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
       }
    }
 
-   return false;
+   return true;
 }
 
 static bool cfg_dispatch_callback(const char *path, int line, const char *section, const char *buf) {
@@ -258,11 +258,9 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    fseek(fp, 0, SEEK_SET);
 
    bool in_comment = false;
-   do {
+   while (true) {
       memset( buf, 0, sizeof(buf) );
       if ( !fgets(buf, sizeof(buf) - 1, fp) ) {
-         fclose(fp);
-         fp = NULL;
          break;
       }
       line++;
@@ -451,9 +449,13 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       } else if (*skip == '[' && *end == ']') {
          size_t section_len = sizeof(this_section);
          size_t skip_len = strlen(skip);
-         size_t copy_len = ( (skip_len - 1) > section_len ? section_len : (skip_len - 1) );
+         size_t copy_len = skip_len > 1 ? skip_len - 1 : 0;
+         if (copy_len >= section_len) {
+            copy_len = section_len - 1;
+         }
          memset(this_section, 0, section_len);
-         snprintf(this_section, copy_len, "%s", skip + 1);
+         memcpy(this_section, skip + 1, copy_len);
+         this_section[copy_len] = '\0';
          continue;
       }
 
@@ -564,7 +566,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             line);
          errors++;
       }
-   } while ( !feof(fp) );
+   }
 
    if (errors > 0) {
       Log(LOG_INFO, "cfg", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
@@ -644,7 +646,7 @@ cfg_save_cb_entry_t *cfg_save_callbacks = NULL;
 bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
    if (!callback) {
       Log(LOG_WARN, "cfg", "Attempt to add NULL save callback");
-      return true;
+      return false;
    }
 
    for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks; cbp; cbp = cbp->next) {
@@ -677,12 +679,12 @@ bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
    }
    Log(LOG_DEBUG, "cfg", "Registered save callback |%s| at <%p>", name ? name : "unnamed", callback);
 
-   return false;
+   return true;
 }
 
 bool cfg_remove_save_callback(cfg_save_cb_t callback) {
    if (!callback) {
-      return true;
+      return false;
    }
 
    for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks, *prev = NULL; cbp; prev = cbp, cbp = cbp->next) {
@@ -693,18 +695,18 @@ bool cfg_remove_save_callback(cfg_save_cb_t callback) {
             cfg_save_callbacks = cbp->next;
          }
          free(cbp);
-         return false;
+         return true;
       }
    }
    Log(LOG_CRIT, "cfg", "Save callback at <%p> not found for removal", callback);
 
-   return true;
+   return false;
 }
 
-// Returns true if any save callback failed
+// Returns true when all save callbacks succeed.
 bool cfg_run_save_callbacks(FILE *fp, const char *path) {
    if (!fp || !path) {
-      return true;
+      return false;
    }
 
    bool errors = false;
@@ -718,7 +720,7 @@ bool cfg_run_save_callbacks(FILE *fp, const char *path) {
       }
    }
 
-   return errors;
+   return !errors;
 }
 
 static void cfg_print_servers(dict *d, FILE *fp) {
@@ -845,7 +847,7 @@ bool cfg_save(dict *d, const char *path) {
 bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    if (!newcfg) {
       Log(LOG_CRIT, "cfg", "cfg_apply_new: newcfg is NULL, ignoring");
-      return true;
+      return false;
    }
 
    int rank = 0;
@@ -928,7 +930,7 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    // Free the temporary new dict -- its values were copied into cfg
    dict_free(newcfg);
 
-   return false;
+   return true;
 }
 
 /*
@@ -941,7 +943,7 @@ bool cfg_reload(const char *filename) {
 
    if (!path) {
       Log(LOG_CRIT, "cfg", "cfg_reload: No config file to reload");
-      return true;
+      return false;
    }
 
    Log(LOG_INFO, "cfg", "cfg_reload: Starting config reload from %s", path);
@@ -950,13 +952,13 @@ bool cfg_reload(const char *filename) {
 
    if (!newcfg) {
       Log(LOG_CRIT, "cfg", "cfg_reload: Failed to load config from %s", path);
-      return true;
+      return false;
    }
 
    cfg_apply_new(cfg, newcfg);
    Log(LOG_INFO, "cfg", "cfg_reload: Finished reloading config from %s", path);
 
-   return false;
+   return true;
 }
 
 // Config save stuff

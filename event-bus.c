@@ -84,7 +84,9 @@ static void event_profile_dump_locked(void) {
          }
       }
    }
-   qsort(rows, used, sizeof(*rows), event_profile_compare);
+   if (used > 1) {
+      qsort(rows, used, sizeof(*rows), event_profile_compare);
+   }
    Log(LOG_INFO, "profile", "Event dispatch counts (cumulative):");
    size_t limit = used < 32 ? used : 32;
    for (size_t i = 0; i < limit; i++) {

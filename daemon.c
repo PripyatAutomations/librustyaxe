@@ -22,8 +22,8 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-int pidfd = -1;
-const char *pidfile = NULL;
+static int pidfd = -1;
+static const char *pidfile = NULL;
 extern char *progname;
 extern bool dying;
 

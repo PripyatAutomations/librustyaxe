@@ -25,12 +25,12 @@
 extern void tui_keys_init(void);         // tui.keys.c
 
 extern char input_buf[TUI_INPUTLEN];
-extern int input_len;
-extern int cursor_pos;
+extern int tui_input_len;
+extern int tui_cursor_pos;
 
 // Is the TUI enabled?
-bool tui_enabled = true;
-bool cfg_tui_use_mouse;
+bool tui_is_enabled = true;
+static bool cfg_tui_use_mouse;
 
 // These get updated by update_term_size() on SIGWINCH (terminal resize) and in
 // tui_init()
@@ -231,22 +231,22 @@ bool tui_fini(void) {
 
 // While deferred, tui_vprint() skips the per-line full redraw; the caller
 // flushes once when done printing a batch (i.e. /help)
-int redraw_defer_count = 0;
+int tui_redraw_defer_count = 0;
 
 void tui_redraw_defer(void) {
-   redraw_defer_count++;
+   tui_redraw_defer_count++;
 }
 
 void tui_redraw_flush(void) {
-   if (redraw_defer_count <= 0) {
+   if (tui_redraw_defer_count <= 0) {
       return;
    }
-   redraw_defer_count = 0;
+   tui_redraw_defer_count = 0;
    tui_redraw_screen();
 }
 
 void tui_redraw_screen(void) {
-   if (!tui_enabled) {
+   if (!tui_is_enabled) {
       return;
    }
    update_term_size();
@@ -429,7 +429,7 @@ void tui_redraw_screen(void) {
 }
 
 void tui_redraw_topline(void) {
-   if (!tui_enabled) {
+   if (!tui_is_enabled) {
       return;
    }
    update_term_size();
@@ -451,7 +451,7 @@ void tui_redraw_topline(void) {
 }
 
 void tui_redraw_statusline(void) {
-   if (!tui_enabled) {
+   if (!tui_is_enabled) {
       return;
    }
    update_term_size();
@@ -461,7 +461,7 @@ void tui_redraw_statusline(void) {
 }
 
 void tui_redraw_clock(void) {
-   if (!tui_enabled) {
+   if (!tui_is_enabled) {
       return;
    }
    int width = term_cols;
@@ -499,7 +499,7 @@ void tui_redraw_clock(void) {
 }
 
 bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
-   if (!tui_enabled) {
+   if (!tui_is_enabled) {
       return true;
    }
 
@@ -621,7 +621,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
 }
 
 void tui_window_update_topline(const char *line) {
-   if (!tui_enabled || !line) {
+   if (!tui_is_enabled || !line) {
       return;
    }
    // Move cursor to the top-left
@@ -638,7 +638,7 @@ void tui_window_update_topline(const char *line) {
 }
 
 void tui_update_input_line(void) {
-   if (!tui_enabled) {
+   if (!tui_is_enabled) {
       return;
    }
    tui_window_t *win = tui_active_window();
@@ -652,10 +652,10 @@ void tui_update_input_line(void) {
    // --- build visible input buffer with placeholders ---
    char buf[2048];
    int buf_pos = 0;
-   int screen_cols[input_len + 1];  // map input char -> screen column
+   int screen_cols[tui_input_len + 1];  // map input char -> screen column
    int cols = 0;
 
-   for (int i = 0 ; i < input_len ; i++) {
+   for (int i = 0 ; i < tui_input_len ; i++) {
       unsigned char c = input_buf[i];
 
       switch (c) {
@@ -710,24 +710,29 @@ void tui_update_input_line(void) {
    // --- determine cursor_screen_pos ---
    int cursor_screen_pos = 0;
 
-   if (cursor_pos == 0) {
+   if (tui_cursor_pos == 0) {
       cursor_screen_pos = 0;
-   } else if (cursor_pos < input_len) {
-      cursor_screen_pos = screen_cols[cursor_pos - 1];
-   } else if (cursor_pos == input_len && input_len > 0) {
-      cursor_screen_pos = screen_cols[input_len - 1] + 1;
+   } else if (tui_cursor_pos < tui_input_len) {
+      cursor_screen_pos = screen_cols[tui_cursor_pos - 1];
+   } else if (tui_cursor_pos == tui_input_len && tui_input_len > 0) {
+      cursor_screen_pos = screen_cols[tui_input_len - 1] + 1;
    }
    // --- colorize entire line ---
    char *colorized_line = tui_colorize_string(buf);
 
    // --- compute visible slice ---
+   char slice[2048];
    int max_input_width = width - prompt_len - 1;
+   if (max_input_width < 1) {
+      max_input_width = 1;
+   } else if ((size_t)max_input_width >= sizeof(slice)) {
+      max_input_width = (int)sizeof(slice) - 1;
+   }
    int start_col = 0;
 
    if (cursor_screen_pos > max_input_width) {
       start_col = cursor_screen_pos - max_input_width;
    }
-   char slice[2048];
    strlcpy(slice, &colorized_line[start_col], max_input_width);
    slice[max_input_width] = '\0';
 

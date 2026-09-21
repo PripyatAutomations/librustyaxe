@@ -30,7 +30,7 @@ extern char latest_timestamp[64];
 extern time_t now;			// you must provide a >= 1hz refresh rate
 static time_t last_ts_update;
 bool log_stdout = true;
-bool tui_mode_enabled = false;
+static bool tui_mode_enabled = false;
 
 // Do we need to show a timestamp in log messages?
 static bool cfg_log_show_ts = false;
@@ -107,7 +107,7 @@ bool log_add_filter(const char *pattern, logpriority_t level) {
    return true;
 }
 
-void log_clear_log_filters(void) {
+void log_clear_filters(void) {
    struct log_filter *f = log_filters;
    while (f) {
       struct log_filter *next = f->next;
@@ -268,7 +268,7 @@ void logger_end(void) {
    log_callbacks = NULL;
 
    // free all log_filters
-   log_clear_log_filters();
+   log_clear_filters();
 }
 
 int update_timestamp(void) {
@@ -399,7 +399,7 @@ bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *su
    if (!newcb) {
       fprintf(stderr, "OOM in log_set_callback!\n");
 
-      return true;
+      return false;
    }
    memset( newcb, 0, sizeof(struct log_callback) );
    newcb->callback = log_va_cb;
@@ -422,5 +422,5 @@ bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *su
       // first entry, pop it at the top of the list
       log_callbacks = newcb;
    }
-   return false;
+   return true;
 }

@@ -32,8 +32,8 @@ extern int handle_alt_right(int c, int key);
 
 static struct termios orig_termios;
 char input_buf[TUI_INPUTLEN];
-int input_len = 0;
-int cursor_pos = 0;
+int tui_input_len = 0;
+int tui_cursor_pos = 0;
 static char input_history[HISTORY_LINES][TUI_INPUTLEN];
 static int history_count = 0;
 static int history_index = -1;
@@ -195,9 +195,9 @@ void handle_enter_key(tui_window_t *win, int cursor)
    {
       return;
    }
-   input_buf[input_len] = '\0';
+   input_buf[tui_input_len] = '\0';
 
-   if (input_len > 0)
+   if (tui_input_len > 0)
    {
       history_add(input_buf);
 
@@ -209,7 +209,7 @@ void handle_enter_key(tui_window_t *win, int cursor)
       {
          Log(LOG_DEBUG, "tui.keys", "no tui_readline_cb");
       }
-      input_len = 0;
+      tui_input_len = 0;
       input_buf[0] = '\0';
    }
    cursor = 0;
@@ -366,8 +366,8 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
                handled = tui_hotkey_dispatch(win, key.code.sym, key.modifiers);
             } else {
                handle_enter_key(win, 0);
-               input_len = 0;
-               cursor_pos = 0;
+               tui_input_len = 0;
+               tui_cursor_pos = 0;
                memset(input_buf, 0, sizeof(input_buf));
                handled = 1;
             }
@@ -397,14 +397,14 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
 
          case TERMKEY_SYM_HOME:
          {
-            cursor_pos = 0;
+            tui_cursor_pos = 0;
             handled = 1;
             break;
          }
 
          case TERMKEY_SYM_END:
          {
-            cursor_pos = input_len;
+            tui_cursor_pos = tui_input_len;
             handled = 1;
             break;
          }
@@ -414,13 +414,13 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             if (key.modifiers & TERMKEY_KEYMOD_CTRL)
             {
                // move cursor to start of previous word
-               while (cursor_pos > 0 && input_buf[cursor_pos - 1] == ' ')
+               while (tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] == ' ')
                {
-                  cursor_pos--;
+                  tui_cursor_pos--;
                }
-               while (cursor_pos > 0 && input_buf[cursor_pos - 1] != ' ')
+               while (tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] != ' ')
                {
-                  cursor_pos--;
+                  tui_cursor_pos--;
                }
                handled = 1;
             }
@@ -430,9 +430,9 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             }
             else
             {
-               if (cursor_pos > 0)
+               if (tui_cursor_pos > 0)
                {
-                  cursor_pos--;
+                  tui_cursor_pos--;
                }
                handled = 1;
             }
@@ -444,13 +444,13 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             if (key.modifiers & TERMKEY_KEYMOD_CTRL)
             {
                // move cursor to start of next word
-               while (cursor_pos < input_len && input_buf[cursor_pos] != ' ')
+               while (tui_cursor_pos < tui_input_len && input_buf[tui_cursor_pos] != ' ')
                {
-                  cursor_pos++;
+                  tui_cursor_pos++;
                }
-               while (cursor_pos < input_len && input_buf[cursor_pos] == ' ')
+               while (tui_cursor_pos < tui_input_len && input_buf[tui_cursor_pos] == ' ')
                {
-                  cursor_pos++;
+                  tui_cursor_pos++;
                }
                handled = 1;
             }
@@ -460,9 +460,9 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             }
             else
             {
-               if (cursor_pos < input_len)
+               if (tui_cursor_pos < tui_input_len)
                {
-                  cursor_pos++;
+                  tui_cursor_pos++;
                }
                handled = 1;
             }
@@ -476,9 +476,9 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             if (prev)
             {
                strlcpy(input_buf, prev, TUI_INPUTLEN);
-               input_len = strlen(input_buf);
-               input_buf[input_len] = '\0';
-               cursor_pos = input_len;
+               tui_input_len = strlen(input_buf);
+               input_buf[tui_input_len] = '\0';
+               tui_cursor_pos = tui_input_len;
             }
             handled = 1;
             break;
@@ -491,9 +491,9 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             if (next)
             {
                strlcpy(input_buf, next, TUI_INPUTLEN);
-               input_len = strlen(next);
-               input_buf[input_len] = '\0';
-               cursor_pos = input_len;
+               tui_input_len = strlen(next);
+               input_buf[tui_input_len] = '\0';
+               tui_cursor_pos = tui_input_len;
             }
             handled = 1;
             break;
@@ -525,7 +525,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          case 'A':
          case 'a':
          {
-            cursor_pos = 0;
+            tui_cursor_pos = 0;
             handled = 1;
             break;
          }
@@ -544,7 +544,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          case 'E':
          case 'e':
          {
-            cursor_pos = input_len;
+            tui_cursor_pos = tui_input_len;
             handled = 1;
             break;
          }
@@ -569,8 +569,8 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          case 'U':
          case 'u':
          {
-            input_len = 0;
-            cursor_pos = 0;
+            tui_input_len = 0;
+            tui_cursor_pos = 0;
             input_buf[0] = '\0';
             handled = 1;
             break;
@@ -578,9 +578,9 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          case 'W':
          case 'w':
          {
-            if (cursor_pos > 0)
+            if (tui_cursor_pos > 0)
             {
-               int i = cursor_pos - 1;
+               int i = tui_cursor_pos - 1;
                while (i >= 0 && input_buf[i] == ' ')
                {
                   i--;
@@ -590,9 +590,9 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
                   i--;
                }
                int start = i + 1;
-               memmove(&input_buf[start], &input_buf[cursor_pos], input_len - cursor_pos + 1);
-               input_len -= (cursor_pos - start);
-               cursor_pos = start;
+               memmove(&input_buf[start], &input_buf[tui_cursor_pos], tui_input_len - tui_cursor_pos + 1);
+               tui_input_len -= (tui_cursor_pos - start);
+               tui_cursor_pos = start;
             }
             handled = 1;
             break;
@@ -606,23 +606,23 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          case 0x08:
          {
             // Ctrl-H
-            if (cursor_pos > 0)
+            if (tui_cursor_pos > 0)
             {
-               memmove(&input_buf[cursor_pos - 1], &input_buf[cursor_pos], input_len - cursor_pos + 1);
-               cursor_pos--;
-               input_len--;
+               memmove(&input_buf[tui_cursor_pos - 1], &input_buf[tui_cursor_pos], tui_input_len - tui_cursor_pos + 1);
+               tui_cursor_pos--;
+               tui_input_len--;
             }
             handled = 1;
             break;
          }
          }
 
-         if (insert && input_len < TUI_INPUTLEN - 1)
+         if (insert && tui_input_len < TUI_INPUTLEN - 1)
          {
-            memmove(&input_buf[cursor_pos + 1], &input_buf[cursor_pos], input_len - cursor_pos + 1);
-            input_buf[cursor_pos] = insert;
-            cursor_pos++;
-            input_len++;
+            memmove(&input_buf[tui_cursor_pos + 1], &input_buf[tui_cursor_pos], tui_input_len - tui_cursor_pos + 1);
+            input_buf[tui_cursor_pos] = insert;
+            tui_cursor_pos++;
+            tui_input_len++;
             handled = 1;
          }
       }
@@ -635,7 +635,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          case '\n':
          {
             handle_enter_key(win, 0);
-            input_len = cursor_pos = 0;
+            tui_input_len = tui_cursor_pos = 0;
             input_buf[0] = '\0';
             handled = 1;
             break;
@@ -643,11 +643,11 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          case 0x08:
          case 0x7f:
          {
-            if (cursor_pos > 0)
+            if (tui_cursor_pos > 0)
             {
-               memmove(&input_buf[cursor_pos - 1], &input_buf[cursor_pos], input_len - cursor_pos + 1);
-               cursor_pos--;
-               input_len--;
+               memmove(&input_buf[tui_cursor_pos - 1], &input_buf[tui_cursor_pos], tui_input_len - tui_cursor_pos + 1);
+               tui_cursor_pos--;
+               tui_input_len--;
             }
             handled = 1;
             break;
@@ -672,10 +672,10 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          }
          case TERMKEY_SYM_DELETE:
          {
-            if (cursor_pos < input_len)
+            if (tui_cursor_pos < tui_input_len)
             {
-               memmove(&input_buf[cursor_pos], &input_buf[cursor_pos + 1], input_len - cursor_pos);
-               input_len--;
+               memmove(&input_buf[tui_cursor_pos], &input_buf[tui_cursor_pos + 1], tui_input_len - tui_cursor_pos);
+               tui_input_len--;
             }
             handled = 1;
             break;
@@ -686,11 +686,11 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
       // --- Insert printable Unicode ---
       if (!handled && key.type == TERMKEY_TYPE_UNICODE && c >= 0x20)
       {
-         if (input_len < TUI_INPUTLEN - 1)
+         if (tui_input_len < TUI_INPUTLEN - 1)
          {
-            memmove(&input_buf[cursor_pos + 1], &input_buf[cursor_pos], input_len - cursor_pos + 1);
-            input_buf[cursor_pos++] = c;
-            input_len++;
+            memmove(&input_buf[tui_cursor_pos + 1], &input_buf[tui_cursor_pos], tui_input_len - tui_cursor_pos + 1);
+            input_buf[tui_cursor_pos++] = c;
+            tui_input_len++;
          }
          handled = 1;
       }
