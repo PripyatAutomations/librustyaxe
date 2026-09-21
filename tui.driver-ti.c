@@ -384,7 +384,10 @@ static bool try_load_terminfo_key(TermKeyTI *ti, const char *name, struct keyinf
       return false;
    }
    struct trie_node *node = new_node_key(info->type, info->sym, info->modifier_mask, info->modifier_set);
-   insert_seq(ti, value, node);
+   if (!insert_seq(ti, value, node)) {
+      free(node);
+      return false;
+   }
 
    return true;
 }
