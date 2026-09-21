@@ -28,6 +28,7 @@
 #include <limits.h>
 #include <libgen.h>
 #include <librustyaxe/core.h>
+#include <librustyaxe/util.file.h>
 #include <librrprotocol/rrprotocol.h>
 
 extern defconfig_t defcfg[];
@@ -501,8 +502,10 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             while (*val == ' ' || *val == '\t') {
                val++;
             }
-            memset( fullkey, 0, sizeof(fullkey) );
-            snprintf(fullkey, sizeof(fullkey), "server:%s.%s", this_section + 7, key);
+            strlcpy(fullkey, "server:", sizeof(fullkey));
+            strlcat(fullkey, this_section + 7, sizeof(fullkey));
+            strlcat(fullkey, ".", sizeof(fullkey));
+            strlcat(fullkey, key, sizeof(fullkey));
             dict_add(newcfg, fullkey, val);
          } else {
             Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
@@ -525,7 +528,8 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
                key[strlen(key) - 1] = '\0';
             }
             if (*key) {
-               snprintf(fullkey, sizeof(fullkey), "callsign-lookup:%s", key);
+               strlcpy(fullkey, "callsign-lookup:", sizeof(fullkey));
+               strlcat(fullkey, key, sizeof(fullkey));
                dict_add(newcfg, fullkey, val);
             }
          } else {
@@ -548,7 +552,8 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
                key[strlen(key) - 1] = '\0';
             }
             if (*key) {
-               snprintf(fullkey, sizeof(fullkey), "site:%s", key);
+               strlcpy(fullkey, "site:", sizeof(fullkey));
+               strlcat(fullkey, key, sizeof(fullkey));
                dict_add(newcfg, fullkey, val);
             }
          } else {
@@ -619,6 +624,16 @@ unsigned long cfg_get_ulong(const char *key, unsigned long def) {
 // You *MUST* free the return value
 const char *cfg_get_exp(const char *key) {
    return dict_get_exp(cfg, key);
+}
+
+char *cfg_get_path(const char *key) {
+   const char *expanded = cfg_get_exp(key);
+   if (!expanded) {
+      return NULL;
+   }
+   char *path = expand_path(expanded);
+   free((void *)expanded);
+   return path;
 }
 
 // ---------------------------------------------------------------

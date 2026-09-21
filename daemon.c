@@ -31,7 +31,7 @@ extern bool dying;
 int daemonize(void) {
    struct stat sb;
 
-   pidfile = cfg_get("path.pid-file");
+   pidfile = cfg_get_path("path.pid-file");
 
    if (pidfile == NULL) {
       Log(LOG_CRIT, "daemon", "no pidfile specified in path.pid-file");

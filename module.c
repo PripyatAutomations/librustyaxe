@@ -65,12 +65,12 @@ char *concat_path(const char *dir, const char *file, const char *suffix) {
 char *rr_find_module(const char *name) {
    // Try to find mod path and return it in an allocated string
 
-   const char *cpath = cfg_get_exp("path.modules");
+   char *cpath = cfg_get_path("path.modules");
    char *tmp = NULL;
 
    if (cpath) {
       tmp = concat_path(cpath, name, NULL);
-      free( (char *)cpath );
+      free(cpath);
    }
 
    return tmp;

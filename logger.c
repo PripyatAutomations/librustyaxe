@@ -342,7 +342,13 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    /* Expand the format string */
    vsnprintf(msgbuf, sizeof(msgbuf) - 1, fmt, ap);
    memset( log_msg, 0, sizeof(log_msg) );
-   snprintf(log_msg, sizeof(log_msg), "<%s@%s> %s", subsys, log_priority_to_str(priority), msgbuf);
+   int log_prefix_len = snprintf(log_msg, sizeof(log_msg), "<%s@%s> ",
+      subsys ? subsys : "core", log_priority_to_str(priority));
+   if (log_prefix_len < 0) {
+      log_msg[0] = '\0';
+   } else if ((size_t)log_prefix_len < sizeof(log_msg)) {
+      strlcpy(log_msg + log_prefix_len, msgbuf, sizeof(log_msg) - (size_t)log_prefix_len);
+   }
    va_end(ap);
 
    if (logfp) {

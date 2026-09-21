@@ -226,7 +226,7 @@ void tui_window_init(void) {
 
       if (sl) {
          memset( sl, 0, sizeof(tui_windows[0]->status_line) );
-         snprintf(sl, sizeof(sl), "%s", " status window");
+         snprintf(sl, sizeof(tui_windows[0]->status_line), "%s", "status");
       }
       tui_num_windows = 1;
       tui_active_win = 0;
