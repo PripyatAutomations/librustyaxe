@@ -132,6 +132,11 @@ static int tui_line_rows(const char *s, int width) {
 static void update_term_size(void) {
    struct winsize ws;
 
+   // Test runners and redirected output have no terminal window to query.
+   if (!isatty(STDOUT_FILENO)) {
+      return;
+   }
+
    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != -1) {
       term_rows = ws.ws_row;
       term_cols = ws.ws_col;

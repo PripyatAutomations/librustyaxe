@@ -64,7 +64,7 @@ static void test_remove(void)
    CHECK(list_len(&list) == 2);
    CHECK(rrlist_find_by_ptr(list, &vals[1]) == NULL);
    // Remove head and tail
-   CHECK(rrlist_remove(&list, *list) != false);
+   CHECK(rrlist_remove(&list, list) != NULL);
    CHECK(list_len(&list) == 1);
    rrlist_destroy(&list);
    CHECK(list == NULL);
@@ -78,9 +78,9 @@ static void test_order(void)
    rrlist_add(&list, &vals[1], LIST_TAIL);
    rrlist_add(&list, &vals[2], LIST_HEAD);
    // vals[2] at head, then vals[0], vals[1]
-   CHECK((*list).data == &vals[2]);
-   CHECK((*list).next->data == &vals[0]);
-   CHECK((*list).next->next->data == &vals[1]);
+   CHECK(list->ptr == &vals[2]);
+   CHECK(list->next->ptr == &vals[0]);
+   CHECK(list->next->next->ptr == &vals[1]);
    rrlist_destroy(&list);
 }
 

@@ -1,4 +1,4 @@
-Ok//      This is part of rustyrig-fw.
+//      This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
 // Unit tests for librustyaxe/util.time.c
@@ -78,14 +78,14 @@ static void test_format_timestamp(void)
    char buf[64];
    time_t t = 875000000; // 1997-09-24 (UTC); localtime may shift, so just check shape
    format_timestamp(t, buf, sizeof(buf));
-   CHECK(strlen(buf) == 20);
-   CHECK(buf[0] == '[' && buf[19] == ']');
+   CHECK(strlen(buf) == 21);
+   CHECK(buf[0] == '[' && buf[20] == ']');
    CHECK(buf[5] == '/' && buf[8] == '/');
-   CHECK(buf[11] == ':' && buf[14] == ':' && buf[17] == ':');
+   CHECK(buf[11] == ' ' && buf[14] == ':' && buf[17] == ':');
    // Truncation must not overflow: tiny buffer produces empty/short string
    char tiny[4];
    format_timestamp(t, tiny, sizeof(tiny));
-   CHECK(strlen(tiny) < 4);
+   CHECK(tiny[0] == '\0');
 }
 
 static void test_timespec_diff_ms(void)

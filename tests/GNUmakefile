@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -O0 -g
+CFLAGS = -Wall -Wextra -std=c99 -D_POSIX_C_SOURCE=200809L -O0 -g
 LIB_DIR = ..
 INCLUDES = -I$(LIB_DIR) -I$(LIB_DIR)/.. -I../../build/radio
 # Link against the prebuilt shared library instead of recompiling the whole lib
@@ -16,8 +16,8 @@ TARGETS = $(TEST_SOURCES:.c=)
 all: $(TARGETS)
 
 # Each test links against the prebuilt shared library
-test_%: test_%.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
+test_%: test_%.o test_globals.o
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(if $(filter test_util_time,$@),$<,$^) $(LIBS)
 
 # maidenhead test needs libm for fabs()
 test_maidenhead: LIBS += -lm
@@ -29,6 +29,6 @@ check: all
 	@fail=0; for t in $(TARGETS); do ./$$t || fail=1; done; exit $$fail
 
 clean:
-	rm -f $(TEST_OBJECTS) $(TARGETS)
+	rm -f $(TEST_OBJECTS) test_globals.o $(TARGETS)
 
 .PHONY: all clean check

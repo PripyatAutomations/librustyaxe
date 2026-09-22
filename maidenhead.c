@@ -103,6 +103,7 @@ Coordinates maidenhead2latlon(const char *locator) {
    extsquare = (lp[6] - '0') / 120.0;
    precsquare = (toupper(lp[8]) - 'A') / 2880.0;
    c.longitude = (field + square + subsquare + extsquare + precsquare - 180);
+   c.error = 0;
    return c;
 }
 

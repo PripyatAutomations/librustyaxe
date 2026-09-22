@@ -98,7 +98,7 @@ static void test_merge_and_diff(void) {
    dict *df = dict_diff(a, b);
    CHECK(df != NULL);
    CHECK(dict_get(df, "common", NULL) != NULL);   // differs
-   CHECK(dict_get(df, "only-a", NULL) != NULL);
+   CHECK(dict_get_type(df, "only-a") == VAL_NULL);
    CHECK(dict_get(df, "only-b", NULL) != NULL);
 
    dict_free(m);

@@ -77,7 +77,7 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
       buffer->tail = node;
       buffer->current_size++;
 
-      return NULL;
+      return node;
    }
 
    if (buffer->current_size == buffer->max_size) {

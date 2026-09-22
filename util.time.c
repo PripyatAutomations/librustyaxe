@@ -176,8 +176,17 @@ char *time_t2dhms(time_t seconds) {
 
 void format_timestamp(time_t t, char *buf, size_t buflen) {
    struct tm tm;
-   localtime_r(&t, &tm);   // or gmtime_r(&t, &tm) for UTC
-   strftime(buf, buflen, "[%Y/%m/%d %H:%M:%S]", &tm);
+
+   if (!buf || buflen == 0) {
+      return;
+   }
+   buf[0] = '\0';
+   if (!localtime_r(&t, &tm)) {
+      return;
+   }
+   if (strftime(buf, buflen, "[%Y/%m/%d %H:%M:%S]", &tm) == 0) {
+      buf[0] = '\0';
+   }
 }
 
 long long timespec_diff_ms(const struct timespec *a, const struct timespec *b) {
