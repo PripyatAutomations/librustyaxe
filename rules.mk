@@ -23,7 +23,7 @@ librustyaxe_objs += mongoose.o
 librustyaxe_objs += posix.o
 librustyaxe_objs += ringbuffer.o
 # XXX: This needs cleanup to remove remnants of termbox/old logger
-librustyaxe_objs += rr_subproc.o
+librustyaxe_objs += subproc.o
 librustyaxe_objs += termkey.o
 librustyaxe_objs += tui.o
 librustyaxe_objs += tui.driver-csi.o
