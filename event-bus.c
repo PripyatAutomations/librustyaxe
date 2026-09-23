@@ -97,6 +97,14 @@ static void event_profile_dump_locked(void) {
 }
 #endif
 
+void event_profile_dump(void) {
+#ifdef USE_PROFILING
+   pthread_mutex_lock(&event_lock);
+   event_profile_dump_locked();
+   pthread_mutex_unlock(&event_lock);
+#endif
+}
+
 typedef struct queued_event {
    event_cb_t cb;
    void *user;

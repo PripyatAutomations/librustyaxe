@@ -93,6 +93,11 @@ typedef struct event_binary_listener {
 extern void event_init(void);
 extern void event_shutdown(void);
 
+/* Emit the accumulated event dispatch counters when profiling is enabled.
+ * Applications with a main loop may call this periodically; the profiler
+ * rate-limits dumps internally so callers do not need their own wall clock. */
+extern void event_profile_dump(void);
+
 
 /*
  * Register synchronous listeners.
