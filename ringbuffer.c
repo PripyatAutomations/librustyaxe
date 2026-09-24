@@ -70,7 +70,8 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    node->next = NULL;
    node->needs_freed = needs_freed;
 
-   Log(LOG_DEBUG, "Adding entry %p to rb:%p (%s), needs_freed: %d", data, buffer, buffer->name, needs_freed);
+   Log(LOG_DEBUG, "ringbuffer", "Adding entry %p to rb:%p (%s), needs_freed: %d",
+      data, buffer, buffer->name, needs_freed);
 
    if (buffer->current_size == 0) {
       buffer->head = node;
