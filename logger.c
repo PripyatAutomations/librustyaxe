@@ -252,6 +252,10 @@ void logger_init(const char *logfile, bool tui_mode) {
    log_dump_log_filters();
 }
 
+void logger_set_show_timestamp(bool enabled) {
+   cfg_log_show_ts = enabled;
+}
+
 void logger_end(void) {
    if ( logfp && (logfp != stdout && logfp != stderr) ) {
       fclose(logfp);

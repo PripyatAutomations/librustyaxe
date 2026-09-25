@@ -510,6 +510,21 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          }
       }
 
+      /* Escape-prefixed letters are reported as Alt+Unicode by termkey.
+       * Continue the Alt-1..Alt-0 window sequence with the QWERTY home row:
+       * Esc-Q selects window 11 through Esc-P selecting window 20. */
+      if (!handled && key.type == TERMKEY_TYPE_UNICODE &&
+          (key.modifiers & TERMKEY_KEYMOD_ALT)) {
+         const char *window_keys = "qwertyuiop";
+         const char *match = strchr(window_keys, (int)key.code.codepoint);
+         if (match) {
+            int window_id = 11 + (int)(match - window_keys);
+            (void)tui_window_focus_id(window_id);
+            handled = 1;
+            tui_redraw_screen();
+         }
+      }
+
       // --- Ctrl line editing ---
       if (!handled && (key.modifiers & TERMKEY_KEYMOD_CTRL))
       {
@@ -524,6 +539,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          }
          case 'A':
          case 'a':
+         case 0x01:                 // Ctrl-A
          {
             tui_cursor_pos = 0;
             handled = 1;
@@ -543,6 +559,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          }
          case 'E':
          case 'e':
+         case 0x05:                 // Ctrl-E
          {
             tui_cursor_pos = tui_input_len;
             handled = 1;
@@ -577,6 +594,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
          }
          case 'W':
          case 'w':
+         case 0x17:                 // Ctrl-W
          {
             if (tui_cursor_pos > 0)
             {
@@ -594,6 +612,27 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
                tui_input_len -= (tui_cursor_pos - start);
                tui_cursor_pos = start;
             }
+            handled = 1;
+            break;
+         }
+         case 'D':
+         case 'd':
+         case 0x04:                 // Ctrl-D: delete forward
+         {
+            if (tui_cursor_pos < tui_input_len) {
+               memmove(&input_buf[tui_cursor_pos], &input_buf[tui_cursor_pos + 1],
+                  tui_input_len - tui_cursor_pos);
+               tui_input_len--;
+            }
+            handled = 1;
+            break;
+         }
+         case 'K':
+         case 'k':
+         case 0x0b:                 // Ctrl-K: kill to end of line
+         {
+            input_buf[tui_cursor_pos] = '\0';
+            tui_input_len = tui_cursor_pos;
             handled = 1;
             break;
          }

@@ -31,7 +31,11 @@
 #include <librustyaxe/util.file.h>
 #include <librrprotocol/rrprotocol.h>
 
+#if defined(__GNUC__) || defined(__clang__)
+extern defconfig_t defcfg[] __attribute__((weak));
+#else
 extern defconfig_t defcfg[];
+#endif
 
 const char *config_file = NULL;
 dict *cfg = NULL;
@@ -83,6 +87,77 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
    }
    Log(LOG_INFO, "cfg", "Imported %d default settings with %d warnings", i, warnings);
 
+   return true;
+}
+
+const defconfig_t *cfg_defconfig_find(const char *key) {
+   if (!key || !defcfg) return NULL;
+   for (size_t i = 0; defcfg[i].key; i++) {
+      if (strcasecmp(defcfg[i].key, key) == 0) return &defcfg[i];
+   }
+   return NULL;
+}
+
+bool cfg_set_value(const char *key, const char *value) {
+   const defconfig_t *def = cfg_defconfig_find(key);
+   if (!cfg || !def || !value) return false;
+
+   char canonical[128];
+   const char *stored = value;
+   char *end = NULL;
+   errno = 0;
+   switch (def->type) {
+   case DEFCONFIG_BOOL: {
+      bool b;
+      if (!strcasecmp(value, "true") || !strcasecmp(value, "yes") ||
+          !strcasecmp(value, "on") || !strcmp(value, "1")) b = true;
+      else if (!strcasecmp(value, "false") || !strcasecmp(value, "no") ||
+               !strcasecmp(value, "off") || !strcmp(value, "0")) b = false;
+      else return false;
+      snprintf(canonical, sizeof(canonical), "%s", b ? "true" : "false");
+      stored = canonical;
+      break;
+   }
+   case DEFCONFIG_INT: {
+      long n = strtol(value, &end, 10);
+      if (errno || end == value || *end) return false;
+      snprintf(canonical, sizeof(canonical), "%ld", n);
+      stored = canonical;
+      break;
+   }
+   case DEFCONFIG_UINT: {
+      if (*value == '-') return false;
+      unsigned long n = strtoul(value, &end, 10);
+      if (errno || end == value || *end) return false;
+      snprintf(canonical, sizeof(canonical), "%lu", n);
+      stored = canonical;
+      break;
+   }
+   case DEFCONFIG_FLOAT: {
+      double n = strtod(value, &end);
+      if (errno || end == value || *end) return false;
+      snprintf(canonical, sizeof(canonical), "%.9g", n);
+      stored = canonical;
+      break;
+   }
+   case DEFCONFIG_ENUM:
+      if (def->choices && *def->choices) {
+         char *choices = strdup(def->choices);
+         bool found = false;
+         char *save = NULL;
+         for (char *p = strtok_r(choices, "|", &save); p;
+              p = strtok_r(NULL, "|", &save)) {
+            if (!strcasecmp(p, value)) { found = true; break; }
+         }
+         free(choices);
+         if (!found) return false;
+      }
+      break;
+   default:
+      break;
+   }
+   if (dict_add(cfg, key, stored) != 0) return false;
+   reload_event_run(key);
    return true;
 }
 

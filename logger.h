@@ -53,6 +53,8 @@ extern FILE *logfp;
 extern int log_level;
 extern void Log(logpriority_t priority, const char *subsys, const char *fmt, ...);
 void logger_init(const char *logfile, bool tui_mode);
+/* Override the configured timestamp policy for embedded/subprocess logs. */
+void logger_set_show_timestamp(bool enabled);
 extern void hash_to_hex(char *dest, const uint8_t *hash, size_t len);
 extern char latest_timestamp[64];
 extern int update_timestamp(void);

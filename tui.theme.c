@@ -15,6 +15,7 @@
 #include <time.h>
 #include <string.h>
 #include <signal.h>
+#include <ctype.h>
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <librustyaxe/core.h>
@@ -124,6 +125,12 @@ static const char *theme_ansi_code(const char *tag) {
    if (!tag || !*tag || strlen(tag) > 32) {
       return NULL;
    }
+   /* Theme names are identifiers. Reject punctuation from ordinary text
+    * before consulting cfg_get(); JSON such as {"ts":123} must stay literal
+    * and must never turn into a lookup for ui.theme."ts":123. */
+   for (const unsigned char *p = (const unsigned char *)tag; *p; p++) {
+      if (!isalnum(*p) && *p != '-' && *p != '_') return NULL;
+   }
    snprintf(key, sizeof(key), "ui.theme.%s", tag);
    const char *val = cfg_get(key);
    if (!val || !*val) {
@@ -158,7 +165,17 @@ char *tui_colorize_string(const char *in) {
    char *o = out;
 
    while (*p) {
-      if (*p == '{') {
+      if ((unsigned char)*p == 0x1b) {
+         /* fwdsp/GStreamer may emit ANSI CSI styling. The TUI owns the
+          * terminal stream, so consume those sequences instead of allowing
+          * them to corrupt the line renderer. */
+         p++;
+         if (*p == '[') {
+            p++;
+            while (*p && !isalpha((unsigned char)*p)) p++;
+            if (*p) p++;
+         }
+      } else if (*p == '{') {
          const char *end = strchr(p, '}');
 
          if (!end) {
@@ -173,6 +190,8 @@ char *tui_colorize_string(const char *in) {
          }
          memcpy(key, p + 1, key_len);
          key[key_len] = '\0';
+
+         bool tag_handled = false;
 
          // if TUI colors are enabled, insert them
          if (cfg_tui_colors) {
@@ -227,6 +246,7 @@ char *tui_colorize_string(const char *in) {
                      }
                   }
                }
+               tag_handled = true;
                p = end + 1;
                continue;
             }
@@ -238,6 +258,7 @@ char *tui_colorize_string(const char *in) {
             for (ae = ansi_table ; ae->tag ; ae++) {
                if (strcmp(ae->tag, key) == 0) {
                   o += sprintf(o, "%s", ae->code);
+                  tag_handled = true;
                   break;
                }
             }
@@ -245,11 +266,28 @@ char *tui_colorize_string(const char *in) {
                const char *code = theme_ansi_code(key);
                if (code) {
                   o += sprintf(o, "%s", code);
+                  tag_handled = true;
                }
             }
          }
-         // if cfg_tui_colors == 0, just skip the {key} sequence
-         p = end + 1;
+         if (!cfg_tui_colors) {
+            // Color tags are still formatting control when colors are
+            // disabled: consume known tags, while preserving unknown braces.
+            char hexbuf[16], fbbuf[64];
+            bool hex_bg = false;
+            if (color_tag_parse(key, hexbuf, sizeof(hexbuf), fbbuf,
+                  sizeof(fbbuf), &hex_bg) || ansi_code(key)) {
+               tag_handled = true;
+            }
+         }
+         if (tag_handled) {
+            p = end + 1;
+         } else {
+            // Braces are ordinary log/chat text unless the contents name a
+            // known color tag. Preserve JSON, config values, and other
+            // literal brace-delimited text verbatim.
+            *o++ = *p++;
+         }
       } else {
          *o++ = *p++;
       }

@@ -38,6 +38,7 @@ static int term_rows = 24;   // default lines
 static int term_cols = 80;   // default width
 static char status_line[STATUS_LEN];
 static char *(*topline_renderer)(tui_window_t *win);
+static volatile sig_atomic_t tui_resize_pending = 0;
 
 void tui_set_topline_renderer(char *(*renderer)(tui_window_t *win)) {
    topline_renderer = renderer;
@@ -161,8 +162,10 @@ static void clear_line(int row) {
 
 // Handle window size changes
 static void sigwinch_handler(int signum) {
-   update_term_size();
-   tui_redraw_screen();
+   (void)signum;
+   // A signal handler may interrupt stdio while a redraw is in progress.
+   // Defer the ioctl and printf-based redraw to the normal event loop.
+   tui_resize_pending = 1;
 }
 
 ////////////////
@@ -254,6 +257,7 @@ void tui_redraw_screen(void) {
    if (!tui_is_enabled) {
       return;
    }
+   tui_resize_pending = 0;
    update_term_size();
 
    printf("\033[H\033[2J");  // clear screen
@@ -642,6 +646,52 @@ void tui_window_update_topline(const char *line) {
    fflush(stdout);
 }
 
+/* Return the byte offset of a visible column in an ANSI-rendered string.
+ * Slicing the rendered string by column used to split escape sequences when
+ * the input line scrolled, leaving the terminal cursor and colors corrupted. */
+static size_t ansi_column_offset(const char *text, int column) {
+   size_t offset = 0;
+   int visible = 0;
+   if (!text || column <= 0) return 0;
+   while (text[offset] && visible < column) {
+      if ((unsigned char)text[offset] == 0x1b) {
+         offset++;
+         if (text[offset] == '[') {
+            offset++;
+            while (text[offset] && !((text[offset] >= '@') && (text[offset] <= '~')))
+               offset++;
+            if (text[offset]) offset++;
+         }
+         continue;
+      }
+      offset++;
+      visible++;
+   }
+   return offset;
+}
+
+static void ansi_copy_columns(const char *text, int columns, char *out, size_t out_size) {
+   size_t in = 0;
+   size_t used = 0;
+   int visible = 0;
+   if (!text || !out || out_size == 0) return;
+   while (text[in] && used + 1 < out_size && visible < columns) {
+      if ((unsigned char)text[in] == 0x1b) {
+         size_t start = in++;
+         if (text[in] == '[') {
+            in++;
+            while (text[in] && !((text[in] >= '@') && (text[in] <= '~'))) in++;
+            if (text[in]) in++;
+         }
+         while (start < in && used + 1 < out_size) out[used++] = text[start++];
+         continue;
+      }
+      out[used++] = text[in++];
+      visible++;
+   }
+   out[used] = '\0';
+}
+
 void tui_update_input_line(void) {
    if (!tui_is_enabled) {
       return;
@@ -651,6 +701,10 @@ void tui_update_input_line(void) {
    if (!win) {
       return;
    }
+   if (tui_input_len < 0) tui_input_len = 0;
+   if (tui_input_len >= TUI_INPUTLEN) tui_input_len = TUI_INPUTLEN - 1;
+   if (tui_cursor_pos < 0) tui_cursor_pos = 0;
+   if (tui_cursor_pos > tui_input_len) tui_cursor_pos = tui_input_len;
    int width = term_cols;
    int prompt_len = visible_length(win->title) + 2;  // title + '>' + space
 
@@ -738,8 +792,8 @@ void tui_update_input_line(void) {
    if (cursor_screen_pos > max_input_width) {
       start_col = cursor_screen_pos - max_input_width;
    }
-   strlcpy(slice, &colorized_line[start_col], max_input_width);
-   slice[max_input_width] = '\0';
+   ansi_copy_columns(colorized_line + ansi_column_offset(colorized_line, start_col),
+      max_input_width, slice, sizeof(slice));
 
    // --- prepare colored prompt ---
    char prompt[512];

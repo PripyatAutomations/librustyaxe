@@ -22,13 +22,28 @@
 // maximum supported section callbacks
 #define	CONFIG_MAX_CALLBACKS 512
 
-// Used to store hard coded defaults for kv items
+typedef enum defconfig_type {
+   DEFCONFIG_STRING = 0,
+   DEFCONFIG_BOOL,
+   DEFCONFIG_INT,
+   DEFCONFIG_UINT,
+   DEFCONFIG_FLOAT,
+   DEFCONFIG_PATH,
+   DEFCONFIG_PASSWORD,
+   DEFCONFIG_ENUM
+} defconfig_type_t;
+
+// Used to store hard coded defaults for kv items.  Existing three-field
+// initializers remain string-typed for compatibility; new definitions should
+// provide type (and choices for DEFCONFIG_ENUM) explicitly.
 struct defconfig {
    const char *key;
    const char *val;
    const char *help;           // Description of the config item for when we
                                // someday
-   // have a config editor
+                               // have a config editor
+   defconfig_type_t type;
+   const char *choices;        // Optional pipe-separated values for ENUM
 };
 typedef struct defconfig defconfig_t;
 
@@ -76,6 +91,8 @@ extern reload_event_t *reload_events;
 // Functions
 extern bool cfg_set_default(dict *d, const char *key, const char *val);
 extern bool cfg_set_defaults(dict *d, defconfig_t *defaults);
+extern const defconfig_t *cfg_defconfig_find(const char *key);
+extern bool cfg_set_value(const char *key, const char *value);
 extern dict *cfg_load(const char *path);
 
 // Boolean API contract: configuration operations return true on success and false on failure.
