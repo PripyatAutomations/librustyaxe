@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <time.h>
 #include <sys/stat.h>
@@ -345,7 +346,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
 
       // skip leading spaces
       skip = buf;
-      while (*skip == ' ') {
+      while (*skip && isspace((unsigned char)*skip)) {
          skip++;
       }
       // trim trailing newlines and whitespace
@@ -473,15 +474,17 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          }
          line++;
 
-         // Trim leading whitespace on continuation line
+         // Trim leading whitespace on continuation line.  This keeps the
+         // indentation used by cfg_save() out of the value.
          char *cont = contbuf;
-         while (*cont == ' ' || *cont == '\t') {
+         while (*cont && isspace((unsigned char)*cont)) {
             cont++;
          }
-         // Trim trailing whitespace/newlines on continuation line
-         char *e2 = cont + strlen(cont) - 1;
-         while ( e2 >= cont && (*e2 == '\r' || *e2 == '\n' || *e2 == ' ' || *e2 == '\t') ) {
-            *e2-- = '\0';
+         // Trim trailing whitespace/newlines on continuation line without
+         // forming a pointer before the buffer when the line is empty.
+         size_t cont_len = strlen(cont);
+         while (cont_len > 0 && isspace((unsigned char)cont[cont_len - 1])) {
+            cont[--cont_len] = '\0';
          }
 
          // Append a space if needed
@@ -804,6 +807,8 @@ bool cfg_run_save_callbacks(FILE *fp, const char *path) {
    return !errors;
 }
 
+static void cfg_write_wrapped(FILE *fp, const char *key, const char *value);
+
 static void cfg_print_servers(dict *d, FILE *fp) {
    if (!d || !fp) {
       return;
@@ -847,7 +852,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
             const char *inner_name = inner_key + 7;
 
             if (strncmp(inner_name, name, name_len) == 0 && inner_name[name_len] == '.') {
-               fprintf(fp, "%s=%s\n", inner_name + name_len + 1, inner_val ? inner_val : "");
+               cfg_write_wrapped(fp, inner_name + name_len + 1, inner_val);
             }
          }
       }
@@ -895,6 +900,48 @@ static bool cfg_save_entry_same_section(const cfg_save_entry_t *entry,
    const char *colon = strchr(entry->key, ':');
    return colon && (size_t)(colon - entry->key) == section_len &&
       strncmp(entry->key, section, section_len) == 0;
+}
+
+/* Keep generated configuration readable by wrapping long values at 80
+ * columns.  Continuation indentation is deliberately part of the syntax:
+ * cfg_load() removes it before joining the fragments, so it does not become
+ * part of the stored value. */
+static void cfg_write_wrapped(FILE *fp, const char *key, const char *value) {
+   const size_t max_columns = 80;
+   const char *text = value ? value : "";
+   size_t indent = strlen(key) + 1; /* the characters through '=' */
+   size_t capacity = indent < max_columns ? max_columns - indent : 1;
+   bool first_line = true;
+
+   while (true) {
+      size_t remaining = strlen(text);
+      size_t chunk = remaining;
+
+      if (remaining > capacity) {
+         /* Reserve one column for the continuation backslash. */
+         chunk = capacity > 1 ? capacity - 1 : 1;
+      }
+
+      if (first_line) {
+         fprintf(fp, "%s=", key);
+         first_line = false;
+      } else {
+         for (size_t i = 0; i < indent; i++) {
+            fputc(' ', fp);
+         }
+      }
+      if (chunk > 0) {
+         fwrite(text, 1, chunk, fp);
+         text += chunk;
+      }
+
+      if (remaining > chunk) {
+         fputs("\\\n", fp);
+         continue;
+      }
+      fputc('\n', fp);
+      break;
+   }
 }
 
 bool cfg_save(dict *d, const char *path) {
@@ -978,8 +1025,7 @@ bool cfg_save(dict *d, const char *path) {
    size_t i = 0;
    for (; i < entry_count; i++) {
       if (strchr(entries[i].key, ':')) break;
-      fprintf(fp, "%s=%s\n", entries[i].key,
-         entries[i].value ? entries[i].value : "");
+      cfg_write_wrapped(fp, entries[i].key, entries[i].value);
    }
 
    while (i < entry_count) {
@@ -998,8 +1044,7 @@ bool cfg_save(dict *d, const char *path) {
       while (i < entry_count && cfg_save_entry_same_section(entries + i,
             entries[i].key, section_len)) {
          const char *entry_colon = strchr(entries[i].key, ':');
-         fprintf(fp, "%s=%s\n", entry_colon + 1,
-            entries[i].value ? entries[i].value : "");
+         cfg_write_wrapped(fp, entry_colon + 1, entries[i].value);
          i++;
       }
    }
