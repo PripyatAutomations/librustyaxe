@@ -856,6 +856,47 @@ static void cfg_print_servers(dict *d, FILE *fp) {
    dict_free(seen);
 }
 
+typedef struct cfg_save_entry {
+   const char *key;
+   char *value;
+} cfg_save_entry_t;
+
+static bool cfg_save_entry_is_skipped(const char *key) {
+   if (!key) return true;
+   if (strncmp(key, "server:", 7) == 0) return true;
+   if (strncmp(key, "network.", 8) == 0) return true;
+   if (strcmp(key, "ui.gtk.css") == 0) return true;
+   return false;
+}
+
+static int cfg_save_entry_compare(const void *left, const void *right) {
+   const cfg_save_entry_t *a = left;
+   const cfg_save_entry_t *b = right;
+   const char *a_colon = strchr(a->key, ':');
+   const char *b_colon = strchr(b->key, ':');
+
+   /* Keep ordinary [general] keys before section-qualified keys. */
+   if (!a_colon && b_colon) return -1;
+   if (a_colon && !b_colon) return 1;
+   if (!a_colon && !b_colon) return strcmp(a->key, b->key);
+
+   size_t a_section_len = (size_t)(a_colon - a->key);
+   size_t b_section_len = (size_t)(b_colon - b->key);
+   size_t common = a_section_len < b_section_len ? a_section_len : b_section_len;
+   int section_cmp = strncmp(a->key, b->key, common);
+   if (section_cmp != 0) return section_cmp;
+   if (a_section_len != b_section_len)
+      return a_section_len < b_section_len ? -1 : 1;
+   return strcmp(a_colon + 1, b_colon + 1);
+}
+
+static bool cfg_save_entry_same_section(const cfg_save_entry_t *entry,
+   const char *section, size_t section_len) {
+   const char *colon = strchr(entry->key, ':');
+   return colon && (size_t)(colon - entry->key) == section_len &&
+      strncmp(entry->key, section, section_len) == 0;
+}
+
 bool cfg_save(dict *d, const char *path) {
    // Back up the existing config before overwriting it. Keep two-digit
    // sequence numbers so multiple saves on the same day remain distinct.
@@ -902,26 +943,68 @@ bool cfg_save(dict *d, const char *path) {
    // Right-side argument overrides defaults
    merged = dict_merge_new(default_cfg, d);
 
-   // Keys handled by module-owned sections or fixed writers are skipped in
-   // the [general] dump.  Anything in a module section callback is emitted
-   // by that module's save callback.
-   fprintf(fp, "[general]\n");
+   /* Collect entries once so the output is deterministic and section-qualified
+    * keys can be written back in the INI section form accepted by the loader.
+    * For example, fwdsp:path becomes [fwdsp] path=... . */
+   cfg_save_entry_t *entries = NULL;
+   size_t entry_count = 0;
+   size_t entry_capacity = 0;
    int rank = 0;
    const char *key;
    char *val;
    while ( ( rank = dict_enumerate(merged, rank, &key, &val) ) >= 0 ) {
-      if (strncmp(key, "server:", 7) == 0) {
-         continue;   // Emitted by the server save callback
+      if (cfg_save_entry_is_skipped(key)) continue;
+      if (entry_count == entry_capacity) {
+         size_t next = entry_capacity ? entry_capacity * 2 : 64;
+         cfg_save_entry_t *grown = realloc(entries, next * sizeof(*entries));
+         if (!grown) {
+            Log(LOG_CRIT, "cfg", "Unable to allocate configuration save entries");
+            free(entries);
+            dict_free(merged);
+            fclose(fp);
+            return false;
+         }
+         entries = grown;
+         entry_capacity = next;
       }
-      if (strncmp(key, "network.", 8) == 0) {
-         continue;   // Emitted by the network save callback
-      }
-      if (strcmp(key, "ui.gtk.css") == 0) {
-         continue;   // Multi-line: emitted by the [gtk-css] save callback
-      }
-      fprintf(fp, "%s=%s\n", key, val ? val : "");
+      entries[entry_count].key = key;
+      entries[entry_count].value = val;
+      entry_count++;
    }
-   // Release the memory used
+
+   qsort(entries, entry_count, sizeof(*entries), cfg_save_entry_compare);
+
+   fprintf(fp, "[general]\n");
+   size_t i = 0;
+   for (; i < entry_count; i++) {
+      if (strchr(entries[i].key, ':')) break;
+      fprintf(fp, "%s=%s\n", entries[i].key,
+         entries[i].value ? entries[i].value : "");
+   }
+
+   while (i < entry_count) {
+      const char *colon = strchr(entries[i].key, ':');
+      if (!colon) {
+         i++;
+         continue;
+      }
+      size_t section_len = (size_t)(colon - entries[i].key);
+      const char *section_name = entries[i].key;
+      if (section_len == 8 && strncmp(section_name, "pipeline", 8) == 0) {
+         section_name = "pipelines";
+      }
+      fprintf(fp, "\n[%.*s]\n", (int)(section_name == entries[i].key ? section_len : 9),
+         section_name);
+      while (i < entry_count && cfg_save_entry_same_section(entries + i,
+            entries[i].key, section_len)) {
+         const char *entry_colon = strchr(entries[i].key, ':');
+         fprintf(fp, "%s=%s\n", entry_colon + 1,
+            entries[i].value ? entries[i].value : "");
+         i++;
+      }
+   }
+
+   free(entries);
    dict_free(merged);
 
    // Print the server sections
