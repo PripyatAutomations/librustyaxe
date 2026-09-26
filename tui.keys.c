@@ -34,45 +34,67 @@ static struct termios orig_termios;
 char input_buf[TUI_INPUTLEN];
 int tui_input_len = 0;
 int tui_cursor_pos = 0;
-static char input_history[HISTORY_LINES][TUI_INPUTLEN];
+static char *input_history[HISTORY_LINES];
 static int history_count = 0;
 static int history_index = -1;
+static bool shared_input_history = true;
+
+void tui_set_shared_input_history(bool shared) {
+   shared_input_history = shared;
+   history_index = shared ? history_count : -1;
+}
+
+static char **active_history(int **count, int **index) {
+   tui_window_t *window = tui_active_window();
+   if (shared_input_history || !window) {
+      *count = &history_count;
+      *index = &history_index;
+      return input_history;
+   }
+   *count = &window->history_count;
+   *index = &window->history_index;
+   return window->input_history;
+}
 
 const char *history_prev(void)
 {
-   if (history_count == 0)
+   int *count = NULL, *index = NULL;
+   char **history = active_history(&count, &index);
+   if (*count == 0)
    {
       return NULL;
    }
 
-   if (history_index < 0)
+   if (*index < 0)
    {
-      history_index = history_count - 1;
+      *index = *count - 1;
    }
-   else if (history_index > 0)
+   else if (*index > 0)
    {
-      history_index--;
+      (*index)--;
    }
 
-   return input_history[history_index];
+   return history[*index];
 }
 
 const char *history_next(void)
 {
-   if (history_count == 0 || history_index < 0)
+   int *count = NULL, *index = NULL;
+   char **history = active_history(&count, &index);
+   if (*count == 0 || *index < 0)
    {
       return NULL;
    }
-   history_index++;
+   (*index)++;
 
-   if (history_index >= history_count)
+   if (*index >= *count)
    {
-      history_index = -1;
+      *index = -1;
 
       return "";
    }
 
-   return input_history[history_index];
+   return history[*index];
 }
 
 void history_add(const char *line)
@@ -82,14 +104,18 @@ void history_add(const char *line)
       return;
    }
 
-   if (history_count >= HISTORY_LINES)
+   int *count = NULL, *index = NULL;
+   char **history = active_history(&count, &index);
+   if (*count >= HISTORY_LINES)
    {
-      memmove(input_history, input_history + 1, sizeof(input_history[0]) * (HISTORY_LINES - 1));
-      history_count--;
+      free(history[0]);
+      memmove(history, history + 1, sizeof(history[0]) * (HISTORY_LINES - 1));
+      (*count)--;
    }
-   strlcpy(input_history[history_count++], line, TUI_INPUTLEN);
-   input_history[history_count - 1][TUI_INPUTLEN - 1] = '\0';
-   history_index = history_count;
+   history[*count] = strndup(line, TUI_INPUTLEN - 1);
+   if (!history[*count]) return;
+   (*count)++;
+   *index = *count;
 }
 
 // --- PgUp / PgDn handlers with partial last page support ---

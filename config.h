@@ -138,7 +138,8 @@ extern bool run_reload_events(const char *key);
 // Find an event in the linked list
 extern reload_event_t *reload_event_find( const char *key, bool (*callback) () );
 
-// Add a reload event to the list
+// Add a reload event to the list.  A NULL key is invoked once after a
+// complete cfg_apply_new() reload, after all individual key events.
 extern reload_event_t *reload_event_add(const char *key, bool (*callback) (), const char *note);
 
 // Remove a reload event from the list
@@ -147,7 +148,7 @@ extern bool reload_event_remove(reload_event_t *evt);
 // Dump the list
 extern bool reload_event_list(const char *key);
 
-// Run the reload events for a key
+// Run the reload events for a key; NULL runs complete-reload callbacks.
 extern bool reload_event_run(const char *key);
 
 #endif // !defined(__inc_config_h)

@@ -158,6 +158,9 @@ bool cfg_set_value(const char *key, const char *value) {
    }
    if (dict_add(cfg, key, stored) != 0) return false;
    reload_event_run(key);
+   /* Programmatic settings changes (for example /set in a client) should
+      refresh the same cached runtime values as a file reload. */
+   reload_event_run(NULL);
    return true;
 }
 
@@ -854,24 +857,36 @@ static void cfg_print_servers(dict *d, FILE *fp) {
 }
 
 bool cfg_save(dict *d, const char *path) {
-   // Back up the existing config before we overwrite it, so a bad save
-   // doesn't destroy the working config. Saved as <path>.YYYYmmddHHMMSS.
+   // Back up the existing config before overwriting it. Keep two-digit
+   // sequence numbers so multiple saves on the same day remain distinct.
    if (file_exists(path)) {
       time_t now = time(NULL);
       struct tm tm_buf;
       localtime_r(&now, &tm_buf);
       char backup[PATH_MAX];
+      bool backed_up = false;
 
-      if (snprintf(backup, sizeof(backup), "%s.%04d%02d%02d%02d%02d%02d",
-         path, tm_buf.tm_year + 1900, tm_buf.tm_mon + 1, tm_buf.tm_mday,
-         tm_buf.tm_hour, tm_buf.tm_min, tm_buf.tm_sec) > 0) {
-
+      for (unsigned int sequence = 1; sequence <= 99; sequence++) {
+         int written = snprintf(backup, sizeof(backup),
+            "%s.%04d%02d%02d.%02u.cfg.old", path,
+            tm_buf.tm_year + 1900, tm_buf.tm_mon + 1, tm_buf.tm_mday, sequence);
+         if (written < 0 || (size_t)written >= sizeof(backup)) {
+            Log(LOG_WARN, "cfg", "Config backup path is too long for '%s'", path);
+            return false;
+         }
+         if (file_exists(backup)) continue;
          if (rename(path, backup) == 0) {
             Log(LOG_INFO, "cfg", "Saved previous config as '%s'", backup);
+            backed_up = true;
          } else {
             Log(LOG_WARN, "cfg", "Failed to back up config '%s' to '%s': %d:%s",
                path, backup, errno, strerror(errno));
          }
+         break;
+      }
+      if (!backed_up) {
+         Log(LOG_CRIT, "cfg", "Unable to create a backup before saving '%s'", path);
+         return false;
       }
    }
 
@@ -997,6 +1012,11 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
       }
    }
 
+   /* Notify modules once after the complete new configuration is live.  A
+      reload event registered with a NULL key is intentionally reserved for
+      this phase, so cached runtime settings can be refreshed atomically. */
+   reload_event_run(NULL);
+
    Log(LOG_INFO, "cfg", "cfg_apply_new: %d added, %d changed, %d removed",
        added, changed, removed);
 
@@ -1068,7 +1088,8 @@ if (homedir && empty_config) {
 reload_event_t *reload_events = NULL;
 
 reload_event_t *reload_event_add(const char *key, bool (*callback) (), const char *note) {
-   if (!callback || !key) {
+   /* A NULL key registers a callback for a completed configuration reload. */
+   if (!callback) {
       return NULL;
    }
    reload_event_t *r = malloc( sizeof(reload_event_t) );
@@ -1080,7 +1101,7 @@ reload_event_t *reload_event_add(const char *key, bool (*callback) (), const cha
    }
    memset( r, 0, sizeof(reload_event_t) );
 
-   if ( ( r->key = strdup(key) ) == NULL ) {
+   if (key && ( r->key = strdup(key) ) == NULL ) {
       abort();
    }
    r->callback = callback;
@@ -1090,14 +1111,17 @@ reload_event_t *reload_event_add(const char *key, bool (*callback) (), const cha
          abort();
       }
    }
-   // find end of the list and append it
-   reload_event_t *ep = reload_events;
-   while (ep) {
-      if (!ep->next) {
-         ep->next = r;
-         break;
+   // Find the end of the list and append it.  The first registration must
+   // become the list head; losing it here silently disables every reload
+   // callback until a later registration happens.
+   if (!reload_events) {
+      reload_events = r;
+   } else {
+      reload_event_t *ep = reload_events;
+      while (ep->next) {
+         ep = ep->next;
       }
-      ep = ep->next;
+      ep->next = r;
    }
    return r;
 }
@@ -1131,7 +1155,7 @@ reload_event_t *reload_event_find( const char *key, bool (*callback) () ) {
    while (r) {
       bool match_key = false, match_cb = false;
 
-      if (strcasecmp(key, r->key) == 0) {
+      if ((!key && !r->key) || (key && r->key && strcasecmp(key, r->key) == 0)) {
          match_key = true;
       }
 
@@ -1155,13 +1179,18 @@ bool reload_event_run(const char *key) {
    if (!reload_events) {
       return false;
    }
-   reload_event_t *rl = reload_event_find(key, NULL);
-
-   if (rl) {
-      Log(LOG_DEBUG, "cfg", "reload: run callback at <%p> for key '%s'", rl->callback, key);
-      rl->callback(key);
+   bool ran = false;
+   for (reload_event_t *rl = reload_events; rl; rl = rl->next) {
+      bool match = (!key && !rl->key) ||
+                   (key && rl->key && strcasecmp(key, rl->key) == 0);
+      if (match) {
+         Log(LOG_DEBUG, "cfg", "reload: run callback at <%p> for key '%s'",
+             rl->callback, key ? key : "<complete>");
+         rl->callback(key);
+         ran = true;
+      }
    }
-   return false;
+   return ran;
 }
 
 // Remove a reload event from the list

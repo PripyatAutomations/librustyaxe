@@ -9,6 +9,9 @@
 #define	__librustyaxe_tui_window_h
 
 #define	TUI_INPUTLEN 512
+#ifndef TUI_HISTORY_LINES
+#define TUI_HISTORY_LINES 50
+#endif
 
 typedef struct tui_window {
    ansi_entry_t    *default_bg, *default_fg;
@@ -18,6 +21,9 @@ typedef struct tui_window {
    int log_count;
    char title[64];
    char input_buf[TUI_INPUTLEN];
+   char *input_history[TUI_HISTORY_LINES];
+   int history_count;
+   int history_index;
    char status_line[128];
    rrconn_t *cptr;
 } tui_window_t;

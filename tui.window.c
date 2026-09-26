@@ -27,6 +27,16 @@ static tui_window_t *tui_windows[TUI_MAX_WINDOWS];
 static int tui_active_win = 0;
 static int tui_num_windows = 0;
 
+static void tui_window_free_history(tui_window_t *w) {
+   if (!w) return;
+   for (int i = 0; i < w->history_count; i++) {
+      free(w->input_history[i]);
+      w->input_history[i] = NULL;
+   }
+   w->history_count = 0;
+   w->history_index = -1;
+}
+
 ////////////////
 // Public API //
 ////////////////
@@ -122,6 +132,7 @@ bool tui_window_destroy(tui_window_t *w) {
    }
 
    if (destroyed_index == -1) {
+      tui_window_free_history(w);
       free(w);
 
       return true;
@@ -143,6 +154,7 @@ bool tui_window_destroy(tui_window_t *w) {
          tui_active_win--;   // shift left because of removed slot
       }
    }
+   tui_window_free_history(w);
    free(w);
 
    if (tui_active_win >= 0 && tui_windows[tui_active_win]) {

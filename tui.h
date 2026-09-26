@@ -73,6 +73,7 @@ extern bool (*tui_readline_cb)(const char *input);
 extern const char *history_prev(void);
 extern const char *history_next(void);
 extern void history_add(const char *line);
+extern void tui_set_shared_input_history(bool shared);
 
 #include <librustyaxe/tui.completion.h>
 
