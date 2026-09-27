@@ -7,28 +7,46 @@ LIBS = -L../.. -lrustyaxe -Wl,-rpath,$(abspath ../..)
 
 TEST_SOURCES = test_dict.c test_list.c test_maidenhead.c test_ringbuffer.c test_util_time.c test_config_save.c
 
-# Object files
-TEST_OBJECTS = $(TEST_SOURCES:.c=.o)
+# Keep test artifacts out of the source directory.  The top-level build already
+# owns generated files, so running a test suite must not leave .o files beside
+# the test sources.
+TEST_BUILD_DIR ?= ../../build/tests/librustyaxe
+
+# Object files and test executables
+TEST_OBJECTS = $(addprefix $(TEST_BUILD_DIR)/,$(TEST_SOURCES:.c=.o))
+GLOBAL_OBJECT = $(TEST_BUILD_DIR)/test_globals.o
 
 # Test executables, one per source file
-TARGETS = $(TEST_SOURCES:.c=)
+TARGETS = $(addprefix $(TEST_BUILD_DIR)/,$(TEST_SOURCES:.c=))
+TEST_NAMES = $(TEST_SOURCES:.c=)
 
 all: $(TARGETS)
 
+# Preserve the convenient `make test_dict` style without placing the
+# executable in the source directory.
+.PHONY: $(TEST_NAMES)
+$(TEST_NAMES): %: $(TEST_BUILD_DIR)/%
+	$<
+
 # Each test links against the prebuilt shared library
-test_%: test_%.o test_globals.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(if $(filter test_util_time,$@),$<,$^) $(LIBS)
+$(TEST_BUILD_DIR)/test_%: $(TEST_BUILD_DIR)/test_%.o $(GLOBAL_OBJECT)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(if $(filter %/test_util_time,$@),$<,$^) $(LIBS)
 
 # maidenhead test needs libm for fabs()
-test_maidenhead: LIBS += -lm
+$(TEST_BUILD_DIR)/test_maidenhead: LIBS += -lm
 
-%.o: %.c
+$(TEST_BUILD_DIR):
+	mkdir -p $@
+
+$(TEST_BUILD_DIR)/%.o: %.c | $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 check: all
-	@fail=0; for t in $(TARGETS); do ./$$t || fail=1; done; exit $$fail
+	@fail=0; for t in $(TARGETS); do ./$$t || fail=1; done; \
+	$(MAKE) clean; \
+	exit $$fail
 
 clean:
-	rm -f $(TEST_OBJECTS) test_globals.o $(TARGETS)
+	rm -rf $(TEST_BUILD_DIR)
 
 .PHONY: all clean check
