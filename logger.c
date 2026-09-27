@@ -229,7 +229,7 @@ void logger_init(const char *logfile, bool tui_mode) {
    cfg_log_show_ts = eeprom_get_bool("debug/show-ts");
 #endif
    ll = "crazy";
-   cfg_log_show_ts = cfg_get_bool("debug.show-ts", true);
+   cfg_log_show_ts = cfg_get_bool("log.show-ts", true);
 
    // save tui mode state so we don't trash the console...
    tui_mode_enabled = tui_mode;
@@ -330,16 +330,16 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    }
 
    if ( debug_filter(subsys, priority) ) {
-//      fprintf(stderr, "skip %s:%d\n", subsys, priority);
       va_end(ap_c1);
       va_end(ap);
       return;
    }
 
-   // this is arranged so that it will return if called more than once a second
+   // this is arranged so that it will return cached, if called more than once a second
    if (cfg_log_show_ts) {
       update_timestamp();
    }
+
    /* clear the message buffer */
    memset( msgbuf, 0, sizeof(msgbuf) );
 
