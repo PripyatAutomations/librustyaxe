@@ -38,7 +38,10 @@ librustyaxe_objs += util.string.o
 librustyaxe_objs += util.mem.o
 librustyaxe_objs += util.time.o
 
-librustyaxe_headers := $(wildcard inc/librustyaxe/*.h)
+# The public headers live in the source tree today.  Track them explicitly so
+# changing a shared struct (for example http_user_t) rebuilds every consumer
+# instead of leaving an ABI-mismatched shared object behind.
+librustyaxe_headers := $(wildcard librustyaxe/*.h) $(wildcard inc/librustyaxe/*.h)
 librustyaxe_src = $(wildcard librustyaxe/*.c)
 
 real_librustyaxe_objs := $(foreach x, ${librustyaxe_objs}, ${BUILD_DIR}/librustyaxe/${x})

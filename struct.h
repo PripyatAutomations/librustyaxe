@@ -1,6 +1,9 @@
 #if     !defined(__librustyaxe_struct_h)
 #define	__librustyaxe_struct_h
 
+#include <sys/types.h>
+#include <time.h>
+
 // XXX:ASAP Move these to build time config file
 // Maximum number of subscribed channels for users
 #define	MAX_RX_CHANNELS 64       // User RX channels
@@ -154,6 +157,9 @@ struct http_user {
                                                          // sessions
    int sessions;                                           // active logins
    int is_muted;                                         // is this user muted?
+   time_t password_set;                                  // password creation time
+   time_t password_expires;                              // zero means no expiry
+   bool password_change_required;                        // force a reset at login
 };
 typedef struct http_user http_user_t;
 
