@@ -14,7 +14,7 @@
 //	extendible:	Register load/save callbacks
 //	variable expansion: Support for %{key} expansion in _exp() versions
 //	reload events:	Dispatch events to your callback if reloaded
-
+//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -32,6 +32,7 @@
 #include <librustyaxe/util.file.h>
 #include <librrprotocol/rrprotocol.h>
 
+// If possible, declare defcfg a weak symbol, so we can link without it
 #if defined(__GNUC__) || defined(__clang__)
 extern defconfig_t defcfg[] __attribute__((weak));
 #else
@@ -92,72 +93,100 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
 }
 
 const defconfig_t *cfg_defconfig_find(const char *key) {
-   if (!key || !defcfg) return NULL;
+   if (!key || !defcfg) {
+      return NULL;
+   }
+
    for (size_t i = 0; defcfg[i].key; i++) {
-      if (strcasecmp(defcfg[i].key, key) == 0) return &defcfg[i];
+      if (strcasecmp(defcfg[i].key, key) == 0) {
+         return &defcfg[i];
+      }
    }
    return NULL;
 }
 
 bool cfg_set_value(const char *key, const char *value) {
    const defconfig_t *def = cfg_defconfig_find(key);
-   if (!cfg || !def || !value) return false;
+   if (!cfg || !def || !value) {
+      return false;
+   }
 
    char canonical[128];
    const char *stored = value;
    char *end = NULL;
    errno = 0;
    switch (def->type) {
-   case DEFCONFIG_BOOL: {
-      bool b;
-      if (!strcasecmp(value, "true") || !strcasecmp(value, "yes") ||
-          !strcasecmp(value, "on") || !strcmp(value, "1")) b = true;
-      else if (!strcasecmp(value, "false") || !strcasecmp(value, "no") ||
-               !strcasecmp(value, "off") || !strcmp(value, "0")) b = false;
-      else return false;
-      snprintf(canonical, sizeof(canonical), "%s", b ? "true" : "false");
-      stored = canonical;
-      break;
-   }
-   case DEFCONFIG_INT: {
-      long n = strtol(value, &end, 10);
-      if (errno || end == value || *end) return false;
-      snprintf(canonical, sizeof(canonical), "%ld", n);
-      stored = canonical;
-      break;
-   }
-   case DEFCONFIG_UINT: {
-      if (*value == '-') return false;
-      unsigned long n = strtoul(value, &end, 10);
-      if (errno || end == value || *end) return false;
-      snprintf(canonical, sizeof(canonical), "%lu", n);
-      stored = canonical;
-      break;
-   }
-   case DEFCONFIG_FLOAT: {
-      double n = strtod(value, &end);
-      if (errno || end == value || *end) return false;
-      snprintf(canonical, sizeof(canonical), "%.9g", n);
-      stored = canonical;
-      break;
-   }
-   case DEFCONFIG_ENUM:
-      if (def->choices && *def->choices) {
-         char *choices = strdup(def->choices);
-         bool found = false;
-         char *save = NULL;
-         for (char *p = strtok_r(choices, "|", &save); p;
-              p = strtok_r(NULL, "|", &save)) {
-            if (!strcasecmp(p, value)) { found = true; break; }
+      case DEFCONFIG_BOOL: {
+         bool b;
+         if (!strcasecmp(value, "true") || !strcasecmp(value, "yes") ||
+             !strcasecmp(value, "on") || !strcmp(value, "1")) {
+              b = true;
+         } else if (!strcasecmp(value, "false") || !strcasecmp(value, "no") ||
+                  !strcasecmp(value, "off") || !strcmp(value, "0")) {
+              b = false;
+         } else {
+            return false;
          }
-         free(choices);
-         if (!found) return false;
+         snprintf(canonical, sizeof(canonical), "%s", b ? "true" : "false");
+         stored = canonical;
+         break;
       }
-      break;
-   default:
-      break;
+      case DEFCONFIG_INT: {
+         long n = strtol(value, &end, 10);
+         if (errno || end == value || *end) {
+            return false;
+         }
+         snprintf(canonical, sizeof(canonical), "%ld", n);
+         stored = canonical;
+         break;
+      }
+      case DEFCONFIG_UINT: {
+         if (*value == '-') {
+            return false;
+         }
+
+         unsigned long n = strtoul(value, &end, 10);
+         if (errno || end == value || *end) {
+            return false;
+         }         
+         snprintf(canonical, sizeof(canonical), "%lu", n);
+         stored = canonical;
+         break;
+      }
+      case DEFCONFIG_FLOAT: {
+         double n = strtod(value, &end);
+         if (errno || end == value || *end) {
+            return false;
+         }
+         snprintf(canonical, sizeof(canonical), "%.9g", n);
+         stored = canonical;
+         break;
+      }
+      case DEFCONFIG_ENUM:
+         if (def->choices && *def->choices) {
+            char *choices = strdup(def->choices);
+            bool found = false;
+            char *save = NULL;
+            for (char *p = strtok_r(choices, "|", &save); p; p = strtok_r(NULL, "|", &save)) {
+               if (!strcasecmp(p, value)) {
+                  found = true;
+                  break;
+               }
+            }
+            free(choices);
+            if (!found) {
+               return false;
+            }
+         }
+         break;
+
+      default:
+         break;
    }
-   if (dict_add(cfg, key, stored) != 0) return false;
+
+   if (dict_add(cfg, key, stored) != 0) {
+      return false;
+   }
    reload_event_run(key);
    /* Programmatic settings changes (for example /set in a client) should
       refresh the same cached runtime values as a file reload. */
@@ -209,7 +238,6 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    memset( new_cb, 0, sizeof(cfg_cb_list_t) );
    if (!new_cb) {
       Log(LOG_CRIT, "cfg", "OOM in cfg_add_callback");
-
       return false;
    }
 
@@ -226,8 +254,6 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    }
    new_cb->callback = cb;
 
-   Log(LOG_DEBUG, "cfg", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
-
    // store our new callback
    if (!cfg_callbacks) {
       cfg_callbacks = new_cb;
@@ -243,6 +269,7 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
          cbp = cbp->next;
       }
    }
+   Log(LOG_DEBUG, "cfg", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
 
    return true;
 }
@@ -867,12 +894,20 @@ typedef struct cfg_save_entry {
 } cfg_save_entry_t;
 
 static bool cfg_save_entry_is_skipped(const char *key) {
-   if (!key) return true;
-   if (strncmp(key, "server:", 7) == 0) return true;
-   if (strncmp(key, "network.", 8) == 0) return true;
+   if (!key) {
+      return true;
+   }
+   if (strncmp(key, "server:", 7) == 0) {
+      return true;
+   }
+   if (strncmp(key, "network.", 8) == 0) {
+      return true;
+   ]
    /* Legacy scalar CSS setting: [gtk-css] is authoritative now. Do not
     * copy the obsolete key back into a saved configuration. */
-   if (strcmp(key, "ui.gtk.css") == 0) return true;
+   if (strcmp(key, "ui.gtk.css") == 0) {
+      return true;
+   }
    return false;
 }
 
@@ -883,17 +918,26 @@ static int cfg_save_entry_compare(const void *left, const void *right) {
    const char *b_colon = strchr(b->key, ':');
 
    /* Keep ordinary [general] keys before section-qualified keys. */
-   if (!a_colon && b_colon) return -1;
-   if (a_colon && !b_colon) return 1;
-   if (!a_colon && !b_colon) return strcmp(a->key, b->key);
+   if (!a_colon && b_colon) {
+      return -1;
+   }
+   if (a_colon && !b_colon) {
+      return 1;
+   }
+   if (!a_colon && !b_colon) {
+      return strcmp(a->key, b->key);
+   }
 
    size_t a_section_len = (size_t)(a_colon - a->key);
    size_t b_section_len = (size_t)(b_colon - b->key);
    size_t common = a_section_len < b_section_len ? a_section_len : b_section_len;
    int section_cmp = strncmp(a->key, b->key, common);
-   if (section_cmp != 0) return section_cmp;
-   if (a_section_len != b_section_len)
+   if (section_cmp != 0) {
+      return section_cmp;
+   }
+   if (a_section_len != b_section_len) {
       return a_section_len < b_section_len ? -1 : 1;
+   }
    return strcmp(a_colon + 1, b_colon + 1);
 }
 
