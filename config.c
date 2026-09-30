@@ -897,12 +897,15 @@ static bool cfg_save_entry_is_skipped(const char *key) {
    if (!key) {
       return true;
    }
+
    if (strncmp(key, "server:", 7) == 0) {
       return true;
    }
+
    if (strncmp(key, "network.", 8) == 0) {
       return true;
-   ]
+   }
+
    /* Legacy scalar CSS setting: [gtk-css] is authoritative now. Do not
     * copy the obsolete key back into a saved configuration. */
    if (strcmp(key, "ui.gtk.css") == 0) {
