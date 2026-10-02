@@ -1236,6 +1236,48 @@ bool cfg_reload(const char *filename) {
    return true;
 }
 
+void cfg_fini(void) {
+   cfg_cb_list_t *cb = cfg_callbacks;
+   while (cb) {
+      cfg_cb_list_t *next = cb->next;
+      free((void *)cb->path);
+      free((void *)cb->section);
+      free(cb);
+      cb = next;
+   }
+   cfg_callbacks = NULL;
+
+   cfg_save_cb_entry_t *save_cb = cfg_save_callbacks;
+   while (save_cb) {
+      cfg_save_cb_entry_t *next = save_cb->next;
+      free(save_cb);
+      save_cb = next;
+   }
+   cfg_save_callbacks = NULL;
+
+   reload_event_t *event = reload_events;
+   while (event) {
+      reload_event_t *next = event->next;
+      free(event->key);
+      free(event->note);
+      free(event);
+      event = next;
+   }
+   reload_events = NULL;
+
+   if (cfg && cfg != default_cfg) {
+      dict_free(cfg);
+   }
+   cfg = NULL;
+   if (default_cfg) {
+      dict_free(default_cfg);
+      default_cfg = NULL;
+   }
+
+   free((void *)config_file);
+   config_file = NULL;
+}
+
 // Config save stuff
 #if     0       // XX: Not yet
 char pathbuf[PATH_MAX + 1];
@@ -1375,7 +1417,18 @@ bool reload_event_remove(reload_event_t *evt) {
    if (!evt) {
       return false;
    }
-   // Free resources
+
+   reload_event_t **link = &reload_events;
+   while (*link && *link != evt) {
+      link = &(*link)->next;
+   }
+   if (!*link) {
+      return false;
+   }
+
+   *link = evt->next;
+   free(evt->key);
+   free(evt->note);
    free(evt);
    return true;
 }

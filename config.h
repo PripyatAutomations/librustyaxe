@@ -102,6 +102,10 @@ extern bool cfg_apply_new(dict *oldcfg, dict *newcfg);
 // Reload a config file (or the last-loaded one if filename is NULL) into the global cfg dict.
 extern bool cfg_reload(const char *filename);
 
+/* Release process-wide configuration dictionaries, callbacks, and reload
+ * registrations during application shutdown. Safe to call more than once. */
+extern void cfg_fini(void);
+
 // Save the dict into a file
 extern bool cfg_save(dict *d, const char *path);
 

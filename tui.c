@@ -23,6 +23,7 @@
 #include <librrprotocol/rrprotocol.h>
 
 extern void tui_keys_init(void);         // tui.keys.c
+extern void tui_keys_fini(void);         // tui.keys.c
 
 extern char input_buf[TUI_INPUTLEN];
 extern int tui_input_len;
@@ -179,8 +180,6 @@ int tui_cols(void) {
    return term_cols;
 }
 
-extern void tui_keys_init(void);         // tui.keys.c
-
 char *s_status_offline = NULL;
 
 bool tui_init(void) {
@@ -234,6 +233,8 @@ bool tui_fini(void) {
       printf("\033[?1000l");
       fflush(stdout);
    }
+   tui_keys_fini();
+   tui_window_fini();
    return false;
 }
 

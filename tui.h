@@ -21,6 +21,7 @@
 extern bool tui_is_enabled;
 
 extern bool tui_init(void);
+extern bool tui_fini(void);
 extern bool tui_set_rl_cb( bool (*cb) (int argc, char **argv) );
 
 /* Host-owned key actions.  The TUI only recognizes and dispatches these

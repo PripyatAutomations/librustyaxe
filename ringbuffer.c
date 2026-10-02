@@ -16,12 +16,15 @@
 
 rb_buffer_t *rb_create(int max_size, const char *name) {
    rb_buffer_t *buffer = malloc( sizeof(rb_buffer_t) );
-   size_t name_len = strnlen( name, sizeof(buffer->name) ) + 1;  // add one for
+   const char *safe_name = name ? name : "";
+   size_t name_len = strnlen( safe_name, sizeof(buffer->name) ) + 1;  // add one for
                                                                  // null
                                                                  // terminator
    char *buffer_name = malloc(name_len);
 
    if (buffer == NULL || buffer_name == NULL) {
+      free(buffer_name);
+      free(buffer);
       Log(LOG_CRIT, "librustyaxe", "rb_create: out of memory!");
       exit(ENOMEM);
    }
@@ -29,7 +32,7 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
    buffer->tail = NULL;
    buffer->max_size = max_size;
    buffer->current_size = 0;
-   strlcpy(buffer_name, name, name_len);
+   strlcpy(buffer_name, safe_name, name_len);
    buffer_name[name_len - 1] = '\0';  // make sure name is null-terminated
    buffer->name = buffer_name;
 
@@ -39,6 +42,7 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
 }
 
 void rb_destroy(rb_buffer_t *buffer) {
+   if (!buffer) return;
    rb_node_t *current = buffer->head;
 
    while (current != NULL) {
@@ -52,6 +56,7 @@ void rb_destroy(rb_buffer_t *buffer) {
       free(current);
       current = next;
    }
+   free(buffer->name);
    free(buffer);
 }
 

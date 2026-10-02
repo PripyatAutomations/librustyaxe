@@ -34,6 +34,9 @@
 extern bool dying;
 
 extern void shutdown_app(int signum);
+#ifdef RRSERVER
+extern void shutdown_rig(uint32_t signum);
+#endif
 
 // This gets called by our atexit() handler to make sure we clean up temporary
 // files...
@@ -67,12 +70,15 @@ static void sighandler(int32_t signum) {
       // Fatal signals
       case SIGINT:
       case SIGTERM: {
-//#if defined(__RRCLI) || defined(__FWDSP)
-//         shutdown_app(0);
-//#else
-//         shutdown_rig(0);
-//#endif
+         /* Let each application leave its main loop so module finalizers
+          * release owned resources before the process exits. */
+#if defined(__RRCLI) || defined(__FWDSP)
+         shutdown_app(signum);
+#elif defined(RRSERVER)
+         shutdown_rig(signum);
+#else
          exit(1);
+#endif
          break;
       }
       default: {

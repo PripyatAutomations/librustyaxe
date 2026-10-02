@@ -10,6 +10,10 @@ extern dict *cfg;
 extern dict *default_cfg;
 
 static int failures = 0;
+static bool test_reload_callback(const char *key) {
+   (void)key;
+   return true;
+}
 #define CHECK(cond) do { \
    if (!(cond)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } \
 } while (0)
@@ -82,11 +86,13 @@ int main(void) {
       }
    }
 
+   reload_event_t *event = reload_event_add("test.key", test_reload_callback,
+      "test event");
+   CHECK(event != NULL);
+   CHECK(reload_event_remove(event));
+
    unlink(path);
-   dict_free(cfg);
-   dict_free(default_cfg);
-   cfg = NULL;
-   default_cfg = NULL;
+   cfg_fini();
    if (failures) return 1;
    puts("test_config_save: all tests passed");
    return 0;

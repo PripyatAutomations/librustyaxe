@@ -37,6 +37,7 @@ extern bool tui_window_destroy(tui_window_t *w);
 extern bool tui_window_destroy_id(int id);
 extern const char *tui_window_get_active_title(void);
 extern void tui_window_init(void);
+extern void tui_window_fini(void);
 extern int tui_window_swap(int c, int key);
 extern int handle_alt_left(int c, int key);
 extern int handle_alt_right(int c, int key);

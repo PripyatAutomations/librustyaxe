@@ -245,6 +245,21 @@ void tui_window_init(void) {
    }
 }
 
+void tui_window_fini(void) {
+   for (int i = 0; i < tui_num_windows; i++) {
+      tui_window_t *w = tui_windows[i];
+      if (!w) continue;
+      tui_window_free_history(w);
+      for (int line = 0; line < LOG_LINES; line++) {
+         free(w->buffer[line]);
+      }
+      free(w);
+      tui_windows[i] = NULL;
+   }
+   tui_num_windows = 0;
+   tui_active_win = 0;
+}
+
 int tui_window_swap(int c, int key) {
    int num = key - '1';          // Alt-1 = window 0
 

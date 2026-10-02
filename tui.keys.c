@@ -303,6 +303,10 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data);
 void tui_keys_init(void)
 {
    tk = termkey_new(STDIN_FILENO, TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW);
+   if (!tk) {
+      Log(LOG_WARN, "tui.keys", "Unable to initialize terminal input; keyboard input disabled");
+      return;
+   }
    termkey_set_canonflags(tk, TERMKEY_CANON_DELBS);
    termkey_set_flags(tk, termkey_get_flags(tk) | TERMKEY_FLAG_NOTERMIOS);
 
@@ -310,6 +314,25 @@ void tui_keys_init(void)
    fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
 
    stdin_watch_id = g_unix_fd_add(STDIN_FILENO, G_IO_IN, stdin_ev_cb, NULL);
+}
+
+void tui_keys_fini(void)
+{
+   if (stdin_watch_id) {
+      g_source_remove(stdin_watch_id);
+      stdin_watch_id = 0;
+   }
+   if (tk) {
+      termkey_destroy(tk);
+      tk = NULL;
+   }
+   for (int i = 0; i < history_count; i++) {
+      free(input_history[i]);
+      input_history[i] = NULL;
+   }
+   history_count = 0;
+   history_index = -1;
+   memset(hotkeys, 0, sizeof(hotkeys));
 }
 
 static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)

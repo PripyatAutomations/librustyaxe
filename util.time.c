@@ -81,7 +81,6 @@ time_t dhms2time_t(const char *str) {
    memset(copy, 0, len + 1);
    memcpy(copy, str, len);
 
-   const char *multipliers = "ywdhms";
    char *ptr = copy;
 
    while (*ptr != '\0') {
@@ -118,12 +117,13 @@ time_t dhms2time_t(const char *str) {
          }
       }
 
-      // Skip an unrecognized unit so we can't loop forever on garbage input
-      if (strchr("ywdhms", unit) == NULL) {
-         ptr++;
+      /* strtol leaves ptr at the unit, or at the terminating NUL when the
+       * value has no unit.  Only advance over a real character; advancing
+       * past the NUL makes the next loop condition read out of bounds. */
+      if (unit == '\0') {
+         break;
       }
-
-      ptr++;   // Move past the unit to the next character
+      ptr++;   // Move past the unit (recognized or malformed) to next input
    }
    free(copy);   // Free the memory allocated for the copy
 
