@@ -297,7 +297,9 @@ int handle_alt_right(int c, int key) {
 }
 
 bool tui_clear_scrollback(tui_window_t *w) {
+   tui_render_lock();
    if (!w) {
+      tui_render_unlock();
       return true;
    }
 
@@ -313,5 +315,6 @@ bool tui_clear_scrollback(tui_window_t *w) {
    w->scroll_offset = 0;
 
    tui_redraw_screen();
+   tui_render_unlock();
    return false;
 }

@@ -16,6 +16,7 @@
 #include <termios.h>
 #include <string.h>
 #include <signal.h>
+#include <pthread.h>
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -39,10 +40,31 @@ static int term_rows = 24;   // default lines
 static int term_cols = 80;   // default width
 static char status_line[STATUS_LEN];
 static char *(*topline_renderer)(tui_window_t *win);
-static volatile sig_atomic_t tui_resize_pending = 0;
+static volatile sig_atomic_t tui_redraw_pending = 0;
+static pthread_once_t tui_render_lock_once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t tui_render_mutex;
+
+static void tui_render_lock_init(void) {
+   pthread_mutexattr_t attr;
+   pthread_mutexattr_init(&attr);
+   pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+   pthread_mutex_init(&tui_render_mutex, &attr);
+   pthread_mutexattr_destroy(&attr);
+}
+
+void tui_render_lock(void) {
+   pthread_once(&tui_render_lock_once, tui_render_lock_init);
+   pthread_mutex_lock(&tui_render_mutex);
+}
+
+void tui_render_unlock(void) {
+   pthread_mutex_unlock(&tui_render_mutex);
+}
 
 void tui_set_topline_renderer(char *(*renderer)(tui_window_t *win)) {
+   tui_render_lock();
    topline_renderer = renderer;
+   tui_render_unlock();
 }
 
 // Keep the top row on one physical line. Preserve SGR colors, but do not
@@ -166,7 +188,7 @@ static void sigwinch_handler(int signum) {
    (void)signum;
    // A signal handler may interrupt stdio while a redraw is in progress.
    // Defer the ioctl and printf-based redraw to the normal event loop.
-   tui_resize_pending = 1;
+   tui_redraw_pending = 1;
 }
 
 ////////////////
@@ -243,22 +265,39 @@ bool tui_fini(void) {
 int tui_redraw_defer_count = 0;
 
 void tui_redraw_defer(void) {
+   tui_render_lock();
    tui_redraw_defer_count++;
+   tui_render_unlock();
 }
 
 void tui_redraw_flush(void) {
-   if (tui_redraw_defer_count <= 0) {
-      return;
+   tui_render_lock();
+   if (tui_redraw_defer_count > 0) {
+      tui_redraw_defer_count = 0;
    }
-   tui_redraw_defer_count = 0;
+   tui_redraw_if_pending();
+   tui_render_unlock();
+}
+
+void tui_redraw_request(void) {
+   tui_redraw_pending = 1;
+}
+
+bool tui_redraw_if_pending(void) {
+   if (!tui_is_enabled || !tui_redraw_pending) {
+      return false;
+   }
    tui_redraw_screen();
+   return true;
 }
 
 void tui_redraw_screen(void) {
+   tui_render_lock();
    if (!tui_is_enabled) {
+      tui_render_unlock();
       return;
    }
-   tui_resize_pending = 0;
+   tui_redraw_pending = 0;
    update_term_size();
 
    printf("\033[H\033[2J");  // clear screen
@@ -266,6 +305,7 @@ void tui_redraw_screen(void) {
    tui_window_t *w = tui_active_window();
 
    if (!w) {
+      tui_render_unlock();
       return;
    }
    // --- Top status line ---
@@ -436,15 +476,19 @@ void tui_redraw_screen(void) {
 
    tui_redraw_clock();
    tui_update_input_line();
+   tui_render_unlock();
 }
 
 void tui_redraw_topline(void) {
+   tui_render_lock();
    if (!tui_is_enabled) {
+      tui_render_unlock();
       return;
    }
    update_term_size();
    tui_window_t *w = tui_active_window();
    if (!w) {
+      tui_render_unlock();
       return;
    }
 
@@ -458,20 +502,26 @@ void tui_redraw_topline(void) {
    printf("\033[u");
    free(topline);
    fflush(stdout);
+   tui_render_unlock();
 }
 
 void tui_redraw_statusline(void) {
+   tui_render_lock();
    if (!tui_is_enabled) {
+      tui_render_unlock();
       return;
    }
    update_term_size();
    printf("\033[s\033[%d;1H%-*s\033[u", term_rows - 1, term_cols, status_line);
    tui_redraw_clock();
    fflush(stdout);
+   tui_render_unlock();
 }
 
 void tui_redraw_clock(void) {
+   tui_render_lock();
    if (!tui_is_enabled) {
+      tui_render_unlock();
       return;
    }
    int width = term_cols;
@@ -506,10 +556,13 @@ void tui_redraw_clock(void) {
       free(clock_colored);
    }
    fflush(stdout);
+   tui_render_unlock();
 }
 
 bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
+   tui_render_lock();
    if (!tui_is_enabled) {
+      tui_render_unlock();
       return true;
    }
 
@@ -540,6 +593,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
    }
    tui_redraw_statusline();
 
+   tui_render_unlock();
    return false;
 }
 
@@ -631,7 +685,9 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
 }
 
 void tui_window_update_topline(const char *line) {
+   tui_render_lock();
    if (!tui_is_enabled || !line) {
+      tui_render_unlock();
       return;
    }
    // Move cursor to the top-left
@@ -645,6 +701,7 @@ void tui_window_update_topline(const char *line) {
 
    // Make sure output is flushed
    fflush(stdout);
+   tui_render_unlock();
 }
 
 /* Return the byte offset of a visible column in an ANSI-rendered string.
@@ -694,12 +751,15 @@ static void ansi_copy_columns(const char *text, int columns, char *out, size_t o
 }
 
 void tui_update_input_line(void) {
+   tui_render_lock();
    if (!tui_is_enabled) {
+      tui_render_unlock();
       return;
    }
    tui_window_t *win = tui_active_window();
 
    if (!win) {
+      tui_render_unlock();
       return;
    }
    if (tui_input_len < 0) tui_input_len = 0;
@@ -802,7 +862,7 @@ void tui_update_input_line(void) {
    char *color_prompt = tui_colorize_string(prompt);
 
    // --- redraw line ---
-   printf(" \033[%d;1H\033[2K", term_rows);
+   printf("\033[%d;1H\033[2K", term_rows);
    printf("%s%s", color_prompt, slice);  // prompt includes space now
 
    // if there's nothing typed by the user, skip forward one character, to leave
@@ -817,4 +877,5 @@ void tui_update_input_line(void) {
    free(color_prompt);
    free(colorized_line);
    fflush(stdout);
+   tui_render_unlock();
 }

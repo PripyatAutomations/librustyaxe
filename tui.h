@@ -37,9 +37,15 @@ extern bool tui_hotkey_dispatch(tui_window_t *win, unsigned key, unsigned modifi
 // These force redrawing of an area of the screen
 extern bool tui_update_status(tui_window_t *win, const char *fmt, ...);
 extern void tui_redraw_screen(void);
+/* Queue a full redraw and consume it from the application's event loop. */
+extern void tui_redraw_request(void);
+extern bool tui_redraw_if_pending(void);
 extern void tui_redraw_topline(void);
 extern void tui_redraw_statusline(void);
 extern void tui_redraw_clock(void);
+/* Internal recursive lock shared by the renderer and scrollback writer. */
+extern void tui_render_lock(void);
+extern void tui_render_unlock(void);
 
 // Optional application renderer for the TOP row. Return an allocated,
 // colorized string (freed by the TUI), or NULL to use the window's topic.

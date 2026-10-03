@@ -406,7 +406,9 @@ char *irc_to_tui_colors(const char *in) {
 }
 
 void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
+   tui_render_lock();
    if (!tui_is_enabled || !win || !fmt) {
+      tui_render_unlock();
       return;
    }
 
@@ -420,6 +422,7 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
    char *colored = tui_colorize_string(msgbuf);
 
    if (!colored) {
+      tui_render_unlock();
       return;
    }
 
@@ -427,6 +430,7 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
    free(colored);
 
    if (!line) {
+      tui_render_unlock();
       return;
    }
 
@@ -441,10 +445,17 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
       win->log_count++;
    }
 
-   // Skip the per-line redraw while a batch is deferred (see tui_redraw_defer)
-   if (tui_redraw_defer_count == 0) {
-      tui_redraw_screen();
+   /* Only active-window output changes the visible scrollback.  In
+    * particular, logging performed by a top/status-line renderer must not
+    * start a nested full-screen redraw while the current frame is being
+    * painted.  Inactive windows will be rendered when they are focused. */
+   if (win == tui_active_window()) {
+      tui_redraw_request();
+      if (tui_redraw_defer_count == 0) {
+         tui_redraw_if_pending();
+      }
    }
+   tui_render_unlock();
 }
 
 void tui_print(tui_window_t *win, const char *fmt, ...) {
