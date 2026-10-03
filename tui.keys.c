@@ -313,22 +313,13 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data);
 
 void tui_keys_init(void)
 {
-   /* tui_raw_mode() owns termios.  Construct termkey stopped so it cannot
-    * save the already-raw state and restore that state during shutdown. */
-   tk = termkey_new(STDIN_FILENO,
-      TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW | TERMKEY_FLAG_NOSTART);
+   tk = termkey_new(STDIN_FILENO, TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW);
    if (!tk) {
       Log(LOG_WARN, "tui.keys", "Unable to initialize terminal input; keyboard input disabled");
       return;
    }
    termkey_set_canonflags(tk, TERMKEY_CANON_DELBS);
    termkey_set_flags(tk, termkey_get_flags(tk) | TERMKEY_FLAG_NOTERMIOS);
-   if (!termkey_start(tk)) {
-      Log(LOG_WARN, "tui.keys", "Unable to start terminal input; keyboard input disabled");
-      termkey_destroy(tk);
-      tk = NULL;
-      return;
-   }
 
    // stdin must be non-blocking for the GLib fd source
    orig_stdin_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
