@@ -41,6 +41,10 @@ static int term_cols = 80;   // default width
 static char status_line[STATUS_LEN];
 static char *(*topline_renderer)(tui_window_t *win);
 static volatile sig_atomic_t tui_redraw_pending = 0;
+static bool tui_finalized = false;
+static bool tui_atexit_registered = false;
+static bool tui_sigwinch_installed = false;
+static void (*previous_sigwinch_handler)(int) = SIG_DFL;
 static pthread_once_t tui_render_lock_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t tui_render_mutex;
 
@@ -204,7 +208,16 @@ int tui_cols(void) {
 
 char *s_status_offline = NULL;
 
+static void tui_atexit_cleanup(void) {
+   tui_fini();
+}
+
 bool tui_init(void) {
+   tui_finalized = false;
+   tui_is_enabled = true;
+   if (!tui_atexit_registered) {
+      tui_atexit_registered = (atexit(tui_atexit_cleanup) == 0);
+   }
    update_term_size();
    cfg_tui_colors = cfg_get_bool("tui.use-color", true);
    cfg_tui_use_mouse = cfg_get_bool("tui.use-mouse", true);
@@ -216,7 +229,8 @@ bool tui_init(void) {
    }
 
    // set SIGnal WINdow CHange handler
-   signal(SIGWINCH, sigwinch_handler);
+   previous_sigwinch_handler = signal(SIGWINCH, sigwinch_handler);
+   tui_sigwinch_installed = (previous_sigwinch_handler != SIG_ERR);
 
    // set default status line
    char *s_status_offline = tui_colorize_string("{bright-black}[{red}OFFLINE{bright-black}]{reset}");
@@ -249,14 +263,47 @@ bool tui_init(void) {
 }
 
 bool tui_fini(void) {
-   if (cfg_tui_use_mouse) {
-      printf("\033[?1006l");
-      printf("\033[?1002l");
-      printf("\033[?1000l");
-      fflush(stdout);
+   tui_render_lock();
+   if (tui_finalized) {
+      tui_render_unlock();
+      return false;
    }
+   tui_finalized = true;
+   tui_is_enabled = false;
+
+   if (tui_sigwinch_installed) {
+      signal(SIGWINCH, previous_sigwinch_handler);
+      tui_sigwinch_installed = false;
+   }
+
+   /* termkey must stop before termios is restored.  Older shutdown ordering
+    * restored cooked mode first, then termkey restored its raw-mode snapshot. */
    tui_keys_fini();
+   tui_raw_mode(false);
+
+   /* Restore modes which can make the caller's shell appear broken.  Disable
+    * mouse/focus/paste/application modes even when configuration says they
+    * were off: these reset sequences are harmless and make partial init safe. */
+   fputs("\033[0m"        /* reset colors and attributes */
+         "\033[?25h"     /* show cursor */
+         "\033[0 q"      /* default cursor style */
+         "\033[?1l"      /* normal cursor keys */
+         "\033>"         /* normal keypad */
+         "\033[?1000l"   /* mouse click reporting */
+         "\033[?1002l"   /* mouse drag reporting */
+         "\033[?1003l"   /* all-motion mouse reporting */
+         "\033[?1004l"   /* focus reporting */
+         "\033[?1006l"   /* SGR mouse reporting */
+         "\033[?2004l"   /* bracketed paste */
+         "\033[?6l"      /* absolute cursor origin */
+         "\033[?7h"      /* automatic margins */
+         "\033[r"        /* full-screen scrolling region */
+         "\033[999;1H"   /* place output below the TUI */
+         "\033[2K\r\n", stdout);
+   fflush(stdout);
+
    tui_window_fini();
+   tui_render_unlock();
    return false;
 }
 

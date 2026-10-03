@@ -31,6 +31,9 @@ extern int handle_alt_left(int c, int key);
 extern int handle_alt_right(int c, int key);
 
 static struct termios orig_termios;
+static bool orig_termios_valid = false;
+static bool raw_mode_enabled = false;
+static int orig_stdin_flags = -1;
 char input_buf[TUI_INPUTLEN];
 int tui_input_len = 0;
 int tui_cursor_pos = 0;
@@ -193,8 +196,14 @@ void tui_raw_mode(bool enabled)
 {
    if (enabled)
    {
+      if (raw_mode_enabled) {
+         return;
+      }
       struct termios raw;
-      tcgetattr(STDIN_FILENO, &orig_termios);
+      if (tcgetattr(STDIN_FILENO, &orig_termios) != 0) {
+         return;
+      }
+      orig_termios_valid = true;
 
       raw = orig_termios;
       raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
@@ -204,12 +213,14 @@ void tui_raw_mode(bool enabled)
       raw.c_cc[VTIME] = 0;
 
       cfmakeraw(&raw);
-      tcsetattr(STDIN_FILENO, TCSANOW, &raw);
-      tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+      if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == 0) {
+         raw_mode_enabled = true;
+      }
    }
-   else
+   else if (orig_termios_valid)
    {
       tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+      raw_mode_enabled = false;
    }
 }
 
@@ -302,16 +313,28 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data);
 
 void tui_keys_init(void)
 {
-   tk = termkey_new(STDIN_FILENO, TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW);
+   /* tui_raw_mode() owns termios.  Construct termkey stopped so it cannot
+    * save the already-raw state and restore that state during shutdown. */
+   tk = termkey_new(STDIN_FILENO,
+      TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW | TERMKEY_FLAG_NOSTART);
    if (!tk) {
       Log(LOG_WARN, "tui.keys", "Unable to initialize terminal input; keyboard input disabled");
       return;
    }
    termkey_set_canonflags(tk, TERMKEY_CANON_DELBS);
    termkey_set_flags(tk, termkey_get_flags(tk) | TERMKEY_FLAG_NOTERMIOS);
+   if (!termkey_start(tk)) {
+      Log(LOG_WARN, "tui.keys", "Unable to start terminal input; keyboard input disabled");
+      termkey_destroy(tk);
+      tk = NULL;
+      return;
+   }
 
    // stdin must be non-blocking for the GLib fd source
-   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
+   orig_stdin_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+   if (orig_stdin_flags >= 0) {
+      fcntl(STDIN_FILENO, F_SETFL, orig_stdin_flags | O_NONBLOCK);
+   }
 
    stdin_watch_id = g_unix_fd_add(STDIN_FILENO, G_IO_IN, stdin_ev_cb, NULL);
 }
@@ -325,6 +348,10 @@ void tui_keys_fini(void)
    if (tk) {
       termkey_destroy(tk);
       tk = NULL;
+   }
+   if (orig_stdin_flags >= 0) {
+      fcntl(STDIN_FILENO, F_SETFL, orig_stdin_flags);
+      orig_stdin_flags = -1;
    }
    for (int i = 0; i < history_count; i++) {
       free(input_history[i]);
