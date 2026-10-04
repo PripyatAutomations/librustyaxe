@@ -18,6 +18,7 @@ librustyaxe_objs += json.o
 librustyaxe_objs += list.o
 librustyaxe_objs += logger.o
 librustyaxe_objs += maidenhead.o
+librustyaxe_objs += cfg.modules.o
 librustyaxe_objs += module.o
 librustyaxe_objs += mongoose.o
 librustyaxe_objs += posix.o

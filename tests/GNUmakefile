@@ -5,7 +5,7 @@ INCLUDES = -I$(LIB_DIR) -I$(LIB_DIR)/.. -I../../build/radio
 # Link against the prebuilt shared library instead of recompiling the whole lib
 LIBS = -L../.. -lrustyaxe -Wl,-rpath,$(abspath ../..)
 
-TEST_SOURCES = test_dict.c test_list.c test_maidenhead.c test_ringbuffer.c test_util_time.c test_config_save.c
+TEST_SOURCES = test_dict.c test_list.c test_maidenhead.c test_ringbuffer.c test_util_time.c test_config_save.c test_event_tokens.c
 
 # Keep test artifacts out of the source directory.  The top-level build already
 # owns generated files, so running a test suite must not leave .o files beside

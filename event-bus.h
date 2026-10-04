@@ -159,6 +159,63 @@ extern void event_on_binary_dispatch(
 
 
 /*
+ * Opaque registration tokens.
+ *
+ * A token represents ownership of one listener registration. Modules must
+ * register with the token API so teardown can remove exactly their own
+ * listeners without reconstructing callback/user tuples:
+ *
+ *    rr_event_token_t tok = event_on_token("foo", cb, user);
+ *    ...
+ *    event_off_token(tok);   // safe to call repeatedly; clears the token
+ *
+ * A token is a pointer to an internal registration record and remains
+ * meaningful (but inactive) after unregistration. Tokens must be
+ * unregistered before the module owning their callback is unloaded.
+ */
+typedef struct rr_event_token *rr_event_token_t;
+
+extern rr_event_token_t event_on_token(
+   const char *event,
+   event_cb_t cb,
+   void *user
+);
+
+extern rr_event_token_t event_on_binary_token(
+   const char *event,
+   event_binary_cb_t cb,
+   void *user
+);
+
+extern rr_event_token_t event_on_token_dispatch(
+   const char *event,
+   event_cb_t cb,
+   void *user,
+   event_dispatch_t dispatch,
+   void *dispatch_user
+);
+
+extern rr_event_token_t event_on_binary_token_dispatch(
+   const char *event,
+   event_binary_cb_t cb,
+   void *user,
+   event_dispatch_t dispatch,
+   void *dispatch_user
+);
+
+/*
+ * Unregister the listener a token owns.
+ *
+ * Semantics:
+ * - Passing NULL is a no-op.
+ * - Unregistering an already-unregistered token is a no-op (no error).
+ * - The token is cleared and cannot be reused; callers should drop it.
+ * - Safe from within a callback: dispatch iterates a snapshot, so a
+ *   callback may unregister itself or other listeners mid-emit.
+ */
+extern void event_off_token(rr_event_token_t token);
+
+/*
  * Emit events.
  */
 extern void event_emit(

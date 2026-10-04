@@ -31,18 +31,6 @@
 //
 #define	RUSTY_MODULE_API_VER 100
 
-// Module functions
-typedef struct rr_module_hook {
-   char                 *name;           // name for calling
-   enum {
-      CB_MSG = 0,               // irc_message_t (default)
-      CB_ARGV,                  // argument list & count
-      CB_VOID,                  // no arguments
-   } callback_type;
-   bool (*callback)();                   // Callback
-   struct rr_module_hook        *next;                   // next hook
-} rr_module_hook_t;
-
 rr_module_t *modules = NULL;
 
 char *concat_path(const char *dir, const char *file, const char *suffix) {
@@ -69,7 +57,13 @@ char *rr_find_module(const char *name) {
    char *tmp = NULL;
 
    if (cpath) {
-      tmp = concat_path(cpath, name, NULL);
+      // dlopen() does not append .so to paths containing a slash, so add
+      // the suffix unless the caller already included one.
+      if (strstr(name, ".so")) {
+         tmp = concat_path(cpath, name, NULL);
+      } else {
+         tmp = concat_path(cpath, name, "so");
+      }
       free(cpath);
    }
 
@@ -77,17 +71,20 @@ char *rr_find_module(const char *name) {
 }
 
 bool rr_load_module(const char *name) {
-   bool rv = true;
-
    if (!name) {
       return true;
+   }
+   // Already loaded?
+   if (rr_find_loaded_module(name)) {
+      Log(LOG_WARN, "module", "rr_load_module: %s is already loaded", name);
+      return false;
    }
    // Does the module exist?
    char *mod_path = rr_find_module(name);
 
    if (!mod_path) {
       // Display an error that the module wasn't found
-      Log(LOG_CRIT, "module", "rr_load_module: Couldn't find module %s: File not found.", name);
+      Log(LOG_WARN, "module", "rr_load_module: Couldn't find module %s (is path.modules set?): File not found.", name);
 
       return true;
    }
@@ -95,18 +92,19 @@ bool rr_load_module(const char *name) {
    void *dp = dlopen(mod_path, RTLD_NOW | RTLD_GLOBAL);
 
    if (!dp) {
-      Log( LOG_CRIT, "module", "rr_load_module: Failed opening module %s: %d:%s", mod_path, errno, strerror(errno) );
-      rv = false;
-      goto done;
+      Log(LOG_WARN, "module", "rr_load_module: Failed opening module %s: %s", mod_path, dlerror());
+      free(mod_path);
+      return true;
    }
    Log(LOG_DEBUG, "module", "rr_load_module: Module %s opened from %s at <%p>", name, mod_path, dp);
-   rr_module_t *mp = malloc( sizeof(rr_module_t) );
+   rr_module_t *mp = calloc(1, sizeof(rr_module_t));
 
    if (mp == NULL) {
       Log(LOG_CRIT, "librustyaxe", "OOM in rr_load_module!");
+      dlclose(dp);
+      free(mod_path);
       return true;
    }
-   memset( mp, 0, sizeof(rr_module_t) );
 
    mp->dlptr = dp;
 
@@ -117,22 +115,25 @@ bool rr_load_module(const char *name) {
    if ( ( mp->mod_name = strdup(name) ) == NULL ) {
       abort();
    }
-   rr_module_event_t *ep = dlsym(mp->dlptr, "modinfo");
 
-   // if no modinfo found, free memory and bail!
-   if (!ep) {
-      Log(LOG_CRIT, "module", "rr_load_module: Mod info not found loading %s", mod_path);
+   // Optional module init hook; runs before the module is registered so a
+   // failed init leaves no half-initialized module behind.
+   bool (*mod_init)(void) = dlsym(mp->dlptr, "rr_module_init");
+   if (mod_init && mod_init()) {
+      Log(LOG_CRIT, "module", "rr_load_module: init failed for %s", mod_path);
       dlclose(mp->dlptr);
+      free((void *)mp->mod_name);
+      free((void *)mp->mod_path);
       free(mp);
-      goto done;
+      free(mod_path);
+      return true;
    }
+
    // Look for export list
    rr_module_event_t *mep = dlsym(mp->dlptr, "modexports");
 
    if (mep) {
       mp->mod_events = mep;
-      // XXX: We need to hook events here
-      // extern void event_on(const char *event, event_cb_t cb, void *user);
    } else {
       Log(LOG_WARN, "module", "rr_load_module: No exports found for module %s", mod_path);
    }
@@ -142,33 +143,58 @@ bool rr_load_module(const char *name) {
       modules = mp;
    } else {
       rr_module_t *lp = modules;
-      int i = 1;
-      while (lp) {
-         // if this is the end of the list, exit leaving lp point at the end
-         if (!lp->next) {
-            Log(LOG_DEBUG, "module", "Adding module to list as %d entry", i);
-            break;
-         }
+      while (lp->next) {
          lp = lp->next;
-         i++;
       }
-
-      if (lp != NULL) {
-         lp->next = mp;
-      }
+      lp->next = mp;
    }
-   // XXX: Call initialization function for the new module
-
-done:
+   Log(LOG_INFO, "module", "rr_load_module: Module %s loaded from %s", name, mod_path);
    free(mod_path);
 
-   return rv;
+   return false;
+}
+
+void *rr_find_loaded_module(const char *name) {
+   if (!name) {
+      return NULL;
+   }
+   for (rr_module_t *mp = modules; mp; mp = mp->next) {
+      if (mp->mod_name && !strcmp(mp->mod_name, name)) {
+         return mp;
+      }
+   }
+   return NULL;
 }
 
 bool rr_unload_module(const char *name) {
    if (!name) {
       return true;
    }
+   rr_module_t **link = &modules;
+   while (*link && strcmp((*link)->mod_name ? (*link)->mod_name : "", name) != 0) {
+      link = &(*link)->next;
+   }
+   if (!*link) {
+      Log(LOG_WARN, "module", "rr_unload_module: %s not loaded", name);
+      return true;
+   }
+   rr_module_t *mp = *link;
 
-   return false;
+   // Give the module a chance to unregister events, cancel timers, and
+   // invalidate pointers it handed out before its code is unmapped.
+   void (*mod_shutdown)(void) = dlsym(mp->dlptr, "rr_module_shutdown");
+   if (mod_shutdown) {
+      mod_shutdown();
+   }
+   *link = mp->next;
+   bool failed = dlclose(mp->dlptr) != 0;
+   if (failed) {
+      Log(LOG_CRIT, "module", "rr_unload_module: dlclose(%s) failed: %s", name, dlerror());
+   } else {
+      Log(LOG_INFO, "module", "rr_unload_module: Module %s unloaded", name);
+   }
+   free((void *)mp->mod_name);
+   free((void *)mp->mod_path);
+   free(mp);
+   return failed;
 }
