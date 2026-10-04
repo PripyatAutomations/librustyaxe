@@ -177,6 +177,7 @@ struct rrconn {
    bool is_ws;                   // Flag to indicate if it's a WebSocket client
    bool is_ptt;                  // Is the user keying up ANY attached rig?
    char ptt_vfo;                 // VFO letter ('A'...) they keyed, 0 if none
+   char ptt_room[128];           // Authoritative TX control room for this session
    bool sent_login;                             // have we sent login?
    bool is_server;                              // is this a server? If so, we'll send
                                                 // relayed commands to it
