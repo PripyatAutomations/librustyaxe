@@ -48,7 +48,7 @@ extern int tui_cursor_pos;
 // returned memory.
 // ---------------------------------------------------------------
 
-#define TUI_MAX_COMPLETION_PROVIDERS 8
+#define	TUI_MAX_COMPLETION_PROVIDERS 8
 
 //typedef char **(*tui_completion_provider_t)(const char *line, const char *word);
 
@@ -60,13 +60,14 @@ bool tui_register_completion_provider(tui_completion_provider_t fn) {
       return false;
    }
 
-   for (int i = 0; i < completion_provider_count; i++) {
+   for (int i = 0 ; i < completion_provider_count ; i++) {
       if (completion_providers[i] == fn) {
          return true;
       }
    }
 
    completion_providers[completion_provider_count++] = fn;
+
    return true;
 }
 
@@ -75,11 +76,12 @@ bool tui_unregister_completion_provider(tui_completion_provider_t fn) {
       return false;
    }
 
-   for (int i = 0; i < completion_provider_count; i++) {
+   for (int i = 0 ; i < completion_provider_count ; i++) {
       if (completion_providers[i] == fn) {
-         memmove(&completion_providers[i], &completion_providers[i + 1],
-                 (completion_provider_count - i - 1) * sizeof(completion_providers[0]));
+         memmove( &completion_providers[i], &completion_providers[i + 1],
+            (completion_provider_count - i - 1) * sizeof(completion_providers[0]) );
          completion_provider_count--;
+
          return true;
       }
    }
@@ -97,15 +99,15 @@ char **completion_collect(const char *line, const char *word) {
    char **matches = NULL;
    size_t count = 0;
 
-   for (int i = 0; i < completion_provider_count; i++) {
+   for (int i = 0 ; i < completion_provider_count ; i++) {
       char **sub = completion_providers[i](line, word);
 
       if (!sub) {
          continue;
       }
 
-      for (int j = 0; sub[j]; j++) {
-         char **tmp = realloc(matches, (count + 2) * sizeof(char *));
+      for (int j = 0 ; sub[j] ; j++) {
+         char **tmp = realloc( matches, (count + 2) * sizeof(char *) );
 
          if (!tmp) {
             free(sub[j]);
@@ -115,6 +117,7 @@ char **completion_collect(const char *line, const char *word) {
          matches[count++] = sub[j];
          matches[count] = NULL;
       }
+
       free(sub);
    }
 
@@ -126,9 +129,10 @@ void completion_free(char **matches) {
       return;
    }
 
-   for (int i = 0; matches[i]; i++) {
+   for (int i = 0 ; matches[i] ; i++) {
       free(matches[i]);
    }
+
    free(matches);
 }
 
@@ -145,14 +149,13 @@ bool tui_do_completion(tui_window_t *win) {
    while (start > 0 && input_buf[start - 1] != ' ') {
       start--;
    }
-
    int word_len = tui_cursor_pos - start;
    char word[TUI_INPUTLEN];
 
-   /* An empty word is allowed when the cursor sits directly after a space,
-    * so providers can complete a full argument list (i.e. /server<space>TAB)
+   /* An empty word is allowed when the cursor sits directly after a space, so providers
+    * can complete a full argument list (i.e. /server<space>TAB)
     */
-   if (word_len < 0 || (word_len == 0 && !(tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] == ' ') ) ) {
+   if ( word_len < 0 || ( word_len == 0 && !(tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] == ' ') ) ) {
       return false;
    }
 
@@ -168,6 +171,7 @@ bool tui_do_completion(tui_window_t *win) {
 
    if (!matches || !matches[0]) {
       completion_free(matches);
+
       return false;
    }
 
@@ -179,7 +183,7 @@ bool tui_do_completion(tui_window_t *win) {
       nmatch++;
    }
 
-   for (int i = 1; i < nmatch; i++) {
+   for (int i = 1 ; i < nmatch ; i++) {
       const char *m = matches[i];
       size_t j = 0;
 
@@ -207,9 +211,11 @@ bool tui_do_completion(tui_window_t *win) {
          tui_input_len += (int)pl - word_len;
          tui_cursor_pos = start + pl;
          completion_free(matches);
+
          return true;
       }
       completion_free(matches);
+
       return false;
    }
 
@@ -219,7 +225,7 @@ bool tui_do_completion(tui_window_t *win) {
       int maxlen = 0;
       int nshown = nmatch > TUI_MAX_COMPLETIONS_SHOWN ? TUI_MAX_COMPLETIONS_SHOWN : nmatch;
 
-      for (int i = 0; i < nshown; i++) {
+      for (int i = 0 ; i < nshown ; i++) {
          int l = (int)strlen(matches[i]);
 
          if (l > maxlen) {
@@ -236,13 +242,13 @@ bool tui_do_completion(tui_window_t *win) {
 
       int rows = (nshown + cols - 1) / cols;
 
-      for (int r = 0; r < rows; r++) {
+      for (int r = 0 ; r < rows ; r++) {
          char line[1024];
          size_t pos = 0;
 
          pos += snprintf(line + pos, sizeof(line) - pos, "  ");
 
-         for (int c = 0; c < cols; c++) {
+         for (int c = 0 ; c < cols ; c++) {
             int idx = c * rows + r;   // column-major so matches read down each column
 
             if (idx >= nshown) {
@@ -254,6 +260,7 @@ bool tui_do_completion(tui_window_t *win) {
                break;
             }
          }
+
          tui_print(win, "%s", line);
       }
 
@@ -262,5 +269,6 @@ bool tui_do_completion(tui_window_t *win) {
       }
    }
    completion_free(matches);
+
    return false;
 }

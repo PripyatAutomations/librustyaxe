@@ -53,7 +53,7 @@ bool is_dir(const char *path) {
 
       return false;
    } else {
-      if ( (sb.st_mode & S_IFMT) == S_IFDIR ) {
+      if ( (sb.st_mode & S_IFMT) == S_IFDIR) {
          return true;
       }
    }
@@ -68,7 +68,7 @@ bool is_link(const char *path) {
       return false;
    }
 
-   if ( S_ISLNK(sb.st_mode) ) {
+   if (S_ISLNK(sb.st_mode) ) {
       return true;
    }
 
@@ -82,7 +82,7 @@ bool is_fifo(const char *path) {
       return false;
    }
 
-   if ( S_ISFIFO(sb.st_mode) ) {
+   if (S_ISFIFO(sb.st_mode) ) {
       return true;
    }
 
@@ -96,7 +96,7 @@ bool is_file(const char *path) {
       return false;
    }
 
-   if ( S_ISREG(sb.st_mode) ) {
+   if (S_ISREG(sb.st_mode) ) {
       return true;
    }
 
@@ -106,32 +106,39 @@ bool is_file(const char *path) {
 bool mkdir_p(const char *path) {
    if (!path || !*path) {
       errno = EINVAL;
+
       return false;
    }
 
    char *work = strdup(path);
+
    if (!work) {
       errno = ENOMEM;
+
       return false;
    }
 
-   for (char *p = work; ; p++) {
+   for (char *p = work ; ; p++) {
       bool separator = (*p == '/' || *p == '\\');
+
       if (*p != '\0' && !separator) {
          continue;
       }
 
       char saved = *p;
       *p = '\0';
+
       if (*work && strcmp(work, ".") != 0) {
 #ifdef _WIN32
          int rv = _mkdir(work);
 #else
          int rv = mkdir(work, 0755);
 #endif
-         if (rv != 0 && (errno != EEXIST || !is_dir(work))) {
+
+         if ( rv != 0 && ( errno != EEXIST || !is_dir(work) ) ) {
             *p = saved;
             free(work);
+
             return false;
          }
       }
@@ -143,6 +150,7 @@ bool mkdir_p(const char *path) {
    }
 
    free(work);
+
    return true;
 }
 
@@ -159,7 +167,8 @@ char *expand_path(const char *path) {
    if (!home || !*home) {
       home = ".";
    }
-   if (!home || strlen(home) > 1024) return NULL;
+
+   if (!home || strlen(home) > 1024) { return NULL; }
    int home_allocated = 0;
    const char *drive = NULL;
    const char *path_part = NULL;
@@ -220,24 +229,29 @@ char *expand_path(const char *path) {
    // POSIX: Handle ~, $HOME, and ${HOME}. If HOME is unavailable, resolve
    // these forms relative to the current directory.
    const char *home = getenv("HOME");
-   if (!home || !*home) home = ".";
+
+   if (!home || !*home) { home = "."; }
    const char *suffix = NULL;
-   if (path[0] == '~' && (path[1] == '\0' || path[1] == '/')) {
+
+   if ( path[0] == '~' && (path[1] == '\0' || path[1] == '/') ) {
       suffix = path + (path[1] == '/' ? 2 : 1);
-   } else if (strncmp(path, "$HOME", 5) == 0 &&
-              (path[5] == '\0' || path[5] == '/')) {
+   } else if ( strncmp(path, "$HOME", 5) == 0 &&
+               (path[5] == '\0' || path[5] == '/') ) {
       suffix = path + (path[5] == '/' ? 6 : 5);
-   } else if (strncmp(path, "${HOME}", 7) == 0 &&
-              (path[7] == '\0' || path[7] == '/')) {
+   } else if ( strncmp(path, "${HOME}", 7) == 0 &&
+               (path[7] == '\0' || path[7] == '/') ) {
       suffix = path + (path[7] == '/' ? 8 : 7);
    }
-   if (!suffix) return strdup(path);
+
+   if (!suffix) { return strdup(path); }
 
    size_t len = strlen(home) + strlen(suffix) + 2;
    char *expanded = malloc(len);
-   if (!expanded) return NULL;
-   if (*suffix) snprintf(expanded, len, "%s/%s", home, suffix);
-   else snprintf(expanded, len, "%s", home);
+
+   if (!expanded) { return NULL; }
+
+   if (*suffix) { snprintf(expanded, len, "%s/%s", home, suffix); } else { snprintf(expanded, len, "%s", home); }
+
    return expanded;
 #endif
 }
@@ -255,7 +269,7 @@ char *find_file_by_list(const char *files[], int file_count) {
          }
          Log(LOG_CRAZY, "core", "%s: Trying %s", __FUNCTION__, fullpath);
 
-         if ( file_exists(fullpath) ) {
+         if (file_exists(fullpath) ) {
             Log(LOG_CRAZY, "core", "%s: Returning \"%s\"", __FUNCTION__, fullpath);
 
             return fullpath;

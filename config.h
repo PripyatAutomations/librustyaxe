@@ -95,15 +95,17 @@ extern const defconfig_t *cfg_defconfig_find(const char *key);
 extern bool cfg_set_value(const char *key, const char *value);
 extern dict *cfg_load(const char *path);
 
-// Boolean API contract: configuration operations return true on success and false on failure.
+// Boolean API contract: configuration operations return true on success and false on
+// failure.
 // Apply new configuration to the oldcfg dict
 extern bool cfg_apply_new(dict *oldcfg, dict *newcfg);
 
-// Reload a config file (or the last-loaded one if filename is NULL) into the global cfg dict.
+// Reload a config file (or the last-loaded one if filename is NULL) into the global cfg
+// dict.
 extern bool cfg_reload(const char *filename);
 
-/* Release process-wide configuration dictionaries, callbacks, and reload
- * registrations during application shutdown. Safe to call more than once. */
+/* Release process-wide configuration dictionaries, callbacks, and reload registrations
+ * during application shutdown. Safe to call more than once. */
 extern void cfg_fini(void);
 
 // Save the dict into a file

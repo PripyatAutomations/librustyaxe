@@ -63,7 +63,8 @@ extern const char *log_priority_to_str(logpriority_t priority);
 extern void logger_end(void);
 
 // Add a callback to the Log() call
-extern bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap) );
+extern bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt,
+   va_list ap) );
 extern bool log_remove_callback(struct log_callback *log_callback);
 
 // Filters

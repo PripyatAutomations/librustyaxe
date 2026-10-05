@@ -15,7 +15,7 @@
 #include <librustyaxe/util.mem.h>
 
 void oom_fatal(const char *what) {
-   Log(LOG_CRIT, "mem", "out of memory%s%s", (what ? ": " : ""), (what ? what : ""));
+   Log( LOG_CRIT, "mem", "out of memory%s%s", (what ? ": " : ""), (what ? what : "") );
    exit(ENOMEM);
 }
 
@@ -25,6 +25,7 @@ void *xmalloc(size_t size) {
    if (!p) {
       oom_fatal("malloc");
    }
+
    return p;
 }
 
@@ -34,6 +35,7 @@ void *xcalloc(size_t nmemb, size_t size) {
    if (!p) {
       oom_fatal("calloc");
    }
+
    return p;
 }
 
@@ -43,6 +45,7 @@ void *xrealloc(void *ptr, size_t size) {
    if (!p) {
       oom_fatal("realloc");
    }
+
    return p;
 }
 
@@ -52,5 +55,6 @@ char *xstrdup(const char *s) {
    if (!p) {
       oom_fatal("strdup");
    }
+
    return p;
 }

@@ -9,11 +9,11 @@
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 //
 // Features:
-//	defconfig:	Default configuration values stored in one place
-//	load/save:	Can save configuration from memory
-//	extendible:	Register load/save callbacks
-//	variable expansion: Support for %{key} expansion in _exp() versions
-//	reload events:	Dispatch events to your callback if reloaded
+// defconfig:  Default configuration values stored in one place
+// load/save:  Can save configuration from memory
+// extendible: Register load/save callbacks
+// variable expansion: Support for %{key} expansion in _exp() versions
+// reload events: Dispatch events to your callback if reloaded
 //
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +34,7 @@
 
 // If possible, declare defcfg a weak symbol, so we can link without it
 #if defined(__GNUC__) || defined(__clang__)
-extern defconfig_t defcfg[] __attribute__((weak));
+extern defconfig_t defcfg[] __attribute__( (weak) );
 #else
 extern defconfig_t defcfg[];
 #endif
@@ -47,12 +47,15 @@ cfg_cb_list_t *cfg_callbacks = NULL;
 bool cfg_set_default(dict *d, const char *key, const char *val) {
    if (!key || !d) {
       Log(LOG_CRIT, "cfg", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);
+
       return false;
    }
 
    Log(LOG_CRAZY, "cfg", "Setting default for dict:<%p>/%s to '%s'", d, key, val);
+
    if (dict_add(d, key, (char *)val) != 0) {
       Log(LOG_CRIT, "cfg", "defcfg dict:<%p> failed to set key |%s| to val |%s| at <%p>", d, key, val, val);
+
       return false;
    }
 
@@ -62,11 +65,13 @@ bool cfg_set_default(dict *d, const char *key, const char *val) {
 bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
    if (!d) {
       Log(LOG_CRIT, "cfg", "cfg_set_defaults: NULL dict");
+
       return false;
    }
 
    if (!defaults) {
       Log(LOG_CRIT, "cfg", "cfg_set_defaults: NULL input");
+
       return false;
    }
    Log(LOG_DEBUG, "cfg", "cfg_set_defaults: Loading defaults from <%p>", defaults);
@@ -81,7 +86,8 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
       }
 
       Log(LOG_CRAZY, "cfg", "cfg_set_defaults: |%s| => |%s|", defaults[i].key, defaults[i].val);
-      if ( !cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
+
+      if (!cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
          Log(LOG_WARN, "cfg", "cfg_set_defaults: Failed to set key: |%s|", defaults[i].key);
          warnings++;
       }
@@ -97,16 +103,18 @@ const defconfig_t *cfg_defconfig_find(const char *key) {
       return NULL;
    }
 
-   for (size_t i = 0; defcfg[i].key; i++) {
+   for (size_t i = 0 ; defcfg[i].key ; i++) {
       if (strcasecmp(defcfg[i].key, key) == 0) {
          return &defcfg[i];
       }
    }
+
    return NULL;
 }
 
 bool cfg_set_value(const char *key, const char *value) {
    const defconfig_t *def = cfg_defconfig_find(key);
+
    if (!cfg || !def || !value) {
       return false;
    }
@@ -115,15 +123,17 @@ bool cfg_set_value(const char *key, const char *value) {
    const char *stored = value;
    char *end = NULL;
    errno = 0;
+
    switch (def->type) {
       case DEFCONFIG_BOOL: {
          bool b;
-         if (!strcasecmp(value, "true") || !strcasecmp(value, "yes") ||
-             !strcasecmp(value, "on") || !strcmp(value, "1")) {
-              b = true;
-         } else if (!strcasecmp(value, "false") || !strcasecmp(value, "no") ||
-                  !strcasecmp(value, "off") || !strcmp(value, "0")) {
-              b = false;
+
+         if ( !strcasecmp(value, "true") || !strcasecmp(value, "yes") ||
+              !strcasecmp(value, "on") || !strcmp(value, "1") ) {
+            b = true;
+         } else if ( !strcasecmp(value, "false") || !strcasecmp(value, "no") ||
+                     !strcasecmp(value, "off") || !strcmp(value, "0") ) {
+            b = false;
          } else {
             return false;
          }
@@ -133,6 +143,7 @@ bool cfg_set_value(const char *key, const char *value) {
       }
       case DEFCONFIG_INT: {
          long n = strtol(value, &end, 10);
+
          if (errno || end == value || *end) {
             return false;
          }
@@ -146,15 +157,17 @@ bool cfg_set_value(const char *key, const char *value) {
          }
 
          unsigned long n = strtoul(value, &end, 10);
+
          if (errno || end == value || *end) {
             return false;
-         }         
+         }
          snprintf(canonical, sizeof(canonical), "%lu", n);
          stored = canonical;
          break;
       }
       case DEFCONFIG_FLOAT: {
          double n = strtod(value, &end);
+
          if (errno || end == value || *end) {
             return false;
          }
@@ -162,35 +175,41 @@ bool cfg_set_value(const char *key, const char *value) {
          stored = canonical;
          break;
       }
-      case DEFCONFIG_ENUM:
+      case DEFCONFIG_ENUM: {
          if (def->choices && *def->choices) {
             char *choices = strdup(def->choices);
             bool found = false;
             char *save = NULL;
-            for (char *p = strtok_r(choices, "|", &save); p; p = strtok_r(NULL, "|", &save)) {
-               if (!strcasecmp(p, value)) {
+
+            for ( char *p = strtok_r(choices, "|", &save) ; p ; p = strtok_r(NULL, "|", &save) ) {
+               if ( !strcasecmp(p, value) ) {
                   found = true;
                   break;
                }
             }
+
             free(choices);
+
             if (!found) {
                return false;
             }
          }
          break;
+      }
 
-      default:
+      default: {
          break;
+      }
    }
 
    if (dict_add(cfg, key, stored) != 0) {
       return false;
    }
    reload_event_run(key);
-   /* Programmatic settings changes (for example /set in a client) should
-      refresh the same cached runtime values as a file reload. */
+   /* Programmatic settings changes (for example /set in a client) should refresh the same
+    * cached runtime values as a file reload. */
    reload_event_run(NULL);
+
    return true;
 }
 
@@ -206,11 +225,11 @@ bool cfg_detect_and_load(const char *configs[], int num_configs) {
 
    if (fullpath) {
       // save the path for later use
-      if ( ( config_file = strdup(fullpath) ) == NULL ) {
+      if ( (config_file = strdup(fullpath) ) == NULL) {
          abort();
       }
 
-      if ( !( cfg = cfg_load(fullpath) ) ) {
+      if (!(cfg = cfg_load(fullpath) ) ) {
          Log(LOG_CRIT, "cfg", "Couldn't load config \"%s\", using defaults instead", fullpath);
          cfg = default_cfg;
       } else {
@@ -222,6 +241,7 @@ bool cfg_detect_and_load(const char *configs[], int num_configs) {
       cfg = default_cfg;
       Log(LOG_CRIT, "cfg", "No config file found, saving defaults");
    }
+
    return true;
 }
 
@@ -231,24 +251,27 @@ bool cfg_add_callback( const char *path, const char *section, bool (*cb) () ) {
    }
 
    cfg_cb_list_t *new_cb = malloc( sizeof(cfg_cb_list_t) );
+
    if (new_cb == NULL) {
       abort();
    }
 
    memset( new_cb, 0, sizeof(cfg_cb_list_t) );
+
    if (!new_cb) {
       Log(LOG_CRIT, "cfg", "OOM in cfg_add_callback");
+
       return false;
    }
 
    if (path) {
-      if ( ( new_cb->path = strdup(path) ) == NULL ) {
+      if ( (new_cb->path = strdup(path) ) == NULL) {
          abort();
       }
    }
 
    if (section) {
-      if ( ( new_cb->section = strdup(section) ) == NULL ) {
+      if ( (new_cb->section = strdup(section) ) == NULL) {
          abort();
       }
    }
@@ -286,14 +309,15 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    int i = 0;
    while (cbp && i < CONFIG_MAX_CALLBACKS) {
       if (cbp->section && fnmatch(cbp->section, section, 0) == 0) {
-         if ( !cbp->path || (fnmatch(cbp->path, path, 0) == 0) ) {
-            Log(LOG_CRAZY, "cfg", "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)", cbp->callback,
-               section, cbp->section, path, cbp->path);
+         if (!cbp->path || (fnmatch(cbp->path, path, 0) == 0) ) {
+            Log(LOG_CRAZY, "cfg", "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)",
+               cbp->callback, section, cbp->section, path, cbp->path);
 
             if (cbp->callback) {
                cbp->callback(path, line, section, buf);
             } else {
-               Log(LOG_CRIT, "cfg", "cfg_dispatch_callback: The callback at <%p> for section |%s| path |%s| doesn't have a valid function attached",
+               Log(LOG_CRIT, "cfg",
+                  "cfg_dispatch_callback: The callback at <%p> for section |%s| path |%s| doesn't have a valid function attached",
                   cbp, section, path);
             }
          }
@@ -305,7 +329,8 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    }
 
    if (i > 10) {
-      Log(LOG_WARN, "cfg", "%s: made (%d) iterations for cbp:<%p> for |%s| and probably could be optimized", __FUNCTION__, i, cfg_callbacks, cbp->path);
+      Log(LOG_WARN, "cfg", "%s: made (%d) iterations for cbp:<%p> for |%s| and probably could be optimized",
+         __FUNCTION__, i, cfg_callbacks, cbp->path);
    }
 
    return false;
@@ -318,9 +343,10 @@ static bool cfg_merge_dict(dict *dst, dict *src) {
    const char *key = NULL;
    char *val = NULL;
 
-   while ((rank = dict_enumerate(src, rank, &key, &val)) >= 0) {
+   while ( ( rank = dict_enumerate(src, rank, &key, &val) ) >= 0 ) {
       if (dict_add(dst, key, val) != 0) {
          Log(LOG_WARN, "cfg", "Unable to merge included key |%s|", key);
+
          return true;
       }
    }
@@ -335,12 +361,14 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
 
    memset( this_section, 0, sizeof(this_section) );
 
-   if ( !file_exists(path) ) {
+   if (!file_exists(path) ) {
       Log(LOG_CRIT, "cfg", "Can't find config file %s", path);
+
       return NULL;
    }
 
    dict *newcfg = dict_new();
+
    if (!newcfg) {
       fprintf(stderr, "OOM in cfg_load?!\n");
       exit(EXIT_FAILURE);
@@ -355,10 +383,12 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    cfg = newcfg;
 
    FILE *fp = fopen(path, "r");
+
    if (!fp) {
       free(newcfg);
       cfg = saved_cfg;
       fprintf( stderr, "Failed to open config %s: %d:%s\n", path, errno, strerror(errno) );
+
       return NULL;
    }
    fseek(fp, 0, SEEK_SET);
@@ -366,23 +396,24 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    bool in_comment = false;
    while (true) {
       memset( buf, 0, sizeof(buf) );
-      if ( !fgets(buf, sizeof(buf) - 1, fp) ) {
+
+      if (!fgets(buf, sizeof(buf) - 1, fp) ) {
          break;
       }
       line++;
 
       // skip leading spaces
       skip = buf;
-      while (*skip && isspace((unsigned char)*skip)) {
+      while ( *skip && isspace( (unsigned char)*skip ) ) {
          skip++;
       }
       // trim trailing newlines and whitespace
       end = buf + strlen(buf) - 1;
-      while ( end >= buf && (*end == '\r' || *end == '\n' || *end == ' ' || *end == '\t') ) {
+      while (end >= buf && (*end == '\r' || *end == '\n' || *end == ' ' || *end == '\t') ) {
          *end-- = '\0';
       }
 
-      if ( (end - skip) < 0 ) {
+      if ( (end - skip) < 0) {
          continue;
       }
 
@@ -392,20 +423,24 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       // optional; a missing mandatory include is a fatal configuration error.
       bool optional_include = (*skip == '!' && strncasecmp(skip + 1, "include", 7) == 0);
       bool mandatory_include = (*skip == '.' && strncasecmp(skip + 1, "include", 7) == 0);
-      if (!in_comment && (optional_include || mandatory_include) &&
-          (skip[8] == '\0' || skip[8] == ' ' || skip[8] == '\t' || skip[8] == '=')) {
+
+      if ( !in_comment && (optional_include || mandatory_include) &&
+           (skip[8] == '\0' || skip[8] == ' ' || skip[8] == '\t' || skip[8] == '=') ) {
          bool optional = optional_include;
          char *include_path = skip + 8;
          while (*include_path == ' ' || *include_path == '\t' || *include_path == '=') {
             include_path++;
          }
+
          if (*include_path == '"' || *include_path == '\'') {
             char quote = *include_path++;
             char *close = strrchr(include_path, quote);
+
             if (close) {
                *close = '\0';
             }
          }
+
          if (!*include_path) {
             if (optional) {
                Log(LOG_INFO, "cfg", "Empty optional !include at %s:%d", path, line);
@@ -416,6 +451,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             errors++;
             continue;
          }
+
          if (depth >= 4) {
             if (optional) {
                Log(LOG_INFO, "cfg", "Maximum !include depth reached at %s:%d (limit 4)", path, line);
@@ -428,6 +464,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          }
 
          char resolved[PATH_MAX];
+
          if (include_path[0] == '/') {
             snprintf(resolved, sizeof(resolved), "%s", include_path);
          } else {
@@ -436,7 +473,8 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             char *dir = dirname(parent);
             snprintf(resolved, sizeof(resolved), "%s/%s", dir, include_path);
          }
-         if (!file_exists(resolved)) {
+
+         if ( !file_exists(resolved) ) {
             if (optional) {
                Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
                continue;
@@ -445,6 +483,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             exit(EXIT_FAILURE);
          }
          dict *included = cfg_load_depth(resolved, depth + 1);
+
          if (!included) {
             if (optional) {
                Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
@@ -454,7 +493,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             }
             errors++;
          } else {
-            if (cfg_merge_dict(newcfg, included)) {
+            if ( cfg_merge_dict(newcfg, included) ) {
                if (!optional) {
                   Log(LOG_CRIT, "cfg", "Unable to merge mandatory include %s", resolved);
                   dict_free(included);
@@ -470,11 +509,11 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       // Handle line continuations
       while (1) {
          // Trim trailing newlines / carriage returns
-         while ( end >= buf && (*end == '\r' || *end == '\n') ) {
+         while (end >= buf && (*end == '\r' || *end == '\n') ) {
             *end-- = '\0';
          }
          // Trim trailing spaces/tabs before checking for '\'
-         while ( end >= buf && (*end == ' ' || *end == '\t') ) {
+         while (end >= buf && (*end == ' ' || *end == '\t') ) {
             *end-- = '\0';
          }
 
@@ -490,13 +529,13 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          end--;
 
          // Also remove trailing spaces before backslash if any remain
-         while ( end >= buf && (*end == ' ' || *end == '\t') ) {
+         while (end >= buf && (*end == ' ' || *end == '\t') ) {
             *end-- = '\0';
          }
          // Read continuation line
          char contbuf[sizeof(buf)];
 
-         if ( !fgets(contbuf, sizeof(contbuf), fp) ) {
+         if (!fgets(contbuf, sizeof(contbuf), fp) ) {
             break;   // EOF or error
          }
          line++;
@@ -504,13 +543,13 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          // Trim leading whitespace on continuation line.  This keeps the
          // indentation used by cfg_save() out of the value.
          char *cont = contbuf;
-         while (*cont && isspace((unsigned char)*cont)) {
+         while ( *cont && isspace( (unsigned char)*cont ) ) {
             cont++;
          }
          // Trim trailing whitespace/newlines on continuation line without
          // forming a pointer before the buffer when the line is empty.
          size_t cont_len = strlen(cont);
-         while (cont_len > 0 && isspace((unsigned char)cont[cont_len - 1])) {
+         while ( cont_len > 0 && isspace( (unsigned char)cont[cont_len - 1] ) ) {
             cont[--cont_len] = '\0';
          }
 
@@ -531,15 +570,17 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       // A leading '\' escapes the comment characters (#, ;, //) so e.g.
       // CSS selectors like '#chat-view' can be used in config sections.
       // We unescape in place here, before any comment processing.
-      if (*skip == '\\' && (skip[1] == '#' || skip[1] == ';' ||
-                            (skip[1] == '/' && skip[2] == '/') || skip[1] == '\\') ) {
-         memmove(skip, skip + 1, strlen(skip));        // shift left incl. NUL
+      if ( *skip == '\\' && (skip[1] == '#' || skip[1] == ';' ||
+                             (skip[1] == '/' && skip[2] == '/') || skip[1] == '\\') ) {
+         memmove( skip, skip + 1, strlen(skip) );        // shift left incl. NUL
+
          // Unescape any further occurrences in the line (e.g. 'a \# b \# c')
-         for (char *p = skip; *p; p++) {
-            if (*p == '\\' && (p[1] == '#' || p[1] == ';' || p[1] == '\\')) {
-               memmove(p, p + 1, strlen(p));
+         for (char *p = skip ; *p ; p++) {
+            if ( *p == '\\' && (p[1] == '#' || p[1] == ';' || p[1] == '\\') ) {
+               memmove( p, p + 1, strlen(p) );
             }
          }
+
          // recompute end pointer after the shifts
          end = buf + strlen(buf) - 1;
       }
@@ -552,7 +593,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          continue;
       } else if (in_comment) {
          continue;
-      } else if ( (*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';' ) {
+      } else if ( (*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';') {
          continue;
       } else if (*skip == '[' && *end == ']') {
          size_t section_len = sizeof(this_section);
@@ -561,6 +602,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          // The previous -1 length copied the closing ']' into section names,
          // producing keys such as server:localhost].server.url.
          size_t copy_len = skip_len > 2 ? skip_len - 2 : 0;
+
          if (copy_len >= section_len) {
             copy_len = section_len - 1;
          }
@@ -594,7 +636,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             continue;
          }
          char *key_end = key + strlen(key) - 1;
-         while ( key_end >= key && (*key_end == ' ' || *key_end == '\t') ) {
+         while (key_end >= key && (*key_end == ' ' || *key_end == '\t') ) {
             *key_end-- = '\0';
          }
 
@@ -615,10 +657,10 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             while (*val == ' ' || *val == '\t') {
                val++;
             }
-            strlcpy(fullkey, "server:", sizeof(fullkey));
-            strlcat(fullkey, this_section + 7, sizeof(fullkey));
-            strlcat(fullkey, ".", sizeof(fullkey));
-            strlcat(fullkey, key, sizeof(fullkey));
+            strlcpy( fullkey, "server:", sizeof(fullkey) );
+            strlcat( fullkey, this_section + 7, sizeof(fullkey) );
+            strlcat( fullkey, ".", sizeof(fullkey) );
+            strlcat( fullkey, key, sizeof(fullkey) );
             dict_add(newcfg, fullkey, val);
          } else {
             Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
@@ -637,12 +679,13 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             while (*val == ' ' || *val == '\t') {
                val++;
             }
-            while (*key && (key[strlen(key) - 1] == ' ' || key[strlen(key) - 1] == '\t')) {
+            while ( *key && (key[strlen(key) - 1] == ' ' || key[strlen(key) - 1] == '\t') ) {
                key[strlen(key) - 1] = '\0';
             }
+
             if (*key) {
-               strlcpy(fullkey, "callsign-lookup:", sizeof(fullkey));
-               strlcat(fullkey, key, sizeof(fullkey));
+               strlcpy( fullkey, "callsign-lookup:", sizeof(fullkey) );
+               strlcat( fullkey, key, sizeof(fullkey) );
                dict_add(newcfg, fullkey, val);
             }
          } else {
@@ -654,6 +697,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          val = NULL;
          char *eq = strchr(skip, '=');
          char fullkey[256];
+
          if (eq) {
             *eq = '\0';
             key = skip;
@@ -661,18 +705,19 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             while (*val == ' ' || *val == '\t') {
                val++;
             }
-            while (*key && (key[strlen(key) - 1] == ' ' || key[strlen(key) - 1] == '\t')) {
+            while ( *key && (key[strlen(key) - 1] == ' ' || key[strlen(key) - 1] == '\t') ) {
                key[strlen(key) - 1] = '\0';
             }
+
             if (*key) {
-               strlcpy(fullkey, "site:", sizeof(fullkey));
-               strlcat(fullkey, key, sizeof(fullkey));
+               strlcpy( fullkey, "site:", sizeof(fullkey) );
+               strlcat( fullkey, key, sizeof(fullkey) );
                dict_add(newcfg, fullkey, val);
             }
          } else {
             Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
-      } else if ( cfg_dispatch_callback(path, line, this_section, buf) ) {
+      } else if (cfg_dispatch_callback(path, line, this_section, buf) ) {
          Log(LOG_CRIT, "cfg", "Unknown configuration section |%s| parsing |%s| at %s:%d", this_section, buf, path,
             line);
          errors++;
@@ -693,6 +738,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    // initial load takes ownership of it, cfg_reload() merges it into the
    // live cfg and frees it.
    cfg = saved_cfg;
+
    return newcfg;
 }
 
@@ -703,6 +749,7 @@ dict *cfg_load(const char *path) {
 const char *cfg_get(const char *key) {
    if (!key) {
       Log(LOG_CRIT, "cfg", "got cfg_get with NULL key!");
+
       return NULL;
    }
    const char *p = dict_get(cfg, key, NULL);
@@ -711,6 +758,7 @@ const char *cfg_get(const char *key) {
    if (!p) {
       if (!default_cfg) {
          Log(LOG_CRAZY, "cfg", "defcfg not found looking for key |%s|", key);
+
          return NULL;
       }
       p = dict_get(default_cfg, key, NULL);
@@ -741,11 +789,13 @@ const char *cfg_get_exp(const char *key) {
 
 char *cfg_get_path(const char *key) {
    const char *expanded = cfg_get_exp(key);
+
    if (!expanded) {
       return NULL;
    }
    char *path = expand_path(expanded);
-   free((void *)expanded);
+   free( (void *)expanded );
+
    return path;
 }
 
@@ -757,23 +807,25 @@ cfg_save_cb_entry_t *cfg_save_callbacks = NULL;
 bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
    if (!callback) {
       Log(LOG_WARN, "cfg", "Attempt to add NULL save callback");
+
       return false;
    }
 
-   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks; cbp; cbp = cbp->next) {
+   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks ; cbp ; cbp = cbp->next) {
       if (cbp->callback == callback) {
          Log(LOG_WARN, "cfg", "Save callback |%s| already registered", name ? name : "unnamed");
+
          return false;
       }
    }
 
-   cfg_save_cb_entry_t *cb = malloc(sizeof(cfg_save_cb_entry_t));
+   cfg_save_cb_entry_t *cb = malloc( sizeof(cfg_save_cb_entry_t) );
 
    if (!cb) {
       fprintf(stderr, "OOM in cfg_add_save_callback!\n");
       abort();
    }
-   memset(cb, 0, sizeof(cfg_save_cb_entry_t));
+   memset( cb, 0, sizeof(cfg_save_cb_entry_t) );
    cb->name = name;
    cb->callback = callback;
    cb->next = NULL;
@@ -798,7 +850,7 @@ bool cfg_remove_save_callback(cfg_save_cb_t callback) {
       return false;
    }
 
-   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks, *prev = NULL; cbp; prev = cbp, cbp = cbp->next) {
+   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks, *prev = NULL ; cbp ; prev = cbp, cbp = cbp->next) {
       if (cbp->callback == callback) {
          if (prev) {
             prev->next = cbp->next;
@@ -806,9 +858,11 @@ bool cfg_remove_save_callback(cfg_save_cb_t callback) {
             cfg_save_callbacks = cbp->next;
          }
          free(cbp);
+
          return true;
       }
    }
+
    Log(LOG_CRIT, "cfg", "Save callback at <%p> not found for removal", callback);
 
    return false;
@@ -822,10 +876,10 @@ bool cfg_run_save_callbacks(FILE *fp, const char *path) {
 
    bool errors = false;
 
-   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks; cbp; cbp = cbp->next) {
+   for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks ; cbp ; cbp = cbp->next) {
       Log(LOG_DEBUG, "cfg", "Running save callback |%s| at <%p>", cbp->name ? cbp->name : "unnamed", cbp->callback);
 
-      if (cbp->callback(fp, path)) {
+      if ( cbp->callback(fp, path) ) {
          Log(LOG_CRIT, "cfg", "Save callback |%s| reported errors saving %s", cbp->name ? cbp->name : "unnamed", path);
          errors = true;
       }
@@ -845,7 +899,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
    int rank = 0;
    dict *seen = dict_new();
 
-   while ( ( rank = dict_enumerate(d, rank, &key, &val) ) >= 0 ) {
+   while ( (rank = dict_enumerate(d, rank, &key, &val) ) >= 0) {
       if (strncmp(key, "server:", 7) != 0) {
          continue;
       }
@@ -858,13 +912,13 @@ static void cfg_print_servers(dict *d, FILE *fp) {
       size_t name_len = dot - name_start;
       char name[64];
 
-      if ( name_len >= sizeof(name) ) {
+      if (name_len >= sizeof(name) ) {
          continue;
       }
       strlcpy(name, name_start, name_len + 1);
       name[name_len] = '\0';
 
-      if ( dict_get(seen, name, NULL) ) {
+      if (dict_get(seen, name, NULL) ) {
          continue;
       }
       dict_add(seen, name, (char *)"1");
@@ -874,7 +928,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
       int inner_rank = 0;
       const char *inner_key;
       char *inner_val;
-      while ( ( inner_rank = dict_enumerate(d, inner_rank, &inner_key, &inner_val) ) >= 0 ) {
+      while ( (inner_rank = dict_enumerate(d, inner_rank, &inner_key, &inner_val) ) >= 0) {
          if (strncmp(inner_key, "server:", 7) == 0) {
             const char *inner_name = inner_key + 7;
 
@@ -906,11 +960,12 @@ static bool cfg_save_entry_is_skipped(const char *key) {
       return true;
    }
 
-   /* Legacy scalar CSS setting: [gtk-css] is authoritative now. Do not
-    * copy the obsolete key back into a saved configuration. */
+   /* Legacy scalar CSS setting: [gtk-css] is authoritative now. Do not copy the obsolete
+    * key back into a saved configuration. */
    if (strcmp(key, "ui.gtk.css") == 0) {
       return true;
    }
+
    return false;
 }
 
@@ -924,9 +979,11 @@ static int cfg_save_entry_compare(const void *left, const void *right) {
    if (!a_colon && b_colon) {
       return -1;
    }
+
    if (a_colon && !b_colon) {
       return 1;
    }
+
    if (!a_colon && !b_colon) {
       return strcmp(a->key, b->key);
    }
@@ -935,26 +992,29 @@ static int cfg_save_entry_compare(const void *left, const void *right) {
    size_t b_section_len = (size_t)(b_colon - b->key);
    size_t common = a_section_len < b_section_len ? a_section_len : b_section_len;
    int section_cmp = strncmp(a->key, b->key, common);
+
    if (section_cmp != 0) {
       return section_cmp;
    }
+
    if (a_section_len != b_section_len) {
       return a_section_len < b_section_len ? -1 : 1;
    }
+
    return strcmp(a_colon + 1, b_colon + 1);
 }
 
-static bool cfg_save_entry_same_section(const cfg_save_entry_t *entry,
-   const char *section, size_t section_len) {
+static bool cfg_save_entry_same_section(const cfg_save_entry_t *entry, const char *section, size_t section_len) {
    const char *colon = strchr(entry->key, ':');
+
    return colon && (size_t)(colon - entry->key) == section_len &&
-      strncmp(entry->key, section, section_len) == 0;
+          strncmp(entry->key, section, section_len) == 0;
 }
 
-/* Keep generated configuration readable by wrapping long values at 80
- * columns.  Continuation indentation is deliberately part of the syntax:
- * cfg_load() removes it before joining the fragments, so it does not become
- * part of the stored value. */
+/* Keep generated configuration readable by wrapping long values at 80 columns.
+ *  Continuation indentation is deliberately part of the syntax:
+ * cfg_load() removes it before joining the fragments, so it does not become part of the
+ * stored value. */
 static void cfg_write_wrapped(FILE *fp, const char *key, const char *value) {
    const size_t max_columns = 80;
    const char *text = value ? value : "";
@@ -975,10 +1035,11 @@ static void cfg_write_wrapped(FILE *fp, const char *key, const char *value) {
          fprintf(fp, "%s=", key);
          first_line = false;
       } else {
-         for (size_t i = 0; i < indent; i++) {
+         for (size_t i = 0 ; i < indent ; i++) {
             fputc(' ', fp);
          }
       }
+
       if (chunk > 0) {
          fwrite(text, 1, chunk, fp);
          text += chunk;
@@ -996,33 +1057,38 @@ static void cfg_write_wrapped(FILE *fp, const char *key, const char *value) {
 bool cfg_save(dict *d, const char *path) {
    // Back up the existing config before overwriting it. Keep two-digit
    // sequence numbers so multiple saves on the same day remain distinct.
-   if (file_exists(path)) {
+   if ( file_exists(path) ) {
       time_t now = time(NULL);
       struct tm tm_buf;
       localtime_r(&now, &tm_buf);
       char backup[PATH_MAX];
       bool backed_up = false;
 
-      for (unsigned int sequence = 1; sequence <= 99; sequence++) {
-         int written = snprintf(backup, sizeof(backup),
-            "%s.%04d%02d%02d.%02u.cfg.old", path,
-            tm_buf.tm_year + 1900, tm_buf.tm_mon + 1, tm_buf.tm_mday, sequence);
-         if (written < 0 || (size_t)written >= sizeof(backup)) {
+      for (unsigned int sequence = 1 ; sequence <= 99 ; sequence++) {
+         int written = snprintf(backup, sizeof(backup), "%s.%04d%02d%02d.%02u.cfg.old", path, tm_buf.tm_year + 1900,
+            tm_buf.tm_mon + 1, tm_buf.tm_mday, sequence);
+
+         if ( written < 0 || (size_t)written >= sizeof(backup) ) {
             Log(LOG_WARN, "cfg", "Config backup path is too long for '%s'", path);
+
             return false;
          }
-         if (file_exists(backup)) continue;
+
+         if ( file_exists(backup) ) { continue; }
+
          if (rename(path, backup) == 0) {
             Log(LOG_INFO, "cfg", "Saved previous config as '%s'", backup);
             backed_up = true;
          } else {
-            Log(LOG_WARN, "cfg", "Failed to back up config '%s' to '%s': %d:%s",
-               path, backup, errno, strerror(errno));
+            Log( LOG_WARN, "cfg", "Failed to back up config '%s' to '%s': %d:%s", path, backup, errno,
+               strerror(errno) );
          }
          break;
       }
+
       if (!backed_up) {
          Log(LOG_CRIT, "cfg", "Unable to create a backup before saving '%s'", path);
+
          return false;
       }
    }
@@ -1039,25 +1105,28 @@ bool cfg_save(dict *d, const char *path) {
    // Right-side argument overrides defaults
    merged = dict_merge_new(default_cfg, d);
 
-   /* Collect entries once so the output is deterministic and section-qualified
-    * keys can be written back in the INI section form accepted by the loader.
-    * For example, fwdsp:path becomes [fwdsp] path=... . */
+   /* Collect entries once so the output is deterministic and section-qualified keys can
+    * be written back in the INI section form accepted by the loader. For example,
+    * fwdsp:path becomes [fwdsp] path=... . */
    cfg_save_entry_t *entries = NULL;
    size_t entry_count = 0;
    size_t entry_capacity = 0;
    int rank = 0;
    const char *key;
    char *val;
-   while ( ( rank = dict_enumerate(merged, rank, &key, &val) ) >= 0 ) {
-      if (cfg_save_entry_is_skipped(key)) continue;
+   while ( (rank = dict_enumerate(merged, rank, &key, &val) ) >= 0) {
+      if ( cfg_save_entry_is_skipped(key) ) { continue; }
+
       if (entry_count == entry_capacity) {
          size_t next = entry_capacity ? entry_capacity * 2 : 64;
-         cfg_save_entry_t *grown = realloc(entries, next * sizeof(*entries));
+         cfg_save_entry_t *grown = realloc( entries, next * sizeof(*entries) );
+
          if (!grown) {
             Log(LOG_CRIT, "cfg", "Unable to allocate configuration save entries");
             free(entries);
             dict_free(merged);
             fclose(fp);
+
             return false;
          }
          entries = grown;
@@ -1067,37 +1136,36 @@ bool cfg_save(dict *d, const char *path) {
       entries[entry_count].value = val;
       entry_count++;
    }
-
    qsort(entries, entry_count, sizeof(*entries), cfg_save_entry_compare);
 
    fprintf(fp, "[general]\n");
    size_t i = 0;
-   for (; i < entry_count; i++) {
-      if (strchr(entries[i].key, ':')) break;
+
+   for ( ; i < entry_count ; i++) {
+      if ( strchr(entries[i].key, ':') ) { break; }
       cfg_write_wrapped(fp, entries[i].key, entries[i].value);
    }
 
    while (i < entry_count) {
       const char *colon = strchr(entries[i].key, ':');
+
       if (!colon) {
          i++;
          continue;
       }
       size_t section_len = (size_t)(colon - entries[i].key);
       const char *section_name = entries[i].key;
+
       if (section_len == 8 && strncmp(section_name, "pipeline", 8) == 0) {
          section_name = "pipelines";
       }
-      fprintf(fp, "\n[%.*s]\n", (int)(section_name == entries[i].key ? section_len : 9),
-         section_name);
-      while (i < entry_count && cfg_save_entry_same_section(entries + i,
-            entries[i].key, section_len)) {
+      fprintf(fp, "\n[%.*s]\n", (int)(section_name == entries[i].key ? section_len : 9), section_name);
+      while ( i < entry_count && cfg_save_entry_same_section(entries + i, entries[i].key, section_len) ) {
          const char *entry_colon = strchr(entries[i].key, ':');
          cfg_write_wrapped(fp, entry_colon + 1, entries[i].value);
          i++;
       }
    }
-
    free(entries);
    dict_free(merged);
 
@@ -1117,6 +1185,7 @@ bool cfg_save(dict *d, const char *path) {
 bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    if (!newcfg) {
       Log(LOG_CRIT, "cfg", "cfg_apply_new: newcfg is NULL, ignoring");
+
       return false;
    }
 
@@ -1126,11 +1195,11 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    val_type_t type;
    int changed = 0, added = 0, removed = 0;
 
-   /* Full swap into the live cfg dict: add/update everything in newcfg,
-      remove everything in oldcfg that's gone from newcfg. */
+   /* Full swap into the live cfg dict: add/update everything in newcfg, remove everything
+    * in oldcfg that's gone from newcfg. */
 
    // Add/update every key from the new config in the live config
-   while ( ( rank = dict_enumerate_typed(newcfg, rank, &key, &val, &type) ) >= 0 ) {
+   while ( (rank = dict_enumerate_typed(newcfg, rank, &key, &val, &type) ) >= 0) {
       const char *oldval = NULL;
       const char *newval = NULL;
 
@@ -1150,29 +1219,26 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
       dict_add(cfg, key, newval);
 
       if (oldcfg && oldval) {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' changed: '%s' => '%s'",
-             key, oldval, newval ? newval : "");
+         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' changed: '%s' => '%s'", key, oldval, newval ? newval : "");
          changed++;
       } else {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' added: '%s'",
-             key, newval ? newval : "");
+         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' added: '%s'", key, newval ? newval : "");
          added++;
       }
 
       // Run any reload callbacks registered for this key
       reload_event_run(key);
    }
-
    // Remove keys from the live config that no longer exist in the new config
    rank = 0;
    const char *rkey;
    char *rval;
 
-   while ( ( rank = dict_enumerate(cfg, rank, &rkey, &rval) ) >= 0 ) {
-      if (!dict_get(newcfg, rkey, NULL)) {
+   while ( (rank = dict_enumerate(cfg, rank, &rkey, &rval) ) >= 0) {
+      if ( !dict_get(newcfg, rkey, NULL) ) {
          /* dict_del() frees the stored key, so we must work on a copy:
-            rkey would otherwise dangle for the Log/reload_event_run calls
-            below (and any callbacks they trigger). */
+          *  rkey would otherwise dangle for the Log/reload_event_run calls below (and any
+          * callbacks they trigger). */
          char *rkcopy = strdup(rkey);
 
          if (!rkcopy) {
@@ -1188,14 +1254,12 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
          rank = 0;   // Restart enumeration, the dict may have been modified
       }
    }
-
-   /* Notify modules once after the complete new configuration is live.  A
-      reload event registered with a NULL key is intentionally reserved for
-      this phase, so cached runtime settings can be refreshed atomically. */
+   /* Notify modules once after the complete new configuration is live.  A reload event
+    * registered with a NULL key is intentionally reserved for this phase, so cached
+    * runtime settings can be refreshed atomically. */
    reload_event_run(NULL);
 
-   Log(LOG_INFO, "cfg", "cfg_apply_new: %d added, %d changed, %d removed",
-       added, changed, removed);
+   Log(LOG_INFO, "cfg", "cfg_apply_new: %d added, %d changed, %d removed", added, changed, removed);
 
    // Free the old config dict if it isn't the live one
    if (oldcfg && oldcfg != cfg) {
@@ -1209,15 +1273,15 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
 }
 
 /*
- * Reload a config file into the global cfg dict.
- * The caller may pass a specific config file name; if NULL, the currently
- * loaded config_file is re-read.
+ * Reload a config file into the global cfg dict. The caller may pass a specific config
+ * file name; if NULL, the currently loaded config_file is re-read.
  */
 bool cfg_reload(const char *filename) {
    const char *path = filename ? filename : config_file;
 
    if (!path) {
       Log(LOG_CRIT, "cfg", "cfg_reload: No config file to reload");
+
       return false;
    }
 
@@ -1227,6 +1291,7 @@ bool cfg_reload(const char *filename) {
 
    if (!newcfg) {
       Log(LOG_CRIT, "cfg", "cfg_reload: Failed to load config from %s", path);
+
       return false;
    }
 
@@ -1240,8 +1305,8 @@ void cfg_fini(void) {
    cfg_cb_list_t *cb = cfg_callbacks;
    while (cb) {
       cfg_cb_list_t *next = cb->next;
-      free((void *)cb->path);
-      free((void *)cb->section);
+      free( (void *)cb->path );
+      free( (void *)cb->section );
       free(cb);
       cb = next;
    }
@@ -1269,12 +1334,13 @@ void cfg_fini(void) {
       dict_free(cfg);
    }
    cfg = NULL;
+
    if (default_cfg) {
       dict_free(default_cfg);
       default_cfg = NULL;
    }
 
-   free((void *)config_file);
+   free( (void *)config_file );
    config_file = NULL;
 }
 
@@ -1292,7 +1358,7 @@ if (homedir && empty_config) {
    snprintf(pathbuf, sizeof(pathbuf), "%s/.config/rrgtk.cfg", homedir);
 #endif
 
-   if ( !file_exists(pathbuf) ) {
+   if (!file_exists(pathbuf) ) {
       Log(LOG_WARN, "main", "Saving default config to %s since it doesn't exist", pathbuf);
       cfg_save(cfg, pathbuf);
       config_file = pathbuf;
@@ -1320,16 +1386,17 @@ reload_event_t *reload_event_add(const char *key, bool (*callback) (), const cha
    }
    memset( r, 0, sizeof(reload_event_t) );
 
-   if (key && ( r->key = strdup(key) ) == NULL ) {
+   if (key && (r->key = strdup(key) ) == NULL) {
       abort();
    }
    r->callback = callback;
 
    if (note) {
-      if ( ( r->note = strdup(note) ) == NULL ) {
+      if ( (r->note = strdup(note) ) == NULL) {
          abort();
       }
    }
+
    // Find the end of the list and append it.  The first registration must
    // become the list head; losing it here silently disables every reload
    // callback until a later registration happens.
@@ -1342,6 +1409,7 @@ reload_event_t *reload_event_add(const char *key, bool (*callback) (), const cha
       }
       ep->next = r;
    }
+
    return r;
 }
 
@@ -1374,7 +1442,7 @@ reload_event_t *reload_event_find( const char *key, bool (*callback) () ) {
    while (r) {
       bool match_key = false, match_cb = false;
 
-      if ((!key && !r->key) || (key && r->key && strcasecmp(key, r->key) == 0)) {
+      if ( (!key && !r->key) || (key && r->key && strcasecmp(key, r->key) == 0) ) {
          match_key = true;
       }
 
@@ -1399,16 +1467,18 @@ bool reload_event_run(const char *key) {
       return false;
    }
    bool ran = false;
-   for (reload_event_t *rl = reload_events; rl; rl = rl->next) {
+
+   for (reload_event_t *rl = reload_events ; rl ; rl = rl->next) {
       bool match = (!key && !rl->key) ||
                    (key && rl->key && strcasecmp(key, rl->key) == 0);
+
       if (match) {
-         Log(LOG_DEBUG, "cfg", "reload: run callback at <%p> for key '%s'",
-             rl->callback, key ? key : "<complete>");
+         Log(LOG_DEBUG, "cfg", "reload: run callback at <%p> for key '%s'", rl->callback, key ? key : "<complete>");
          rl->callback(key);
          ran = true;
       }
    }
+
    return ran;
 }
 
@@ -1422,6 +1492,7 @@ bool reload_event_remove(reload_event_t *evt) {
    while (*link && *link != evt) {
       link = &(*link)->next;
    }
+
    if (!*link) {
       return false;
    }
@@ -1430,5 +1501,6 @@ bool reload_event_remove(reload_event_t *evt) {
    free(evt->key);
    free(evt->note);
    free(evt);
+
    return true;
 }

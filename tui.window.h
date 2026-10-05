@@ -10,7 +10,7 @@
 
 #define	TUI_INPUTLEN 512
 #ifndef TUI_HISTORY_LINES
-#define TUI_HISTORY_LINES 50
+#define	TUI_HISTORY_LINES 50
 #endif
 
 typedef struct tui_window {

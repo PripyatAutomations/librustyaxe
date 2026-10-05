@@ -28,11 +28,13 @@ static int tui_active_win = 0;
 static int tui_num_windows = 0;
 
 static void tui_window_free_history(tui_window_t *w) {
-   if (!w) return;
-   for (int i = 0; i < w->history_count; i++) {
+   if (!w) { return; }
+
+   for (int i = 0 ; i < w->history_count ; i++) {
       free(w->input_history[i]);
       w->input_history[i] = NULL;
    }
+
    w->history_count = 0;
    w->history_index = -1;
 }
@@ -206,6 +208,7 @@ tui_window_t *tui_window_focus(const char *title) {
          // try to determine the network name to show
          const char *network = "unknown";
          tui_update_input_line();
+
          return tui_windows[i];
       }
    }
@@ -246,16 +249,20 @@ void tui_window_init(void) {
 }
 
 void tui_window_fini(void) {
-   for (int i = 0; i < tui_num_windows; i++) {
+   for (int i = 0 ; i < tui_num_windows ; i++) {
       tui_window_t *w = tui_windows[i];
-      if (!w) continue;
+
+      if (!w) { continue; }
       tui_window_free_history(w);
-      for (int line = 0; line < LOG_LINES; line++) {
+
+      for (int line = 0 ; line < LOG_LINES ; line++) {
          free(w->buffer[line]);
       }
+
       free(w);
       tui_windows[i] = NULL;
    }
+
    tui_num_windows = 0;
    tui_active_win = 0;
 }
@@ -298,8 +305,10 @@ int handle_alt_right(int c, int key) {
 
 bool tui_clear_scrollback(tui_window_t *w) {
    tui_render_lock();
+
    if (!w) {
       tui_render_unlock();
+
       return true;
    }
 
@@ -316,5 +325,6 @@ bool tui_clear_scrollback(tui_window_t *w) {
 
    tui_redraw_screen();
    tui_render_unlock();
+
    return false;
 }

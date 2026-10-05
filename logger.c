@@ -27,7 +27,7 @@
 
 // These are in main
 extern char latest_timestamp[64];
-extern time_t now;			// you must provide a >= 1hz refresh rate
+extern time_t now;                      // you must provide a >= 1hz refresh rate
 static time_t last_ts_update;
 bool log_stdout = true;
 static bool tui_mode_enabled = false;
@@ -43,20 +43,36 @@ const char s_prio_none[] = " NONE";
 
 // Here we define our logo priorities to be used everywhere else
 static struct log_priority log_priorities[] = {
-   { .prio = LOG_AUDIT, .msg = "audit" },     // Auditing events
-   { .prio = LOG_CRIT,  .msg = "crit" },       // Critical issues
-   { .prio = LOG_WARN,  .msg = "warn" },	      // Warnings
-   { .prio = LOG_INFO,  .msg = "info" },       // Normal operational info
-   { .prio = LOG_DEBUG, .msg = "debug" },     // Debugging information
-   { .prio = LOG_CRAZY, .msg = "crazy" },     // Extreme debugging
-   { .prio = LOG_BLITZKREIG, .msg = "blitz" }, // Don't use this
-   { .prio = LOG_NONE,  .msg = s_prio_none }  // Invalid
+   {
+      .prio = LOG_AUDIT, .msg = "audit"
+   },                                         // Auditing events
+   {
+      .prio = LOG_CRIT, .msg = "crit"
+   },                                          // Critical issues
+   {
+      .prio = LOG_WARN, .msg = "warn"
+   },                                                 // Warnings
+   {
+      .prio = LOG_INFO, .msg = "info"
+   },                                          // Normal operational info
+   {
+      .prio = LOG_DEBUG, .msg = "debug"
+   },                                         // Debugging information
+   {
+      .prio = LOG_CRAZY, .msg = "crazy"
+   },                                         // Extreme debugging
+   {
+      .prio = LOG_BLITZKREIG, .msg = "blitz"
+   },                                          // Don't use this
+   {
+      .prio = LOG_NONE, .msg = s_prio_none
+   }                                          // Invalid
 };
 
 FILE    *logfp = NULL;
 
 enum LogPriority log_priority_from_str(const char *priority) {
-   int log_levels = ( sizeof(log_priorities) / sizeof(struct log_priority) );
+   int log_levels = (sizeof(log_priorities) / sizeof(struct log_priority) );
 
    for (int i = 0 ; i < log_levels ; i++) {
       if (strcasecmp(log_priorities[i].msg, priority) == 0) {
@@ -68,7 +84,7 @@ enum LogPriority log_priority_from_str(const char *priority) {
 }
 
 const char *log_priority_to_str(logpriority_t priority) {
-   int log_levels = ( sizeof(log_priorities) / sizeof(struct log_priority) );
+   int log_levels = (sizeof(log_priorities) / sizeof(struct log_priority) );
 
    for (int i = 0 ; i < log_levels ; i++) {
       if (log_priorities[i].prio == priority) {
@@ -92,10 +108,11 @@ bool log_add_filter(const char *pattern, logpriority_t level) {
 
    if (f == NULL) {
       fprintf(stderr, "OOM in log_add_filter\n");
+
       return false;
    }
 
-   if ( ( f->pattern = strdup(pattern) ) == NULL ) {
+   if ( (f->pattern = strdup(pattern) ) == NULL) {
       free(f);
 
       return false;
@@ -126,7 +143,7 @@ void load_log_filters_from_config(void) {
    }
 
    char *copy = strdup(cfg);
-   free((void *)cfg);
+   free( (void *)cfg );
 
    if (!copy) {
       abort();
@@ -135,7 +152,7 @@ void load_log_filters_from_config(void) {
    char *tok = copy;
 
    while (*tok) {
-      while (*tok && (isspace((unsigned char)*tok) || *tok == ',')) {
+      while ( *tok && (isspace( (unsigned char)*tok ) || *tok == ',') ) {
          tok++;
       }
 
@@ -144,7 +161,7 @@ void load_log_filters_from_config(void) {
       }
 
       char *end = tok;
-      while (*end && !isspace((unsigned char)*end) && *end != ',') {
+      while (*end && !isspace( (unsigned char)*end ) && *end != ',') {
          end++;
       }
 
@@ -180,7 +197,6 @@ void load_log_filters_from_config(void) {
 
       tok = end;
    }
-
    free(copy);
 }
 
@@ -193,7 +209,7 @@ bool debug_filter(const char *subsys, logpriority_t msg_level) {
 
    while (f) {
       if (fnmatch(f->pattern, subsys, 0) == 0) {
-         if (!best || strlen(f->pattern) > strlen(best->pattern)) {
+         if ( !best || strlen(f->pattern) > strlen(best->pattern) ) {
             best = f;
          }
       }
@@ -257,7 +273,7 @@ void logger_set_show_timestamp(bool enabled) {
 }
 
 void logger_end(void) {
-   if ( logfp && (logfp != stdout && logfp != stderr) ) {
+   if (logfp && (logfp != stdout && logfp != stderr) ) {
       fclose(logfp);
    }
    logfp = NULL;
@@ -286,7 +302,7 @@ int update_timestamp(void) {
    last_ts_update = now;
    memset( latest_timestamp, 0, sizeof(latest_timestamp) );
 
-   if ( ( tmp = localtime(&now) ) ) {
+   if ( (tmp = localtime(&now) ) ) {
       /* success, proceed */
       if (strftime(latest_timestamp, sizeof(latest_timestamp), "%Y/%m/%d %H:%M:%S", tmp) == 0) {
          /* handle the error */
@@ -296,6 +312,7 @@ int update_timestamp(void) {
    } else {
       return 1;
    }
+
    return 0;
 }
 
@@ -329,9 +346,10 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       }
    }
 
-   if ( debug_filter(subsys, priority) ) {
+   if (debug_filter(subsys, priority) ) {
       va_end(ap_c1);
       va_end(ap);
+
       return;
    }
 
@@ -346,11 +364,12 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    /* Expand the format string */
    vsnprintf(msgbuf, sizeof(msgbuf) - 1, fmt, ap);
    memset( log_msg, 0, sizeof(log_msg) );
-   int log_prefix_len = snprintf(log_msg, sizeof(log_msg), "<%s@%s> ",
-      subsys ? subsys : "core", log_priority_to_str(priority));
+   int log_prefix_len = snprintf( log_msg, sizeof(log_msg), "<%s@%s> ", subsys ? subsys : "core",
+      log_priority_to_str(priority) );
+
    if (log_prefix_len < 0) {
       log_msg[0] = '\0';
-   } else if ((size_t)log_prefix_len < sizeof(log_msg)) {
+   } else if ( (size_t)log_prefix_len < sizeof(log_msg) ) {
       strlcpy(log_msg + log_prefix_len, msgbuf, sizeof(log_msg) - (size_t)log_prefix_len);
    }
    va_end(ap);
@@ -365,7 +384,8 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    }
 
    if (!tui_mode_enabled) {
-      /* Only spew to the console if logfile is closed or log.stdout == true, but avoid duplicating messages */
+      /* Only spew to the console if logfile is closed or log.stdout == true, but avoid
+       * duplicating messages */
       if ( (!logfp || log_stdout) && (logfp != stdout) ) {
          if (cfg_log_show_ts) {
             fprintf(stdout, "[%s] %s\n", latest_timestamp, log_msg);
@@ -426,5 +446,6 @@ bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *su
       // first entry, pop it at the top of the list
       log_callbacks = newcb;
    }
+
    return true;
 }

@@ -10,7 +10,7 @@
 #if     !defined(__rr_eeprom_h)
 #define	__rr_eeprom_h
 
-#ifdef	USE_EEPROM
+#ifdef  USE_EEPROM
 
 // This will prevent loading with a newer EEPROM version and someday will force
 // an upgrade if older
@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include "eeprom_types.h"
 
-#define	PIN_LEN 8        // 8 byte pin
+#define	PIN_LEN 8       // 8 byte pin
 
 typedef enum mod_mode {
    MOD_NONE = 0,
@@ -127,6 +127,6 @@ extern u_int8_t         *eeprom_mmap;
 extern size_t eeprom_size;
 #endif // defined(HOST_POSIX)
 
-#endif	// USE_EEPROM
+#endif // USE_EEPROM
 
 #endif // !defined(__rr_eeprom_h)

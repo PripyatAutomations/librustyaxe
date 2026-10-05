@@ -65,7 +65,7 @@ void tui_render_unlock(void) {
    pthread_mutex_unlock(&tui_render_mutex);
 }
 
-void tui_set_topline_renderer(char *(*renderer)(tui_window_t *win)) {
+void tui_set_topline_renderer( char *(*renderer) (tui_window_t *win) ) {
    tui_render_lock();
    topline_renderer = renderer;
    tui_render_unlock();
@@ -79,12 +79,15 @@ static void tui_print_topline(const char *text, int columns) {
    while (p && *p && columns > 0) {
       if (p[0] == '\033' && p[1] == '[') {
          const unsigned char *end = p + 2;
-         while (*end && !(*end >= '@' && *end <= '~')) end++;
-         if (!*end) break;
-         if (*end == 'm') fwrite(p, 1, end - p + 1, stdout);
+         while ( *end && !(*end >= '@' && *end <= '~') ) { end++; }
+
+         if (!*end) { break; }
+
+         if (*end == 'm') { fwrite(p, 1, end - p + 1, stdout); }
          p = end + 1;
          continue;
       }
+
       if (*p < 32 || *p == 127) {
          putchar(' ');
          p++;
@@ -92,12 +95,15 @@ static void tui_print_topline(const char *text, int columns) {
          continue;
       }
       size_t len = 1;
+
       if (*p >= 0xc2 && *p <= 0xf4) {
          size_t expected = *p < 0xe0 ? 2 : (*p < 0xf0 ? 3 : 4);
-         while (len < expected && p[len] && (p[len] & 0xc0) == 0x80) len++;
+         while (len < expected && p[len] && (p[len] & 0xc0) == 0x80) { len++; }
+
          if (len != expected) { p += len; continue; }
       }
-      if (len > (size_t)columns) break;
+
+      if (len > (size_t)columns) { break; }
       fwrite(p, 1, len, stdout);
       p += len;
       columns -= (int)len;
@@ -126,7 +132,7 @@ static int tui_line_rows(const char *s, int width) {
       if (*s == '\033' && *(s + 1) == '[') {
          s += 2;
 
-         while (*s && !(*s >= '@' && *s <= '~')) {
+         while ( *s && !(*s >= '@' && *s <= '~') ) {
             s++;
          }
 
@@ -152,7 +158,6 @@ static int tui_line_rows(const char *s, int width) {
 
       s++;
    }
-
    return rows;
 }
 
@@ -161,7 +166,7 @@ static void update_term_size(void) {
    struct winsize ws;
 
    // Test runners and redirected output have no terminal window to query.
-   if (!isatty(STDOUT_FILENO)) {
+   if ( !isatty(STDOUT_FILENO) ) {
       return;
    }
 
@@ -215,6 +220,7 @@ static void tui_atexit_cleanup(void) {
 bool tui_init(void) {
    tui_finalized = false;
    tui_is_enabled = true;
+
    if (!tui_atexit_registered) {
       tui_atexit_registered = (atexit(tui_atexit_cleanup) == 0);
    }
@@ -264,8 +270,10 @@ bool tui_init(void) {
 
 bool tui_fini(void) {
    tui_render_lock();
+
    if (tui_finalized) {
       tui_render_unlock();
+
       return false;
    }
    tui_finalized = true;
@@ -276,34 +284,35 @@ bool tui_fini(void) {
       tui_sigwinch_installed = false;
    }
 
-   /* termkey must stop before termios is restored.  Older shutdown ordering
-    * restored cooked mode first, then termkey restored its raw-mode snapshot. */
+   /* termkey must stop before termios is restored.  Older shutdown ordering restored
+    * cooked mode first, then termkey restored its raw-mode snapshot. */
    tui_keys_fini();
    tui_raw_mode(false);
 
    /* Restore modes which can make the caller's shell appear broken.  Disable
-    * mouse/focus/paste/application modes even when configuration says they
-    * were off: these reset sequences are harmless and make partial init safe. */
+    * mouse/focus/paste/application modes even when configuration says they were off:
+    * these reset sequences are harmless and make partial init safe. */
    fputs("\033[0m"        /* reset colors and attributes */
-         "\033[?25h"     /* show cursor */
-         "\033[0 q"      /* default cursor style */
-         "\033[?1l"      /* normal cursor keys */
-         "\033>"         /* normal keypad */
-         "\033[?1000l"   /* mouse click reporting */
-         "\033[?1002l"   /* mouse drag reporting */
-         "\033[?1003l"   /* all-motion mouse reporting */
-         "\033[?1004l"   /* focus reporting */
-         "\033[?1006l"   /* SGR mouse reporting */
-         "\033[?2004l"   /* bracketed paste */
-         "\033[?6l"      /* absolute cursor origin */
-         "\033[?7h"      /* automatic margins */
-         "\033[r"        /* full-screen scrolling region */
-         "\033[999;1H"   /* place output below the TUI */
-         "\033[2K\r\n", stdout);
+      "\033[?25h"        /* show cursor */
+      "\033[0 q"         /* default cursor style */
+      "\033[?1l"         /* normal cursor keys */
+      "\033>"            /* normal keypad */
+      "\033[?1000l"      /* mouse click reporting */
+      "\033[?1002l"      /* mouse drag reporting */
+      "\033[?1003l"      /* all-motion mouse reporting */
+      "\033[?1004l"      /* focus reporting */
+      "\033[?1006l"      /* SGR mouse reporting */
+      "\033[?2004l"      /* bracketed paste */
+      "\033[?6l"         /* absolute cursor origin */
+      "\033[?7h"         /* automatic margins */
+      "\033[r"           /* full-screen scrolling region */
+      "\033[999;1H"      /* place output below the TUI */
+      "\033[2K\r\n", stdout);
    fflush(stdout);
 
    tui_window_fini();
    tui_render_unlock();
+
    return false;
 }
 
@@ -319,6 +328,7 @@ void tui_redraw_defer(void) {
 
 void tui_redraw_flush(void) {
    tui_render_lock();
+
    if (tui_redraw_defer_count > 0) {
       tui_redraw_defer_count = 0;
    }
@@ -335,13 +345,16 @@ bool tui_redraw_if_pending(void) {
       return false;
    }
    tui_redraw_screen();
+
    return true;
 }
 
 void tui_redraw_screen(void) {
    tui_render_lock();
+
    if (!tui_is_enabled) {
       tui_render_unlock();
+
       return;
    }
    tui_redraw_pending = 0;
@@ -353,13 +366,15 @@ void tui_redraw_screen(void) {
 
    if (!w) {
       tui_render_unlock();
+
       return;
    }
    // --- Top status line ---
    printf("\033[1;1H");
 
    char *topline = topline_renderer ? topline_renderer(w) : NULL;
-   if (!topline) topline = tui_colorize_string(w->status_line);
+
+   if (!topline) { topline = tui_colorize_string(w->status_line); }
    putchar(' ');
    tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
    free(topline);
@@ -448,7 +463,7 @@ void tui_redraw_screen(void) {
 
                p += 2;
 
-               while (*p && !(*p >= '@' && *p <= '~')) {
+               while ( *p && !(*p >= '@' && *p <= '~') ) {
                   p++;
                }
 
@@ -458,7 +473,7 @@ void tui_redraw_screen(void) {
 
                // Remember the last complete SGR sequence; a wrapped row must
                // re-apply the color in effect where the previous row ended
-               if (p[-1] == 'm' && (size_t)(p - estart) < sizeof(active_sgr)) {
+               if ( p[-1] == 'm' && (size_t)(p - estart) < sizeof(active_sgr) ) {
                   size_t elen = p - estart;
 
                   memcpy(active_sgr, estart, elen);
@@ -475,7 +490,6 @@ void tui_redraw_screen(void) {
             col++;
             last_break = ++p;
          }
-
          bool explicit_newline = (*p == '\n');
 
          // If this is the first message and we need to skip physical rows,
@@ -528,18 +542,23 @@ void tui_redraw_screen(void) {
 
 void tui_redraw_topline(void) {
    tui_render_lock();
+
    if (!tui_is_enabled) {
       tui_render_unlock();
+
       return;
    }
    update_term_size();
    tui_window_t *w = tui_active_window();
+
    if (!w) {
       tui_render_unlock();
+
       return;
    }
 
    char *topline = topline_renderer ? topline_renderer(w) : NULL;
+
    if (!topline) {
       topline = tui_colorize_string(w->status_line);
    }
@@ -554,8 +573,10 @@ void tui_redraw_topline(void) {
 
 void tui_redraw_statusline(void) {
    tui_render_lock();
+
    if (!tui_is_enabled) {
       tui_render_unlock();
+
       return;
    }
    update_term_size();
@@ -567,8 +588,10 @@ void tui_redraw_statusline(void) {
 
 void tui_redraw_clock(void) {
    tui_render_lock();
+
    if (!tui_is_enabled) {
       tui_render_unlock();
+
       return;
    }
    int width = term_cols;
@@ -588,8 +611,7 @@ void tui_redraw_clock(void) {
       if (tui_over_ssh) {
          // SSH session: HH:MM only, so we can redraw far less often
          snprintf(clock_tagged, sizeof(clock_tagged),
-            "{bright-black}[{cyan}%02d{bright-black}:{cyan}%02d{bright-black}]{reset}",
-            tm.tm_hour, tm.tm_min);
+            "{bright-black}[{cyan}%02d{bright-black}:{cyan}%02d{bright-black}]{reset}", tm.tm_hour, tm.tm_min);
       } else {
          snprintf(clock_tagged, sizeof(clock_tagged),
             "{bright-black}[{cyan}%02d{bright-black}:{cyan}%02d{bright-black}:{cyan}%02d{bright-black}]{reset}",
@@ -608,8 +630,10 @@ void tui_redraw_clock(void) {
 
 bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
    tui_render_lock();
+
    if (!tui_is_enabled) {
       tui_render_unlock();
+
       return true;
    }
 
@@ -641,6 +665,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
    tui_redraw_statusline();
 
    tui_render_unlock();
+
    return false;
 }
 
@@ -678,7 +703,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
    const char *src = processed;
    char *dst = expanded;
 
-   while ( *src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
+   while (*src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
       if (src[0] == '$' && src[1] == '{') {
          const char *end = strchr(src + 2, '}');
 
@@ -686,7 +711,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             size_t varlen = end - (src + 2);
             char varspec[256];
 
-            if ( varlen >= sizeof(varspec) ) {
+            if (varlen >= sizeof(varspec) ) {
                varlen = sizeof(varspec) - 1;
             }
             memcpy(varspec, src + 2, varlen);
@@ -710,7 +735,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             if (val) {
                size_t vlen = strlen(val);
 
-               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1 ) {
+               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1) {
                   memcpy(dst, val, vlen);
                   dst += vlen;
                }
@@ -733,8 +758,10 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
 
 void tui_window_update_topline(const char *line) {
    tui_render_lock();
+
    if (!tui_is_enabled || !line) {
       tui_render_unlock();
+
       return;
    }
    // Move cursor to the top-left
@@ -751,21 +778,25 @@ void tui_window_update_topline(const char *line) {
    tui_render_unlock();
 }
 
-/* Return the byte offset of a visible column in an ANSI-rendered string.
- * Slicing the rendered string by column used to split escape sequences when
- * the input line scrolled, leaving the terminal cursor and colors corrupted. */
+/* Return the byte offset of a visible column in an ANSI-rendered string. Slicing the
+ * rendered string by column used to split escape sequences when the input line scrolled,
+ * leaving the terminal cursor and colors corrupted. */
 static size_t ansi_column_offset(const char *text, int column) {
    size_t offset = 0;
    int visible = 0;
-   if (!text || column <= 0) return 0;
+
+   if (!text || column <= 0) { return 0; }
    while (text[offset] && visible < column) {
-      if ((unsigned char)text[offset] == 0x1b) {
+      if ( (unsigned char)text[offset] == 0x1b ) {
          offset++;
+
          if (text[offset] == '[') {
             offset++;
-            while (text[offset] && !((text[offset] >= '@') && (text[offset] <= '~')))
+            while ( text[offset] && !( (text[offset] >= '@') && (text[offset] <= '~') ) ) {
                offset++;
-            if (text[offset]) offset++;
+            }
+
+            if (text[offset]) { offset++; }
          }
          continue;
       }
@@ -779,16 +810,19 @@ static void ansi_copy_columns(const char *text, int columns, char *out, size_t o
    size_t in = 0;
    size_t used = 0;
    int visible = 0;
-   if (!text || !out || out_size == 0) return;
+
+   if (!text || !out || out_size == 0) { return; }
    while (text[in] && used + 1 < out_size && visible < columns) {
-      if ((unsigned char)text[in] == 0x1b) {
+      if ( (unsigned char)text[in] == 0x1b ) {
          size_t start = in++;
+
          if (text[in] == '[') {
             in++;
-            while (text[in] && !((text[in] >= '@') && (text[in] <= '~'))) in++;
-            if (text[in]) in++;
+            while ( text[in] && !( (text[in] >= '@') && (text[in] <= '~') ) ) { in++; }
+
+            if (text[in]) { in++; }
          }
-         while (start < in && used + 1 < out_size) out[used++] = text[start++];
+         while (start < in && used + 1 < out_size) { out[used++] = text[start++]; }
          continue;
       }
       out[used++] = text[in++];
@@ -799,20 +833,27 @@ static void ansi_copy_columns(const char *text, int columns, char *out, size_t o
 
 void tui_update_input_line(void) {
    tui_render_lock();
+
    if (!tui_is_enabled) {
       tui_render_unlock();
+
       return;
    }
    tui_window_t *win = tui_active_window();
 
    if (!win) {
       tui_render_unlock();
+
       return;
    }
-   if (tui_input_len < 0) tui_input_len = 0;
-   if (tui_input_len >= TUI_INPUTLEN) tui_input_len = TUI_INPUTLEN - 1;
-   if (tui_cursor_pos < 0) tui_cursor_pos = 0;
-   if (tui_cursor_pos > tui_input_len) tui_cursor_pos = tui_input_len;
+
+   if (tui_input_len < 0) { tui_input_len = 0; }
+
+   if (tui_input_len >= TUI_INPUTLEN) { tui_input_len = TUI_INPUTLEN - 1; }
+
+   if (tui_cursor_pos < 0) { tui_cursor_pos = 0; }
+
+   if (tui_cursor_pos > tui_input_len) { tui_cursor_pos = tui_input_len; }
    int width = term_cols;
    int prompt_len = visible_length(win->title) + 2;  // title + '>' + space
 
@@ -890,9 +931,10 @@ void tui_update_input_line(void) {
    // --- compute visible slice ---
    char slice[2048];
    int max_input_width = width - prompt_len - 1;
+
    if (max_input_width < 1) {
       max_input_width = 1;
-   } else if ((size_t)max_input_width >= sizeof(slice)) {
+   } else if ( (size_t)max_input_width >= sizeof(slice) ) {
       max_input_width = (int)sizeof(slice) - 1;
    }
    int start_col = 0;
@@ -900,8 +942,8 @@ void tui_update_input_line(void) {
    if (cursor_screen_pos > max_input_width) {
       start_col = cursor_screen_pos - max_input_width;
    }
-   ansi_copy_columns(colorized_line + ansi_column_offset(colorized_line, start_col),
-      max_input_width, slice, sizeof(slice));
+   ansi_copy_columns( colorized_line + ansi_column_offset(colorized_line, start_col), max_input_width, slice,
+      sizeof(slice) );
 
    // --- prepare colored prompt ---
    char prompt[512];

@@ -70,8 +70,8 @@ static void sighandler(int32_t signum) {
       // Fatal signals
       case SIGINT:
       case SIGTERM: {
-         /* Let each application leave its main loop so module finalizers
-          * release owned resources before the process exits. */
+         /* Let each application leave its main loop so module finalizers release owned
+          * resources before the process exits. */
 #if defined(__RRCLI) || defined(__FWDSP)
          shutdown_app(signum);
 #elif defined(RRSERVER)

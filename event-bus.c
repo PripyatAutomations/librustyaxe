@@ -26,7 +26,7 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-#define EVENT_NOMATCH "NOMATCH"
+#define	EVENT_NOMATCH "NOMATCH"
 
 typedef struct event_entry {
    event_listener_t *listeners;
@@ -57,20 +57,24 @@ static time_t event_profile_last_dump;
 static int event_profile_compare(const void *a, const void *b) {
    const event_profile_row_t *left = a;
    const event_profile_row_t *right = b;
-   if (left->count < right->count) return 1;
-   if (left->count > right->count) return -1;
+
+   if (left->count < right->count) { return 1; }
+
+   if (left->count > right->count) { return -1; }
+
    return strcmp(left->event, right->event);
 }
 
 static void event_profile_dump_locked(void) {
    const time_t current = time(NULL);
+
    if (event_profile_last_dump && current - event_profile_last_dump < 300) {
       return;
    }
    event_profile_last_dump = current;
 
    size_t capacity = event_store ? event_store->used : 0;
-   event_profile_row_t *rows = capacity ? xcalloc(capacity, sizeof(*rows)) : NULL;
+   event_profile_row_t *rows = capacity ? xcalloc( capacity, sizeof(*rows) ) : NULL;
    size_t used = 0;
    int rank = 0;
    const char *key = NULL;
@@ -78,9 +82,10 @@ static void event_profile_dump_locked(void) {
    val_type_t type;
 
    while (event_store && rows &&
-          (rank = dict_enumerate_typed(event_store, rank, &key, &value, &type)) >= 0) {
+          ( rank = dict_enumerate_typed(event_store, rank, &key, &value, &type) ) >= 0) {
       if (type == VAL_PTR && value.p) {
          event_entry_t *entry = value.p;
+
          if (entry->emit_count) {
             rows[used].event = key;
             rows[used].count = entry->emit_count;
@@ -88,15 +93,17 @@ static void event_profile_dump_locked(void) {
          }
       }
    }
+
    if (used > 1) {
       qsort(rows, used, sizeof(*rows), event_profile_compare);
    }
    Log(LOG_INFO, "profile", "Event dispatch counts (cumulative):");
    size_t limit = used < 32 ? used : 32;
-   for (size_t i = 0; i < limit; i++) {
-      Log(LOG_INFO, "profile", "  %s: %llu", rows[i].event,
-         (unsigned long long)rows[i].count);
+
+   for (size_t i = 0 ; i < limit ; i++) {
+      Log(LOG_INFO, "profile", "  %s: %llu", rows[i].event, (unsigned long long)rows[i].count);
    }
+
    free(rows);
 }
 #endif
@@ -133,11 +140,11 @@ typedef struct queued_binary_event {
 /*
  * Opaque registration token records.
  *
- * A token identifies exactly one listener: the owning event, the callback,
- * the user pointer, and a generation stamped by the entry. Registration
- * order alone is not enough because listeners may be removed by wildcards
- * out from under a token; the generation counter lets event_off_token()
- * verify the indexed slot still holds the listener it was issued for.
+ * A token identifies exactly one listener: the owning event, the callback, the user
+ * pointer, and a generation stamped by the entry. Registration order alone is not enough
+ * because listeners may be removed by wildcards out from under a token; the generation
+ * counter lets event_off_token() verify the indexed slot still holds the listener it was
+ * issued for.
  */
 struct rr_event_token {
    char *event;
@@ -180,10 +187,11 @@ static event_entry_t *event_get_or_create_locked(const char *event) {
       return entry;
    }
 
-   entry = xcalloc(1, sizeof(*entry));
+   entry = xcalloc( 1, sizeof(*entry) );
 
    if (dict_add_ptr(event_store, event, entry) != 0) {
       free(entry);
+
       return NULL;
    }
 
@@ -194,8 +202,8 @@ static event_entry_t *event_get_or_create_locked(const char *event) {
 /*
  * Free an event entry and its listener arrays.
  *
- * Listener structures are stored directly in the arrays, so there are no
- * individual listener allocations to release.
+ * Listener structures are stored directly in the arrays, so there are no individual
+ * listener allocations to release.
  */
 static void event_entry_free(event_entry_t *entry) {
    if (!entry) {
@@ -213,9 +221,7 @@ static void event_entry_free(event_entry_t *entry) {
  *
  * Caller must hold event_lock.
  */
-static void event_remove_if_empty_locked(
-      const char *event,
-      event_entry_t *entry) {
+static void event_remove_if_empty_locked(const char *event, event_entry_t *entry) {
    if (!event || !entry) {
       return;
    }
@@ -226,8 +232,8 @@ static void event_remove_if_empty_locked(
    }
 
    /*
-    * dict_del() frees the dictionary key but VAL_PTR does not free the
-    * pointed-to object, so free the entry ourselves.
+    * dict_del() frees the dictionary key but VAL_PTR does not free the pointed-to object,
+    * so free the entry ourselves.
     */
    dict_del(event_store, event);
    event_entry_free(entry);
@@ -244,12 +250,7 @@ static void event_dispatch_run(void *arg) {
       return;
    }
 
-   queued->cb(
-      queued->event,
-      queued->data,
-      queued->cptr,
-      queued->user
-   );
+   queued->cb(queued->event, queued->data, queued->cptr, queued->user);
 
    free(queued->event);
    free(queued->data);
@@ -267,13 +268,7 @@ static void event_dispatch_binary_run(void *arg) {
       return;
    }
 
-   queued->cb(
-      queued->event,
-      queued->data,
-      queued->len,
-      queued->cptr,
-      queued->user
-   );
+   queued->cb(queued->event, queued->data, queued->len, queued->cptr, queued->user);
 
    free(queued->event);
    free(queued->data);
@@ -284,25 +279,21 @@ static void event_dispatch_binary_run(void *arg) {
 /*
  * Deliver one text event to one listener.
  */
-static void event_fire_listener(
-      const event_listener_t *listener,
-      const char *event,
-      rrconn_t *cptr,
-      const char *data) {
+static void event_fire_listener(const event_listener_t *listener, const char *event, rrconn_t *cptr, const char *data) {
    if (!listener || !listener->cb) {
       return;
    }
 
    if (!listener->dispatch) {
-      Log(LOG_CRAZY, "event",
-         "Firing event %s from cptr:<%p> with data:<%p> user:<%p>",
-         event, cptr, data, listener->user);
+      Log(LOG_CRAZY, "event", "Firing event %s from cptr:<%p> with data:<%p> user:<%p>", event, cptr, data,
+         listener->user);
 
       listener->cb(event, data, cptr, listener->user);
+
       return;
    }
 
-   queued_event_t *queued = xcalloc(1, sizeof(*queued));
+   queued_event_t *queued = xcalloc( 1, sizeof(*queued) );
 
    queued->cb = listener->cb;
    queued->user = listener->user;
@@ -310,49 +301,32 @@ static void event_fire_listener(
    queued->data = data ? xstrdup(data) : NULL;
    queued->cptr = cptr;
 
-   Log(LOG_CRAZY, "event",
-      "Dispatching event %s from cptr:<%p> user:<%p>",
-      event, cptr, listener->user);
+   Log(LOG_CRAZY, "event", "Dispatching event %s from cptr:<%p> user:<%p>", event, cptr, listener->user);
 
-   listener->dispatch(
-      event_dispatch_run,
-      queued,
-      listener->dispatch_user
-   );
+   listener->dispatch(event_dispatch_run, queued, listener->dispatch_user);
 }
 
 
 /*
  * Deliver one binary event to one listener.
  */
-static void event_fire_binary_listener(
-      const event_binary_listener_t *listener,
-      const char *event,
-      rrconn_t *cptr,
-      const void *data,
-      size_t len) {
+static void event_fire_binary_listener(const event_binary_listener_t *listener, const char *event, rrconn_t *cptr,
+                                       const void *data, size_t len) {
    if (!listener || !listener->cb) {
       return;
    }
 
    if (!listener->dispatch) {
-      Log(LOG_CRAZY, "event",
-         "Firing binary event %s from cptr:<%p> with data:<%p> "
-         "len %zu user:<%p>",
-         event, cptr, data, len, listener->user);
+      Log(LOG_CRAZY, "event", "Firing binary event %s from cptr:<%p> with data:<%p> "
+         "len %zu user:<%p>", event, cptr, data, len, listener->user);
 
-      listener->cb(
-         event,
-         data,
-         len,
-         cptr,
-         listener->user
-      );
+      listener->cb(event, data, len, cptr, listener->user);
+
       return;
    }
 
    queued_binary_event_t *queued =
-      xcalloc(1, sizeof(*queued));
+      xcalloc( 1, sizeof(*queued) );
 
    queued->cb = listener->cb;
    queued->user = listener->user;
@@ -365,31 +339,23 @@ static void event_fire_binary_listener(
       memcpy(queued->data, data, len);
    }
 
-   Log(LOG_CRAZY, "event",
-      "Dispatching binary event %s from cptr:<%p> "
-      "len %zu user:<%p>",
-      event, cptr, len, listener->user);
+   Log(LOG_CRAZY, "event", "Dispatching binary event %s from cptr:<%p> "
+      "len %zu user:<%p>", event, cptr, len, listener->user);
 
-   listener->dispatch(
-      event_dispatch_binary_run,
-      queued,
-      listener->dispatch_user
-   );
+   listener->dispatch(event_dispatch_binary_run, queued, listener->dispatch_user);
 }
 
 
 /*
  * Snapshot the text listener array.
  *
- * This is what allows event_off() or event_on() to safely execute while
- * callbacks are running. The snapshot contains listener structures by
- * value, not pointers into the live registry.
+ * This is what allows event_off() or event_on() to safely execute while callbacks are
+ * running. The snapshot contains listener structures by value, not pointers into the live
+ * registry.
  *
  * Caller must hold event_lock.
  */
-static event_listener_t *event_snapshot_locked(
-      event_entry_t *entry,
-      size_t *count) {
+static event_listener_t *event_snapshot_locked(event_entry_t *entry, size_t *count) {
    event_listener_t *snapshot;
 
    *count = 0;
@@ -398,15 +364,9 @@ static event_listener_t *event_snapshot_locked(
       return NULL;
    }
 
-   snapshot = xmalloc(
-      sizeof(*snapshot) * entry->listener_count
-   );
+   snapshot = xmalloc(sizeof(*snapshot) * entry->listener_count);
 
-   memcpy(
-      snapshot,
-      entry->listeners,
-      sizeof(*snapshot) * entry->listener_count
-   );
+   memcpy(snapshot, entry->listeners, sizeof(*snapshot) * entry->listener_count);
 
    *count = entry->listener_count;
 
@@ -419,9 +379,7 @@ static event_listener_t *event_snapshot_locked(
  *
  * Caller must hold event_lock.
  */
-static event_binary_listener_t *event_binary_snapshot_locked(
-      event_entry_t *entry,
-      size_t *count) {
+static event_binary_listener_t *event_binary_snapshot_locked(event_entry_t *entry, size_t *count) {
    event_binary_listener_t *snapshot;
 
    *count = 0;
@@ -430,15 +388,9 @@ static event_binary_listener_t *event_binary_snapshot_locked(
       return NULL;
    }
 
-   snapshot = xmalloc(
-      sizeof(*snapshot) * entry->binary_listener_count
-   );
+   snapshot = xmalloc(sizeof(*snapshot) * entry->binary_listener_count);
 
-   memcpy(
-      snapshot,
-      entry->binary_listeners,
-      sizeof(*snapshot) * entry->binary_listener_count
-   );
+   memcpy(snapshot, entry->binary_listeners, sizeof(*snapshot) * entry->binary_listener_count);
 
    *count = entry->binary_listener_count;
 
@@ -460,10 +412,7 @@ void event_init(void) {
 /*
  * Subscribe to a synchronous text event.
  */
-void event_on(
-      const char *event,
-      event_cb_t cb,
-      void *user) {
+void event_on(const char *event, event_cb_t cb, void *user) {
    event_on_dispatch(event, cb, user, NULL, NULL);
 }
 
@@ -471,12 +420,7 @@ void event_on(
 /*
  * Subscribe to a text event using a dispatcher.
  */
-void event_on_dispatch(
-      const char *event,
-      event_cb_t cb,
-      void *user,
-      event_dispatch_t dispatch,
-      void *dispatch_user) {
+void event_on_dispatch(const char *event, event_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user) {
    event_entry_t *entry;
 
    if (!event || !cb) {
@@ -487,6 +431,7 @@ void event_on_dispatch(
 
    if (!event_store) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
@@ -494,19 +439,17 @@ void event_on_dispatch(
 
    if (!entry) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
-   entry->listeners = xrealloc(
-      entry->listeners,
-      sizeof(*entry->listeners) *
-         (entry->listener_count + 1)
-   );
+   entry->listeners = xrealloc(entry->listeners, sizeof(*entry->listeners) *
+      (entry->listener_count + 1) );
 
    event_listener_t *listener =
       &entry->listeners[entry->listener_count++];
 
-   memset(listener, 0, sizeof(*listener));
+   memset( listener, 0, sizeof(*listener) );
 
    listener->cb = cb;
    listener->user = user;
@@ -521,30 +464,20 @@ void event_on_dispatch(
 /*
  * Register a listener and return an opaque token owning it.
  *
- * Tokens are allocated here and recorded on a module-agnostic list so
- * shutdown paths can audit outstanding registrations.
+ * Tokens are allocated here and recorded on a module-agnostic list so shutdown paths can
+ * audit outstanding registrations.
  */
 
-rr_event_token_t event_on_token(
-      const char *event,
-      event_cb_t cb,
-      void *user) {
+rr_event_token_t event_on_token(const char *event, event_cb_t cb, void *user) {
    return event_on_token_dispatch(event, cb, user, NULL, NULL);
 }
 
-rr_event_token_t event_on_binary_token(
-      const char *event,
-      event_binary_cb_t cb,
-      void *user) {
+rr_event_token_t event_on_binary_token(const char *event, event_binary_cb_t cb, void *user) {
    return event_on_binary_token_dispatch(event, cb, user, NULL, NULL);
 }
 
-rr_event_token_t event_on_token_dispatch(
-      const char *event,
-      event_cb_t cb,
-      void *user,
-      event_dispatch_t dispatch,
-      void *dispatch_user) {
+rr_event_token_t event_on_token_dispatch(const char *event, event_cb_t cb, void *user, event_dispatch_t dispatch,
+                                         void *dispatch_user) {
    if (!event || !cb) {
       return NULL;
    }
@@ -559,17 +492,15 @@ rr_event_token_t event_on_token_dispatch(
 
    if (!entry) {
       pthread_mutex_unlock(&event_lock);
+
       return NULL;
    }
 
-   entry->listeners = xrealloc(
-      entry->listeners,
-      sizeof(*entry->listeners) * (entry->listener_count + 1)
-   );
+   entry->listeners = xrealloc(entry->listeners, sizeof(*entry->listeners) * (entry->listener_count + 1) );
 
    event_listener_t *listener = &entry->listeners[entry->listener_count++];
 
-   memset(listener, 0, sizeof(*listener));
+   memset( listener, 0, sizeof(*listener) );
 
    listener->cb = cb;
    listener->user = user;
@@ -577,10 +508,9 @@ rr_event_token_t event_on_token_dispatch(
    listener->dispatch_user = dispatch_user;
    entry->generation++;
 
-   /* The token is issued after the listener exists, using the current
-    * generation; a later wildcard removal bumps it and invalidates the
-    * slot match. */
-   struct rr_event_token *token = xcalloc(1, sizeof(*token));
+   /* The token is issued after the listener exists, using the current generation; a later
+    * wildcard removal bumps it and invalidates the slot match. */
+   struct rr_event_token *token = xcalloc( 1, sizeof(*token) );
    token->event = xstrdup(event);
    token->binary = false;
    token->cb = cb;
@@ -595,12 +525,8 @@ rr_event_token_t event_on_token_dispatch(
    return token;
 }
 
-rr_event_token_t event_on_binary_token_dispatch(
-      const char *event,
-      event_binary_cb_t cb,
-      void *user,
-      event_dispatch_t dispatch,
-      void *dispatch_user) {
+rr_event_token_t event_on_binary_token_dispatch(const char *event, event_binary_cb_t cb, void *user,
+                                                event_dispatch_t dispatch, void *dispatch_user) {
    if (!event || !cb) {
       return NULL;
    }
@@ -615,18 +541,17 @@ rr_event_token_t event_on_binary_token_dispatch(
 
    if (!entry) {
       pthread_mutex_unlock(&event_lock);
+
       return NULL;
    }
 
-   entry->binary_listeners = xrealloc(
-      entry->binary_listeners,
-      sizeof(*entry->binary_listeners) * (entry->binary_listener_count + 1)
-   );
+   entry->binary_listeners = xrealloc(entry->binary_listeners,
+      sizeof(*entry->binary_listeners) * (entry->binary_listener_count + 1) );
 
    event_binary_listener_t *listener =
       &entry->binary_listeners[entry->binary_listener_count++];
 
-   memset(listener, 0, sizeof(*listener));
+   memset( listener, 0, sizeof(*listener) );
 
    listener->cb = cb;
    listener->user = user;
@@ -634,7 +559,7 @@ rr_event_token_t event_on_binary_token_dispatch(
    listener->dispatch_user = dispatch_user;
    entry->generation++;
 
-   struct rr_event_token *token = xcalloc(1, sizeof(*token));
+   struct rr_event_token *token = xcalloc( 1, sizeof(*token) );
    token->event = xstrdup(event);
    token->binary = true;
    token->binary_cb = cb;
@@ -652,10 +577,10 @@ rr_event_token_t event_on_binary_token_dispatch(
 /*
  * Unregister the listener a token owns.
  *
- * The token identifies its listener by event + callback + user; the
- * generation check detects when that listener was already removed (e.g. by
- * a wildcard event_off()) so the wrong listener is never dropped when
- * several share a callback. Already-unregistered tokens are a no-op.
+ * The token identifies its listener by event + callback + user; the generation check
+ * detects when that listener was already removed (e.g. by a wildcard event_off()) so the
+ * wrong listener is never dropped when several share a callback. Already-unregistered
+ * tokens are a no-op.
  */
 void event_off_token(rr_event_token_t token_handle) {
    struct rr_event_token *token = token_handle;
@@ -671,15 +596,13 @@ void event_off_token(rr_event_token_t token_handle) {
 
       if (entry) {
          if (token->binary) {
-            for (size_t i = 0; i < entry->binary_listener_count; i++) {
+            for (size_t i = 0 ; i < entry->binary_listener_count ; i++) {
                event_binary_listener_t *l = &entry->binary_listeners[i];
+
                if (l->cb == token->binary_cb && l->user == token->user) {
-                  memmove(
-                     &entry->binary_listeners[i],
-                     &entry->binary_listeners[i + 1],
+                  memmove(&entry->binary_listeners[i], &entry->binary_listeners[i + 1],
                      (entry->binary_listener_count - i - 1) *
-                        sizeof(*entry->binary_listeners)
-                  );
+                     sizeof(*entry->binary_listeners) );
                   entry->binary_listener_count--;
                   entry->generation++;
                   break;
@@ -691,15 +614,12 @@ void event_off_token(rr_event_token_t token_handle) {
                entry->binary_listeners = NULL;
             }
          } else {
-            for (size_t i = 0; i < entry->listener_count; i++) {
+            for (size_t i = 0 ; i < entry->listener_count ; i++) {
                event_listener_t *l = &entry->listeners[i];
+
                if (l->cb == token->cb && l->user == token->user) {
-                  memmove(
-                     &entry->listeners[i],
-                     &entry->listeners[i + 1],
-                     (entry->listener_count - i - 1) *
-                        sizeof(*entry->listeners)
-                  );
+                  memmove(&entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
+                     sizeof(*entry->listeners) );
                   entry->listener_count--;
                   entry->generation++;
                   break;
@@ -720,27 +640,15 @@ void event_off_token(rr_event_token_t token_handle) {
 
    pthread_mutex_unlock(&event_lock);
 }
-void event_on_binary(
-      const char *event,
-      event_binary_cb_t cb,
-      void *user) {
-   event_on_binary_dispatch(
-      event,
-      cb,
-      user,
-      NULL,
-      NULL
-   );
+void event_on_binary(const char *event, event_binary_cb_t cb, void *user) {
+   event_on_binary_dispatch(event, cb, user, NULL, NULL);
 }
 
 
 /*
  * Compatibility alias.
  */
-void event_register_binary(
-      const char *event,
-      event_binary_cb_t cb,
-      void *user) {
+void event_register_binary(const char *event, event_binary_cb_t cb, void *user) {
    event_on_binary(event, cb, user);
 }
 
@@ -748,12 +656,8 @@ void event_register_binary(
 /*
  * Subscribe to a binary event using a dispatcher.
  */
-void event_on_binary_dispatch(
-      const char *event,
-      event_binary_cb_t cb,
-      void *user,
-      event_dispatch_t dispatch,
-      void *dispatch_user) {
+void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *user, event_dispatch_t dispatch,
+                              void *dispatch_user) {
    event_entry_t *entry;
 
    if (!event || !cb) {
@@ -764,6 +668,7 @@ void event_on_binary_dispatch(
 
    if (!event_store) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
@@ -771,21 +676,19 @@ void event_on_binary_dispatch(
 
    if (!entry) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
-   entry->binary_listeners = xrealloc(
-      entry->binary_listeners,
-      sizeof(*entry->binary_listeners) *
-         (entry->binary_listener_count + 1)
-   );
+   entry->binary_listeners = xrealloc(entry->binary_listeners, sizeof(*entry->binary_listeners) *
+      (entry->binary_listener_count + 1) );
 
    event_binary_listener_t *listener =
       &entry->binary_listeners[
          entry->binary_listener_count++
       ];
 
-   memset(listener, 0, sizeof(*listener));
+   memset( listener, 0, sizeof(*listener) );
 
    listener->cb = cb;
    listener->user = user;
@@ -796,10 +699,7 @@ void event_on_binary_dispatch(
 }
 
 
-void event_emit(
-      const char *event,
-      rrconn_t *cptr,
-      const char *data) {
+void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    event_listener_t *snapshot = NULL;
    size_t count = 0;
 
@@ -807,9 +707,7 @@ void event_emit(
       return;
    }
 
-   Log(LOG_CRAZY, "event",
-      "send event %s: %s",
-      event, data ? data : "(null)");
+   Log(LOG_CRAZY, "event", "send event %s: %s", event, data ? data : "(null)");
 
    pthread_mutex_lock(&event_lock);
 
@@ -818,35 +716,27 @@ void event_emit(
          event_lookup_locked(event);
 
 #ifdef USE_PROFILING
+
       if (entry) {
          entry->emit_count++;
          event_profile_dump_locked();
       }
 #endif
 
-      snapshot = event_snapshot_locked(
-         entry,
-         &count
-      );
+      snapshot = event_snapshot_locked(entry, &count);
    }
 
    pthread_mutex_unlock(&event_lock);
 
    if (count) {
       for (size_t i = 0 ; i < count ; i++) {
-         event_fire_listener(
-            &snapshot[i],
-            event,
-            cptr,
-            data
-         );
+         event_fire_listener(&snapshot[i], event, cptr, data);
       }
 
-      Log(LOG_CRAZY, "event.match",
-         "Event %s from cptr:<%p> hit %zu times",
-         event, cptr, count);
+      Log(LOG_CRAZY, "event.match", "Event %s from cptr:<%p> hit %zu times", event, cptr, count);
 
       free(snapshot);
+
       return;
    }
 
@@ -861,52 +751,32 @@ void event_emit(
       event_entry_t *nomatch =
          event_lookup_locked(EVENT_NOMATCH);
 
-      snapshot = event_snapshot_locked(
-         nomatch,
-         &count
-      );
+      snapshot = event_snapshot_locked(nomatch, &count);
    }
 
    pthread_mutex_unlock(&event_lock);
 
    if (count) {
       if (cptr && cptr->chatname) {
-         Log(LOG_CRAZY, "event.nomatch",
-            "Event %s from cptr:<%p> didn't match; "
-            "firing NOMATCH",
-            event, cptr);
+         Log(LOG_CRAZY, "event.nomatch", "Event %s from cptr:<%p> didn't match; "
+            "firing NOMATCH", event, cptr);
       } else {
-         Log(LOG_CRAZY, "event.nomatch",
-            "Event %s didn't match; firing NOMATCH",
-            event);
+         Log(LOG_CRAZY, "event.nomatch", "Event %s didn't match; firing NOMATCH", event);
       }
 
       for (size_t i = 0 ; i < count ; i++) {
-         event_fire_listener(
-            &snapshot[i],
-            event,
-            cptr,
-            data
-         );
+         event_fire_listener(&snapshot[i], event, cptr, data);
       }
    } else {
-      Log(LOG_CRAZY, "event.nomatch",
-         "Event %s from cptr:<%p> didn't match anything. "
-         "data: |%s|",
-         event,
-         cptr,
-         data ? data : "(null)");
+      Log(LOG_CRAZY, "event.nomatch", "Event %s from cptr:<%p> didn't match anything. "
+         "data: |%s|", event, cptr, data ? data : "(null)");
    }
 
    free(snapshot);
 }
 
 
-void event_emit_binary(
-      const char *event,
-      rrconn_t *cptr,
-      const void *data,
-      size_t len) {
+void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size_t len) {
    event_binary_listener_t *snapshot = NULL;
    size_t count = 0;
 
@@ -914,9 +784,7 @@ void event_emit_binary(
       return;
    }
 
-   Log(LOG_CRAZY, "event",
-      "send binary event %s: %zu bytes",
-      event, len);
+   Log(LOG_CRAZY, "event", "send binary event %s: %zu bytes", event, len);
 
    pthread_mutex_lock(&event_lock);
 
@@ -925,49 +793,34 @@ void event_emit_binary(
          event_lookup_locked(event);
 
 #ifdef USE_PROFILING
+
       if (entry) {
          entry->emit_count++;
          event_profile_dump_locked();
       }
 #endif
 
-      snapshot = event_binary_snapshot_locked(
-         entry,
-         &count
-      );
+      snapshot = event_binary_snapshot_locked(entry, &count);
    }
 
    pthread_mutex_unlock(&event_lock);
 
    for (size_t i = 0 ; i < count ; i++) {
-      event_fire_binary_listener(
-         &snapshot[i],
-         event,
-         cptr,
-         data,
-         len
-      );
+      event_fire_binary_listener(&snapshot[i], event, cptr, data, len);
    }
 
    free(snapshot);
 
    if (!count) {
-      Log(LOG_CRAZY, "event.nomatch",
-         "Binary event %s from cptr:<%p> "
-         "didn't match anything (%zu bytes)",
-         event, cptr, len);
+      Log(LOG_CRAZY, "event.nomatch", "Binary event %s from cptr:<%p> "
+         "didn't match anything (%zu bytes)", event, cptr, len);
    } else {
-      Log(LOG_CRAZY, "event.match",
-         "Binary event %s from cptr:<%p> hit %zu times",
-         event, cptr, count);
+      Log(LOG_CRAZY, "event.match", "Binary event %s from cptr:<%p> hit %zu times", event, cptr, count);
    }
 }
 
 
-void event_emit_dict(
-      const char *event,
-      rrconn_t *cptr,
-      dict *data) {
+void event_emit_dict(const char *event, rrconn_t *cptr, dict *data) {
    const char *jp = NULL;
 
    if (data) {
@@ -976,7 +829,7 @@ void event_emit_dict(
 
    if (jp) {
       event_emit(event, cptr, jp);
-      free((void *)jp);
+      free( (void *)jp );
    }
 }
 
@@ -986,13 +839,9 @@ void event_emit_dict(
  *
  * As with the old implementation:
  *
- *    cb == NULL    matches any callback
- *    user == NULL  matches any user pointer
+ *    cb == NULL    matches any callback user == NULL  matches any user pointer
  */
-void event_off(
-      const char *event,
-      event_cb_t cb,
-      void *user) {
+void event_off(const char *event, event_cb_t cb, void *user) {
    event_entry_t *entry;
 
    if (!event) {
@@ -1003,6 +852,7 @@ void event_off(
 
    if (!event_store) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
@@ -1010,6 +860,7 @@ void event_off(
 
    if (!entry) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
@@ -1017,14 +868,10 @@ void event_off(
       event_listener_t *listener =
          &entry->listeners[i];
 
-      if ((!cb || listener->cb == cb) &&
-          (!user || listener->user == user)) {
-         memmove(
-            &entry->listeners[i],
-            &entry->listeners[i + 1],
-            (entry->listener_count - i - 1) *
-               sizeof(*entry->listeners)
-         );
+      if ( (!cb || listener->cb == cb) &&
+           (!user || listener->user == user) ) {
+         memmove(&entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
+            sizeof(*entry->listeners) );
 
          entry->listener_count--;
          continue;
@@ -1047,10 +894,7 @@ void event_off(
 /*
  * Remove matching binary listeners.
  */
-void event_off_binary(
-      const char *event,
-      event_binary_cb_t cb,
-      void *user) {
+void event_off_binary(const char *event, event_binary_cb_t cb, void *user) {
    event_entry_t *entry;
 
    if (!event) {
@@ -1061,6 +905,7 @@ void event_off_binary(
 
    if (!event_store) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
@@ -1068,6 +913,7 @@ void event_off_binary(
 
    if (!entry) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
@@ -1076,14 +922,10 @@ void event_off_binary(
       event_binary_listener_t *listener =
          &entry->binary_listeners[i];
 
-      if ((!cb || listener->cb == cb) &&
-          (!user || listener->user == user)) {
-         memmove(
-            &entry->binary_listeners[i],
-            &entry->binary_listeners[i + 1],
-            (entry->binary_listener_count - i - 1) *
-               sizeof(*entry->binary_listeners)
-         );
+      if ( (!cb || listener->cb == cb) &&
+           (!user || listener->user == user) ) {
+         memmove(&entry->binary_listeners[i], &entry->binary_listeners[i + 1], (entry->binary_listener_count - i - 1) *
+            sizeof(*entry->binary_listeners) );
 
          entry->binary_listener_count--;
          continue;
@@ -1106,19 +948,19 @@ void event_off_binary(
 /*
  * Optional cleanup.
  *
- * event_store contains VAL_PTR values, so dict_free() deliberately does
- * not free the event_entry_t objects. Enumerate and release them first.
+ * event_store contains VAL_PTR values, so dict_free() deliberately does not free the
+ * event_entry_t objects. Enumerate and release them first.
  *
- * Do not call event_shutdown() while dispatched callbacks remain queued
- * if their user/dispatch_user objects are being destroyed at the same
- * time. The queued callback itself owns its copied event payload, but
- * user pointers remain borrowed.
+ * Do not call event_shutdown() while dispatched callbacks remain queued if their
+ * user/dispatch_user objects are being destroyed at the same time. The queued callback
+ * itself owns its copied event payload, but user pointers remain borrowed.
  */
 void event_shutdown(void) {
    pthread_mutex_lock(&event_lock);
 
    if (!event_store) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
 
@@ -1127,17 +969,11 @@ void event_shutdown(void) {
    val_type_t type;
    int rank = 0;
 
-   while ((rank = dict_enumerate_typed(
-              event_store,
-              rank,
-              &key,
-              &val,
-              &type)) >= 0) {
+   while ( ( rank = dict_enumerate_typed(event_store, rank, &key, &val, &type) ) >= 0 ) {
       if (type == VAL_PTR) {
          event_entry_free(val.p);
       }
    }
-
    dict_free(event_store);
    event_store = NULL;
 

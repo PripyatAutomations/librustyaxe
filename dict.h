@@ -229,8 +229,7 @@ extern int dict_add_float(dict *d, const char *key, float val);
 extern int dict_add_double(dict *d, const char *key, double val);
 
 extern val_type_t dict_get_type(dict *d, const char *key);
-extern int dict_enumerate_typed(dict *d, int rank, const char **key,
-                                dict_value_t *val, val_type_t *type);
+extern int dict_enumerate_typed(dict *d, int rank, const char **key, dict_value_t *val, val_type_t *type);
 
 // Merge two dicts into the first
 extern int dict_merge(dict *dst, dict *src);

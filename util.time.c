@@ -51,14 +51,11 @@ const char *get_chat_ts(time_t ts) {
    if (tmsg.tm_year == tcurr.tm_year &&
        tmsg.tm_yday == tcurr.tm_yday) {
       strftime(chat_ts, sizeof(chat_ts),
-         "{bright-black}[{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ",
-         &tmsg);
+         "{bright-black}[{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ", &tmsg);
    } else {
       // Include the date for messages before today
-      strftime(chat_ts, sizeof(chat_ts),
-         "{bright-black}[{cyan}%Y-%m-%d{bright-black} "
-         "{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ",
-         &tmsg);
+      strftime(chat_ts, sizeof(chat_ts), "{bright-black}[{cyan}%Y-%m-%d{bright-black} "
+         "{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ", &tmsg);
    }
 
    return chat_ts;
@@ -70,11 +67,12 @@ time_t dhms2time_t(const char *str) {
 
    if (str == NULL) {
       Log(LOG_CRIT, "librustyaxe", "ERR: timestr2time_t: passed NULL str");
+
       return 0;
    }
    size_t len = strlen(str);
 
-   if ( ( copy = malloc(len + 1) ) == NULL ) {
+   if ( (copy = malloc(len + 1) ) == NULL) {
       Log(LOG_DEBUG, "librustyaxe", "ERR: timestr2time_t: out of memory");
       exit(ENOMEM);
    }
@@ -117,9 +115,9 @@ time_t dhms2time_t(const char *str) {
          }
       }
 
-      /* strtol leaves ptr at the unit, or at the terminating NUL when the
-       * value has no unit.  Only advance over a real character; advancing
-       * past the NUL makes the next loop condition read out of bounds. */
+      /* strtol leaves ptr at the unit, or at the terminating NUL when the value has no
+       * unit.  Only advance over a real character; advancing past the NUL makes the next
+       * loop condition read out of bounds. */
       if (unit == '\0') {
          break;
       }
@@ -181,9 +179,11 @@ void format_timestamp(time_t t, char *buf, size_t buflen) {
       return;
    }
    buf[0] = '\0';
-   if (!localtime_r(&t, &tm)) {
+
+   if ( !localtime_r(&t, &tm) ) {
       return;
    }
+
    if (strftime(buf, buflen, "[%Y/%m/%d %H:%M:%S]", &tm) == 0) {
       buf[0] = '\0';
    }
@@ -203,7 +203,7 @@ long long mono_ms(void) {
       return 0;
    }
 
-   return ( (long long)ts.tv_sec * 1000 ) + ( ts.tv_nsec / 1000000 );
+   return ( (long long)ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
 }
 
 ////////////////////////////
@@ -216,5 +216,5 @@ long long mono_us(void) {
       return 0;
    }
 
-   return ( (long long)ts.tv_sec * 1000000 ) + ( ts.tv_nsec / 1000 );
+   return ( (long long)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
 }

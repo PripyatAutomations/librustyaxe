@@ -57,7 +57,7 @@ static char *path_append(const char *base, const char *suffix) {
 /////////////////////////////////
 // helper: skip whitespace
 static const char *skip_ws(const char *s) {
-   while ( *s && isspace( (unsigned char)*s ) ) {
+   while (*s && isspace( (unsigned char)*s ) ) {
       s++;
    }
    return s;
@@ -105,7 +105,7 @@ static const char *json_parse_str(const char *s, char **out) {
 // parse primitive (number, true, false, null)
 static const char *json_parse_primitive(const char *s, char **out) {
    const char *start = s;
-   while ( *s && !strchr(",]} \t\r\n", *s) ) {
+   while (*s && !strchr(",]} \t\r\n", *s) ) {
       s++;
    }
    size_t len = s - start;
@@ -209,6 +209,7 @@ char *json_escape(const char *s) {
 
    if (!out) {
       Log(LOG_CRIT, "librustyaxe", "OOM in json_escape");
+
       return NULL;
    }
    char *p = out;
@@ -367,7 +368,7 @@ char *json_unescape(const char *s) {
                   *q++ = 0x80 | (code & 0x3F);
                } else {
                   *q++ = 0xE0 | (code >> 12);
-                  *q++ = 0x80 | ( (code >> 6) & 0x3F );
+                  *q++ = 0x80 | ( (code >> 6) & 0x3F);
                   *q++ = 0x80 | (code & 0x3F);
                }
                break;
@@ -388,16 +389,19 @@ char *json_unescape(const char *s) {
 }
 
 static json_node *json_make_node(const char *key) {
-   json_node *n = calloc(1, sizeof(*n));
+   json_node *n = calloc( 1, sizeof(*n) );
 
    if (!n) {
       Log(LOG_CRIT, "librustyaxe", "OOM in json_make_node");
+
       return NULL;
    }
 
    n->key = strdup(key);
+
    if (!n->key) {
       free(n);
+
       return NULL;
    }
 
@@ -406,104 +410,122 @@ static json_node *json_make_node(const char *key) {
 
 static json_node *find_child(json_node *parent, const char *key) {
    for (json_node *c = parent->child ; c ; c = c->next) {
-      if (!strcmp(c->key, key)) return c;
+      if ( !strcmp(c->key, key) ) { return c; }
    }
 
    json_node *n = json_make_node(key);
-   if (!n) return NULL;
+
+   if (!n) { return NULL; }
 
    n->next = parent->child;
    parent->child = n;
+
    return n;
 }
 
 /*
- * Store a value as its final JSON representation. This means the JSON tree
- * itself remains compatible with the existing json_node structure.
+ * Store a value as its final JSON representation. This means the JSON tree itself remains
+ * compatible with the existing json_node structure.
  */
-static int json_insert(json_node *root, const char *fullkey,
-                       const dict_value_t *v, val_type_t type) {
+static int json_insert(json_node *root, const char *fullkey, const dict_value_t *v, val_type_t type) {
    char *tmp = strdup(fullkey);
    char buf[128];
    char *jsonval = NULL;
 
    if (!tmp || !v) {
       free(tmp);
+
       return -1;
    }
 
    switch (type) {
-      case VAL_NULL:
+      case VAL_NULL: {
          jsonval = strdup("null");
          break;
+      }
 
-      case VAL_STR:
+      case VAL_STR: {
          jsonval = json_escape(v->s);
          break;
+      }
 
       case VAL_CHAR: {
-         char str[2] = { v->c, '\0' };
+         char str[2] = {
+            v->c, '\0'
+         };
          jsonval = json_escape(str);
          break;
       }
 
-      case VAL_BOOL:
+      case VAL_BOOL: {
          jsonval = strdup(v->i ? "true" : "false");
          break;
+      }
 
-      case VAL_INT:
+      case VAL_INT: {
          snprintf(buf, sizeof(buf), "%d", v->i);
          jsonval = strdup(buf);
          break;
+      }
 
-      case VAL_UINT:
+      case VAL_UINT: {
          snprintf(buf, sizeof(buf), "%u", v->ui);
          jsonval = strdup(buf);
          break;
+      }
 
-      case VAL_LONG:
+      case VAL_LONG: {
          snprintf(buf, sizeof(buf), "%ld", v->l);
          jsonval = strdup(buf);
          break;
+      }
 
-      case VAL_ULONG:
+      case VAL_ULONG: {
          snprintf(buf, sizeof(buf), "%lu", v->ul);
          jsonval = strdup(buf);
          break;
+      }
 
-      case VAL_LLONG:
+      case VAL_LLONG: {
          snprintf(buf, sizeof(buf), "%lld", v->ll);
          jsonval = strdup(buf);
          break;
+      }
 
-      case VAL_ULLONG:
+      case VAL_ULLONG: {
          snprintf(buf, sizeof(buf), "%llu", v->ull);
          jsonval = strdup(buf);
          break;
+      }
 
       case VAL_FLOAT:
-      case VAL_FLOATP:
+      case VAL_FLOATP: {
          snprintf(buf, sizeof(buf), "%.9g", (double)v->f);
          jsonval = strdup(buf);
          break;
+      }
 
       case VAL_DOUBLE:
-      case VAL_DOUBLEP:
+      case VAL_DOUBLEP: {
          snprintf(buf, sizeof(buf), "%.17g", v->d);
          jsonval = strdup(buf);
          break;
+      }
 
-      case VAL_PTR:
+      case VAL_PTR: {
          jsonval = strdup("null");
          break;
+      }
 
-      default:
+      default: {
          jsonval = strdup("null");
          break;
+      }
    }
 
    if (!jsonval) {
       free(tmp);
+
       return -1;
    }
 
@@ -512,18 +534,20 @@ static int json_insert(json_node *root, const char *fullkey,
 
    while (tok) {
       cur = find_child(cur, tok);
+
       if (!cur) {
          free(jsonval);
          free(tmp);
+
          return -1;
       }
       tok = strtok(NULL, ".");
    }
-
    free(cur->value);
    cur->value = jsonval;
 
    free(tmp);
+
    return 0;
 }
 
@@ -548,6 +572,7 @@ static bool sbuf_putc(sbuf *b, char c) {
       b->cap *= 2;
 
       char *tmp = realloc(b->buf, b->cap);
+
       if (!tmp) {
          return true;
       }
@@ -556,6 +581,7 @@ static bool sbuf_putc(sbuf *b, char c) {
 
    b->buf[b->len++] = c;
    b->buf[b->len] = 0;
+
    return false;
 }
 
@@ -567,12 +593,13 @@ static bool sbuf_puts(sbuf *b, const char *s) {
    }
 
    slen = strlen(s);
+
    if (b->len + slen + 1 > b->cap) {
       while (b->len + slen + 1 > b->cap) {
          b->cap *= 2;
       }
-
       char *tmp = realloc(b->buf, b->cap);
+
       if (!tmp) {
          return true;
       }
@@ -582,11 +609,12 @@ static bool sbuf_puts(sbuf *b, const char *s) {
    memcpy(b->buf + b->len, s, slen);
    b->len += slen;
    b->buf[b->len] = 0;
+
    return false;
 }
 
 static void dump_json(json_node *n, sbuf *out) {
-   if (!n || !out) return;
+   if (!n || !out) { return; }
 
    sbuf_putc(out, '{');
 
@@ -607,8 +635,9 @@ static void dump_json(json_node *n, sbuf *out) {
          dump_json(c, out);
       }
 
-      if (c->next)
+      if (c->next) {
          sbuf_putc(out, ',');
+      }
    }
 
    sbuf_putc(out, '}');
@@ -632,24 +661,29 @@ char *dict2json(dict *d) {
    dict_value_t val;
    val_type_t type;
    int rank = 0;
-   json_node root = { 0 };
-   sbuf out = { 0 };
+   json_node root = {
+      0
+   };
+   sbuf out = {
+      0
+   };
 
    if (!d) {
       return NULL;
    }
 
-   while ((rank = dict_enumerate_typed(d, rank, &key, &val, &type)) >= 0) {
+   while ( ( rank = dict_enumerate_typed(d, rank, &key, &val, &type) ) >= 0 ) {
       if (json_insert(&root, key, &val, type) != 0) {
          free_json(root.child);
+
          return NULL;
       }
    }
-
    sbuf_init(&out);
 
    if (!out.buf) {
       free_json(root.child);
+
       return NULL;
    }
 
@@ -667,18 +701,42 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
       const char *key = va_arg(ap, const char *);
 
       switch (type) {
-         case VAL_NULL: dict_add_null(d, key); break;
-         case VAL_STR: dict_add(d, key, va_arg(ap, const char *)); break;
-         case VAL_CHAR: dict_add_char(d, key, (char)va_arg(ap, int)); break;
-         case VAL_INT: dict_add_int(d, key, va_arg(ap, int)); break;
-         case VAL_UINT: dict_add_uint(d, key, va_arg(ap, unsigned int)); break;
-         case VAL_LONG: dict_add_long(d, key, va_arg(ap, long)); break;
-         case VAL_ULONG: dict_add_ulong(d, key, va_arg(ap, unsigned long)); break;
-         case VAL_LLONG: dict_add_llong(d, key, va_arg(ap, long long)); break;
-         case VAL_ULLONG: dict_add_ullong(d, key, va_arg(ap, unsigned long long)); break;
-         case VAL_FLOAT: dict_add_float(d, key, (float)va_arg(ap, double)); break;
-         case VAL_DOUBLE: dict_add_double(d, key, va_arg(ap, double)); break;
-         case VAL_BOOL: dict_add_bool(d, key, va_arg(ap, int) != 0); break;
+         case VAL_NULL: {
+            dict_add_null(d, key); break;
+         }
+         case VAL_STR: {
+            dict_add( d, key, va_arg(ap, const char *) ); break;
+         }
+         case VAL_CHAR: {
+            dict_add_char( d, key, (char)va_arg(ap, int) ); break;
+         }
+         case VAL_INT: {
+            dict_add_int( d, key, va_arg(ap, int) ); break;
+         }
+         case VAL_UINT: {
+            dict_add_uint( d, key, va_arg(ap, unsigned int) ); break;
+         }
+         case VAL_LONG: {
+            dict_add_long( d, key, va_arg(ap, long) ); break;
+         }
+         case VAL_ULONG: {
+            dict_add_ulong( d, key, va_arg(ap, unsigned long) ); break;
+         }
+         case VAL_LLONG: {
+            dict_add_llong( d, key, va_arg(ap, long long) ); break;
+         }
+         case VAL_ULLONG: {
+            dict_add_ullong( d, key, va_arg(ap, unsigned long long) ); break;
+         }
+         case VAL_FLOAT: {
+            dict_add_float( d, key, (float)va_arg(ap, double) ); break;
+         }
+         case VAL_DOUBLE: {
+            dict_add_double( d, key, va_arg(ap, double) ); break;
+         }
+         case VAL_BOOL: {
+            dict_add_bool(d, key, va_arg(ap, int) != 0); break;
+         }
          case VAL_FLOATP: {
             double v = va_arg(ap, double);
             (void)va_arg(ap, int);
@@ -691,13 +749,15 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
             dict_add_double(d, key, v);
             break;
          }
-         case VAL_PTR:
+         case VAL_PTR: {
             (void)va_arg(ap, void *);
             dict_add_null(d, key);
             break;
-         default:
+         }
+         default: {
             (void)va_arg(ap, void *);
             break;
+         }
       }
 
       type = va_arg(ap, int);
@@ -736,90 +796,104 @@ static bool json_number_is_integer(const char *s) {
 
 static const char *json_parse_value(const char *s, const char *path, dict *d) {
    s = skip_ws(s);
-   if (!*s) return NULL;
+
+   if (!*s) { return NULL; }
 
    if (*s == '"') {
       char *val = NULL;
       s = json_parse_str(s, &val);
-      if (!s) return NULL;
+
+      if (!s) { return NULL; }
+
       if (dict_add(d, path, val) != 0) {
          free(val);
+
          return NULL;
       }
       free(val);
+
       return s;
    }
 
-   if (*s == '{') return json_parse_obj(s, path, d);
-   if (*s == '[') return json_parse_array(s, path, d);
+   if (*s == '{') { return json_parse_obj(s, path, d); }
+
+   if (*s == '[') { return json_parse_array(s, path, d); }
 
    char *val = NULL;
    s = json_parse_primitive(s, &val);
-   if (!s) return NULL;
 
-   if (!strcmp(val, "null")) {
-      if (dict_add_null(d, path) != 0) goto fail;
-   } else if (!strcmp(val, "true")) {
-      if (dict_add_bool(d, path, true) != 0) goto fail;
-   } else if (!strcmp(val, "false")) {
-      if (dict_add_bool(d, path, false) != 0) goto fail;
-   } else if (json_number_is_integer(val)) {
+   if (!s) { return NULL; }
+
+   if ( !strcmp(val, "null") ) {
+      if (dict_add_null(d, path) != 0) { goto fail; }
+   } else if ( !strcmp(val, "true") ) {
+      if (dict_add_bool(d, path, true) != 0) { goto fail; }
+   } else if ( !strcmp(val, "false") ) {
+      if (dict_add_bool(d, path, false) != 0) { goto fail; }
+   } else if ( json_number_is_integer(val) ) {
       char *ep = NULL;
       errno = 0;
       long long ll = strtoll(val, &ep, 10);
 
       if (errno == 0 && ep != val && *ep == '\0') {
-         if (ll >= INT_MIN && ll <= INT_MAX)
+         if (ll >= INT_MIN && ll <= INT_MAX) {
             dict_add_int(d, path, (int)ll);
-         else if (ll >= LONG_MIN && ll <= LONG_MAX)
+         } else if (ll >= LONG_MIN && ll <= LONG_MAX) {
             dict_add_long(d, path, (long)ll);
-         else
+         } else {
             dict_add_llong(d, path, ll);
+         }
       } else if (val[0] != '-') {
          errno = 0;
          unsigned long long ull = strtoull(val, &ep, 10);
 
-         if (errno != 0 || ep == val || *ep != '\0') goto fail;
+         if (errno != 0 || ep == val || *ep != '\0') { goto fail; }
 
-         if (ull <= UINT_MAX)
+         if (ull <= UINT_MAX) {
             dict_add_uint(d, path, (unsigned int)ull);
-         else if (ull <= ULONG_MAX)
+         } else if (ull <= ULONG_MAX) {
             dict_add_ulong(d, path, (unsigned long)ull);
-         else
+         } else {
             dict_add_ullong(d, path, ull);
+         }
       }
    } else {
       char *ep = NULL;
       errno = 0;
       double v = strtod(val, &ep);
 
-      if (errno == ERANGE || ep == val || *ep != '\0' || !isfinite(v))
+      if ( errno == ERANGE || ep == val || *ep != '\0' || !isfinite(v) ) {
          goto fail;
+      }
 
       dict_add_double(d, path, v);
    }
 
    free(val);
+
    return s;
 
 fail:
    free(val);
+
    return NULL;
 }
 
 dict *json2dict(const char *json) {
-   if (!json || *json == '\0') return NULL;
+   if (!json || *json == '\0') { return NULL; }
 
    dict *d = dict_new();
-   if (!d) return NULL;
+
+   if (!d) { return NULL; }
 
    const char *res = json_parse_value(json, "", d);
-   /* A websocket message must contain exactly one JSON value.  Previously
-    * trailing bytes were silently ignored, which made truncated or
-    * concatenated frames look like valid dictionaries and sent the failure
-    * much later through the event bus. */
+
+   /* A websocket message must contain exactly one JSON value.  Previously trailing bytes
+    * were silently ignored, which made truncated or concatenated frames look like valid
+    * dictionaries and sent the failure much later through the event bus. */
    if (!res || *skip_ws(res) != '\0') {
       dict_free(d);
+
       return NULL;
    }
 
@@ -827,6 +901,6 @@ dict *json2dict(const char *json) {
 }
 
 void json_parse_and_flatten(const char *json, dict *dptr) {
-   if (!json || !dptr) return;
+   if (!json || !dptr) { return; }
    json_parse_value(json, "", dptr);
 }

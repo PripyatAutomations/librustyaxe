@@ -25,68 +25,179 @@
 bool cfg_tui_colors = true;
 
 static const ansi_entry_t ansi_table[] = {
-   { "reset", "\033[0m" },
+   {
+      "reset", "\033[0m"
+   },
 // Attributes
-   { "bold", "\033[1m" },
-   { "dim", "\033[2m" },
-   { "italic", "\033[3m" },
-   { "underline", "\033[4m" },
-   { "blink", "\033[5m" },
-   { "reverse", "\033[7m" },
-   { "hidden", "\033[8m" },
-   { "strike", "\033[9m" },
-   { "bold-off", "\033[22m" },                                // turns off bold/dim
-   { "dim-off", "\033[22m" },                                // same as bold-off
-   { "italic-off", "\033[23m" },                                // turns off italic
-   { "underline-off", "\033[24m" },                                // turns off underline
-   { "blink-off", "\033[25m" },                                // turns off blink
-   { "reverse-off", "\033[27m" },                                // turns off reverse/inverse
-   { "hidden-off", "\033[28m" },                                // turns off hidden
-   { "strike-off", "\033[29m" },                                // turns off strike-through
+   {
+      "bold", "\033[1m"
+   },
+   {
+      "dim", "\033[2m"
+   },
+   {
+      "italic", "\033[3m"
+   },
+   {
+      "underline", "\033[4m"
+   },
+   {
+      "blink", "\033[5m"
+   },
+   {
+      "reverse", "\033[7m"
+   },
+   {
+      "hidden", "\033[8m"
+   },
+   {
+      "strike", "\033[9m"
+   },
+   {
+      "bold-off", "\033[22m"
+   },                                                         // turns off bold/dim
+   {
+      "dim-off", "\033[22m"
+   },                                                        // same as bold-off
+   {
+      "italic-off", "\033[23m"
+   },                                                           // turns off italic
+   {
+      "underline-off", "\033[24m"
+   },                                                              // turns off underline
+   {
+      "blink-off", "\033[25m"
+   },                                                          // turns off blink
+   {
+      "reverse-off", "\033[27m"
+   },                                                            // turns off
+                                                                 // reverse/inverse
+   {
+      "hidden-off", "\033[28m"
+   },                                                           // turns off hidden
+   {
+      "strike-off", "\033[29m"
+   },                                                           // turns off
+                                                                // strike-through
    // Normal foreground colors
-   { "black", "\033[30m" },
-   { "red", "\033[31m" },
-   { "green", "\033[32m" },
-   { "yellow", "\033[33m" },
-   { "brown", "\033[38;5;94m" },                                    // mIRC-style brown
-   { "blue", "\033[34m" },
-   { "magenta", "\033[35m" },
-   { "cyan", "\033[36m" },
-   { "white", "\033[37m" },
-   { "orange", "\033[38;5;208m" },                                    // mIRC-style orange
+   {
+      "black", "\033[30m"
+   },
+   {
+      "red", "\033[31m"
+   },
+   {
+      "green", "\033[32m"
+   },
+   {
+      "yellow", "\033[33m"
+   },
+   {
+      "brown", "\033[38;5;94m"
+   },                                                               // mIRC-style brown
+   {
+      "blue", "\033[34m"
+   },
+   {
+      "magenta", "\033[35m"
+   },
+   {
+      "cyan", "\033[36m"
+   },
+   {
+      "white", "\033[37m"
+   },
+   {
+      "orange", "\033[38;5;208m"
+   },                                                                 // mIRC-style orange
 
    // Bright foreground colors
-   { "bright-black", "\033[90m" },                                    // ensure bright-black exists
-   { "bright-red", "\033[91m" },
-   { "bright-green", "\033[92m" },
-   { "bright-yellow", "\033[93m" },
-   { "bright-blue", "\033[94m" },
-   { "bright-magenta", "\033[95m" },
-   { "bright-cyan", "\033[96m" },
-   { "bright-white", "\033[97m" },
+   {
+      "bright-black", "\033[90m"
+   },                                                                 // ensure
+                                                                      // bright-black
+                                                                      // exists
+   {
+      "bright-red", "\033[91m"
+   },
+   {
+      "bright-green", "\033[92m"
+   },
+   {
+      "bright-yellow", "\033[93m"
+   },
+   {
+      "bright-blue", "\033[94m"
+   },
+   {
+      "bright-magenta", "\033[95m"
+   },
+   {
+      "bright-cyan", "\033[96m"
+   },
+   {
+      "bright-white", "\033[97m"
+   },
 
    // Background colors
-   { "bg-black", "\033[40m" },
-   { "bg-red", "\033[41m" },
-   { "bg-green", "\033[42m" },
-   { "bg-yellow", "\033[43m" },
-   { "bg-brown", "\033[48;5;94m" },
-   { "bg-blue", "\033[44m" },
-   { "bg-magenta", "\033[45m" },
-   { "bg-cyan", "\033[46m" },
-   { "bg-white", "\033[47m" },
-   { "bg-orange", "\033[48;5;208m" },
+   {
+      "bg-black", "\033[40m"
+   },
+   {
+      "bg-red", "\033[41m"
+   },
+   {
+      "bg-green", "\033[42m"
+   },
+   {
+      "bg-yellow", "\033[43m"
+   },
+   {
+      "bg-brown", "\033[48;5;94m"
+   },
+   {
+      "bg-blue", "\033[44m"
+   },
+   {
+      "bg-magenta", "\033[45m"
+   },
+   {
+      "bg-cyan", "\033[46m"
+   },
+   {
+      "bg-white", "\033[47m"
+   },
+   {
+      "bg-orange", "\033[48;5;208m"
+   },
 
    // Bright backgrounds
-   { "bg-bright-black", "\033[100m" },
-   { "bg-bright-red", "\033[101m" },
-   { "bg-bright-green", "\033[102m" },
-   { "bg-bright-yellow", "\033[103m" },
-   { "bg-bright-blue", "\033[104m" },
-   { "bg-bright-magenta", "\033[105m" },
-   { "bg-bright-cyan", "\033[106m" },
-   { "bg-bright-white", "\033[107m" },
-   { NULL, NULL
+   {
+      "bg-bright-black", "\033[100m"
+   },
+   {
+      "bg-bright-red", "\033[101m"
+   },
+   {
+      "bg-bright-green", "\033[102m"
+   },
+   {
+      "bg-bright-yellow", "\033[103m"
+   },
+   {
+      "bg-bright-blue", "\033[104m"
+   },
+   {
+      "bg-bright-magenta", "\033[105m"
+   },
+   {
+      "bg-bright-cyan", "\033[106m"
+   },
+   {
+      "bg-bright-white", "\033[107m"
+   },
+   {
+      NULL, NULL
    }
 };
 
@@ -125,29 +236,35 @@ static const char *theme_ansi_code(const char *tag) {
    if (!tag || !*tag || strlen(tag) > 32) {
       return NULL;
    }
-   /* Theme names are identifiers. Reject punctuation from ordinary text
-    * before consulting cfg_get(); JSON such as {"ts":123} must stay literal
-    * and must never turn into a lookup for ui.theme."ts":123. */
-   for (const unsigned char *p = (const unsigned char *)tag; *p; p++) {
-      if (!isalnum(*p) && *p != '-' && *p != '_') return NULL;
+
+   /* Theme names are identifiers. Reject punctuation from ordinary text before consulting
+    * cfg_get(); JSON such as {"ts":123} must stay literal and must never turn into a
+    * lookup for ui.theme."ts":123. */
+   for (const unsigned char *p = (const unsigned char *)tag ; *p ; p++) {
+      if (!isalnum(*p) && *p != '-' && *p != '_') { return NULL; }
    }
+
    snprintf(key, sizeof(key), "ui.theme.%s", tag);
    const char *val = cfg_get(key);
+
    if (!val || !*val) {
       return NULL;
    }
    // Strip surrounding braces if present
    char clean[64];
    size_t vlen = strlen(val);
+
    if (vlen >= 2 && val[0] == '{' && val[vlen - 1] == '}') {
       vlen -= 2;
-      if (vlen >= sizeof(clean)) {
+
+      if ( vlen >= sizeof(clean) ) {
          vlen = sizeof(clean) - 1;
       }
       memcpy(clean, val + 1, vlen);
       clean[vlen] = '\0';
       val = clean;
    }
+
    return ansi_code(val);
 }
 
@@ -165,15 +282,17 @@ char *tui_colorize_string(const char *in) {
    char *o = out;
 
    while (*p) {
-      if ((unsigned char)*p == 0x1b) {
-         /* fwdsp/GStreamer may emit ANSI CSI styling. The TUI owns the
-          * terminal stream, so consume those sequences instead of allowing
-          * them to corrupt the line renderer. */
+      if ( (unsigned char)*p == 0x1b ) {
+         /* fwdsp/GStreamer may emit ANSI CSI styling. The TUI owns the terminal stream,
+          * so consume those sequences instead of allowing them to corrupt the line
+          * renderer. */
          p++;
+
          if (*p == '[') {
             p++;
-            while (*p && !isalpha((unsigned char)*p)) p++;
-            if (*p) p++;
+            while ( *p && !isalpha( (unsigned char)*p ) ) { p++; }
+
+            if (*p) { p++; }
          }
       } else if (*p == '{') {
          const char *end = strchr(p, '}');
@@ -185,7 +304,7 @@ char *tui_colorize_string(const char *in) {
          size_t key_len = end - (p + 1);
          char key[64];
 
-         if ( key_len >= sizeof(key) ) {
+         if (key_len >= sizeof(key) ) {
             key_len = sizeof(key) - 1;
          }
          memcpy(key, p + 1, key_len);
@@ -202,17 +321,17 @@ char *tui_colorize_string(const char *in) {
             char hexbuf[16], fbbuf[64];
             bool hex_bg = false;
 
-            if (color_tag_parse(key, hexbuf, sizeof(hexbuf), fbbuf, sizeof(fbbuf), &hex_bg) ) {
+            if ( color_tag_parse(key, hexbuf, sizeof(hexbuf), fbbuf, sizeof(fbbuf), &hex_bg) ) {
                static int cap = -1;   // 2 = truecolor, 1 = 256color, 0 = 16
 
                if (cap < 0) {
                   const char *ct = getenv("COLORTERM");
 
-                  if (ct && (strcasecmp(ct, "truecolor") == 0 || strcasecmp(ct, "24bit") == 0) ) {
+                  if ( ct && (strcasecmp(ct, "truecolor") == 0 || strcasecmp(ct, "24bit") == 0) ) {
                      cap = 2;
                   } else {
                      const char *t = getenv("TERM");
-                     cap = (t && strstr(t, "256color") ) ? 1 : 0;
+                     cap = ( t && strstr(t, "256color") ) ? 1 : 0;
                   }
                }
 
@@ -223,18 +342,20 @@ char *tui_colorize_string(const char *in) {
                   o += sprintf(o, "\033[%d;2;%d;%d;%dm", (hex_bg ? 48 : 38), hr, hg, hb);
                } else if (cap == 1) {
                   int n = color_rgb_to_ansi256(hr, hg, hb);
+
                   if (n >= 0) {
                      o += sprintf(o, "\033[%d;5;%dm", (hex_bg ? 48 : 38), n);
                   }
                } else {
                   // 16-color terminal: use the explicit :fallback if given,
                   // else the nearest base color
-                  const char *fb = (fbbuf[0] ? fbbuf : color_nearest_named(hr, hg, hb) );
+                  const char *fb = ( fbbuf[0] ? fbbuf : color_nearest_named(hr, hg, hb) );
                   const char *code = ansi_code(fb);
 
                   if (!code && !fbbuf[0]) {
                      // nearest_named returned a name ansi_code() should know
                   }
+
                   if (code) {
                      if (hex_bg) {
                         // convert fg code (30-97) to bg code (40-107)
@@ -262,24 +383,28 @@ char *tui_colorize_string(const char *in) {
                   break;
                }
             }
+
             if (!ae->tag) {
                const char *code = theme_ansi_code(key);
+
                if (code) {
                   o += sprintf(o, "%s", code);
                   tag_handled = true;
                }
             }
          }
+
          if (!cfg_tui_colors) {
             // Color tags are still formatting control when colors are
             // disabled: consume known tags, while preserving unknown braces.
             char hexbuf[16], fbbuf[64];
             bool hex_bg = false;
-            if (color_tag_parse(key, hexbuf, sizeof(hexbuf), fbbuf,
-                  sizeof(fbbuf), &hex_bg) || ansi_code(key)) {
+
+            if ( color_tag_parse(key, hexbuf, sizeof(hexbuf), fbbuf, sizeof(fbbuf), &hex_bg) || ansi_code(key) ) {
                tag_handled = true;
             }
          }
+
          if (tag_handled) {
             p = end + 1;
          } else {
@@ -293,6 +418,7 @@ char *tui_colorize_string(const char *in) {
       }
    }
    *o = '\0';
+
    return out;
 }
 
@@ -339,11 +465,11 @@ char *irc_to_tui_colors(const char *in) {
          int fg = -1, bg = -1;
 
          // --- parse foreground (1–2 digits) ---
-         if ( isdigit( (unsigned char)p[0] ) ) {
+         if (isdigit( (unsigned char)p[0] ) ) {
             fg = p[0] - '0';
             p++;
 
-            if ( isdigit( (unsigned char)p[0] ) ) {
+            if (isdigit( (unsigned char)p[0] ) ) {
                fg = fg * 10 + (p[0] - '0');
                p++;
             }
@@ -353,11 +479,11 @@ char *irc_to_tui_colors(const char *in) {
          if (*p == ',') {
             p++;
 
-            if ( isdigit( (unsigned char)p[0] ) ) {
+            if (isdigit( (unsigned char)p[0] ) ) {
                bg = p[0] - '0';
                p++;
 
-               if ( isdigit( (unsigned char)p[0] ) ) {
+               if (isdigit( (unsigned char)p[0] ) ) {
                   bg = bg * 10 + (p[0] - '0');
                   p++;
                }
@@ -402,13 +528,16 @@ char *irc_to_tui_colors(const char *in) {
       p++;
    }
    *o = '\0';
+
    return out;
 }
 
 void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
    tui_render_lock();
+
    if (!tui_is_enabled || !win || !fmt) {
       tui_render_unlock();
+
       return;
    }
 
@@ -423,6 +552,7 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
 
    if (!colored) {
       tui_render_unlock();
+
       return;
    }
 
@@ -431,6 +561,7 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
 
    if (!line) {
       tui_render_unlock();
+
       return;
    }
 
@@ -445,12 +576,13 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
       win->log_count++;
    }
 
-   /* Only active-window output changes the visible scrollback.  In
-    * particular, logging performed by a top/status-line renderer must not
-    * start a nested full-screen redraw while the current frame is being
-    * painted.  Inactive windows will be rendered when they are focused. */
-   if (win == tui_active_window()) {
+   /* Only active-window output changes the visible scrollback.  In particular, logging
+    * performed by a top/status-line renderer must not start a nested full-screen redraw
+    * while the current frame is being painted.  Inactive windows will be rendered when
+    * they are focused. */
+   if ( win == tui_active_window() ) {
       tui_redraw_request();
+
       if (tui_redraw_defer_count == 0) {
          tui_redraw_if_pending();
       }
@@ -497,11 +629,11 @@ char *strip_mirc_formatting(const char *input) {
          p++;
 
          // skip up to two digits for foreground
-         if ( isdigit( (unsigned char)*p ) ) {
+         if (isdigit( (unsigned char)*p ) ) {
             p++;
          }
 
-         if ( isdigit( (unsigned char)*p ) ) {
+         if (isdigit( (unsigned char)*p ) ) {
             p++;
          }
 
@@ -509,11 +641,11 @@ char *strip_mirc_formatting(const char *input) {
          if (*p == ',') {
             p++;
 
-            if ( isdigit( (unsigned char)*p ) ) {
+            if (isdigit( (unsigned char)*p ) ) {
                p++;
             }
 
-            if ( isdigit( (unsigned char)*p ) ) {
+            if (isdigit( (unsigned char)*p ) ) {
                p++;
             }
          }

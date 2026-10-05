@@ -24,14 +24,11 @@ extern bool tui_init(void);
 extern bool tui_fini(void);
 extern bool tui_set_rl_cb( bool (*cb) (int argc, char **argv) );
 
-/* Host-owned key actions.  The TUI only recognizes and dispatches these
- * bindings; the application supplies the behavior. */
-typedef bool (*tui_hotkey_cb_t)(tui_window_t *win, unsigned key, unsigned modifiers,
-   void *user_data);
-extern bool tui_hotkey_register(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback,
-   void *user_data);
-extern bool tui_hotkey_unregister(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback,
-   void *user_data);
+/* Host-owned key actions.  The TUI only recognizes and dispatches these bindings; the
+ * application supplies the behavior. */
+typedef bool (*tui_hotkey_cb_t)(tui_window_t *win, unsigned key, unsigned modifiers, void *user_data);
+extern bool tui_hotkey_register(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback, void *user_data);
+extern bool tui_hotkey_unregister(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback, void *user_data);
 extern bool tui_hotkey_dispatch(tui_window_t *win, unsigned key, unsigned modifiers);
 
 // These force redrawing of an area of the screen
@@ -49,7 +46,7 @@ extern void tui_render_unlock(void);
 
 // Optional application renderer for the TOP row. Return an allocated,
 // colorized string (freed by the TUI), or NULL to use the window's topic.
-extern void tui_set_topline_renderer(char *(*renderer)(tui_window_t *win));
+extern void tui_set_topline_renderer( char *(*renderer) (tui_window_t *win) );
 
 // True when running in an SSH session (SSH_TTY set): clock shows HH:MM and
 // callers should only repaint on actual changes instead of once a second
@@ -61,8 +58,8 @@ extern void tui_redraw_defer(void);
 extern void tui_redraw_flush(void);
 
 extern char **tui_completion_cb(const char*text, int start, int end);
-extern bool tui_register_completion_provider(char **(*fn)(const char *line, const char *word));
-extern bool tui_unregister_completion_provider(char **(*fn)(const char *line, const char *word));
+extern bool tui_register_completion_provider( char **(*fn) (const char *line, const char *word) );
+extern bool tui_unregister_completion_provider( char **(*fn) (const char *line, const char *word) );
 extern bool tui_do_completion(tui_window_t *win);
 extern int tui_rows(void);
 extern int tui_cols(void);
