@@ -8,6 +8,7 @@
 #define	TUI_COMPLETION_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #define	TUI_MAX_COMPLETIONS_SHOWN 32
 
@@ -18,5 +19,9 @@ bool tui_unregister_completion_provider(tui_completion_provider_t fn);
 
 char **completion_collect(const char *line, const char *word);
 void completion_free(char **matches);
+// The application owns optional display metadata; replacement words stay bare.
+typedef void (*tui_completion_describer_t)(const char *, const char *, char *, size_t);
+void tui_set_completion_describer(tui_completion_describer_t fn);
+void completion_describe(const char *line, const char *value, char *out, size_t capacity);
 
 #endif

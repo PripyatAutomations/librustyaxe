@@ -54,6 +54,14 @@ extern int tui_cursor_pos;
 
 static tui_completion_provider_t completion_providers[TUI_MAX_COMPLETION_PROVIDERS];
 static int completion_provider_count = 0;
+static tui_completion_describer_t completion_describer;
+void tui_set_completion_describer(tui_completion_describer_t fn) { completion_describer = fn; }
+void completion_describe(const char *line, const char *value, char *out, size_t capacity) {
+   if (!out || !capacity) return;
+   snprintf(out,capacity,"%s",value ? value : "");
+   if (completion_describer && value) completion_describer(line,value,out,capacity);
+   out[capacity-1]='\0';
+}
 
 bool tui_register_completion_provider(tui_completion_provider_t fn) {
    if (!fn || completion_provider_count >= TUI_MAX_COMPLETION_PROVIDERS) {
@@ -222,11 +230,13 @@ bool tui_do_completion(tui_window_t *win) {
    // Ambiguous: complete the common prefix and list the candidates in a
    // multi-column layout across a few lines instead of one per line.
    {
+      char labels[TUI_MAX_COMPLETIONS_SHOWN][512];
       int maxlen = 0;
       int nshown = nmatch > TUI_MAX_COMPLETIONS_SHOWN ? TUI_MAX_COMPLETIONS_SHOWN : nmatch;
 
       for (int i = 0 ; i < nshown ; i++) {
-         int l = (int)strlen(matches[i]);
+         completion_describe(input_buf,matches[i],labels[i],sizeof(labels[i]));
+         int l = (int)strlen(labels[i]);
 
          if (l > maxlen) {
             maxlen = l;
@@ -254,7 +264,7 @@ bool tui_do_completion(tui_window_t *win) {
             if (idx >= nshown) {
                break;
             }
-            pos += snprintf(line + pos, sizeof(line) - pos, "%-*s  ", maxlen, matches[idx]);
+            pos += snprintf(line + pos, sizeof(line) - pos, "%-*s  ", maxlen, labels[idx]);
 
             if (pos >= sizeof(line) - 1) {
                break;
