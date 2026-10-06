@@ -239,6 +239,8 @@ struct rrconn {
    char media_codecs[256];
    // Comma-separated WebSocket chat rooms this session has joined.
    char rooms[AUTOJOIN_LEN];
+   char chat_vfo;                // Session-local !vfo selection (letter)
+   char chat_vfo_room[128];      // Room for that selection
 
    // This is a little ugly, but this stores pointers to the users associated with
    // elmer/noob system

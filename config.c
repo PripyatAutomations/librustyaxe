@@ -51,10 +51,10 @@ bool cfg_set_default(dict *d, const char *key, const char *val) {
       return false;
    }
 
-   Log(LOG_CRAZY, "cfg", "Setting default for dict:<%p>/%s to '%s'", d, key, val);
+   Log(LOG_CRAZY, "cfg", "Setting default for dict:<%p>/%s", d, key);
 
    if (dict_add(d, key, (char *)val) != 0) {
-      Log(LOG_CRIT, "cfg", "defcfg dict:<%p> failed to set key |%s| to val |%s| at <%p>", d, key, val, val);
+      Log(LOG_CRIT, "cfg", "defcfg dict:<%p> failed to set key |%s|", d, key);
 
       return false;
    }
@@ -85,7 +85,7 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
          continue;
       }
 
-      Log(LOG_CRAZY, "cfg", "cfg_set_defaults: |%s| => |%s|", defaults[i].key, defaults[i].val);
+      Log(LOG_CRAZY, "cfg", "cfg_set_defaults: |%s|", defaults[i].key);
 
       if (!cfg_set_default(d, defaults[i].key, defaults[i].val) ) {
          Log(LOG_WARN, "cfg", "cfg_set_defaults: Failed to set key: |%s|", defaults[i].key);
@@ -762,9 +762,9 @@ const char *cfg_get(const char *key) {
          return NULL;
       }
       p = dict_get(default_cfg, key, NULL);
-      Log(LOG_CRAZY, "cfg", "returning default value |%s| for key |%s|", p, key);
+      Log(LOG_CRAZY, "cfg", "returning default for key |%s|", key);
    } else {
-      Log(LOG_CRAZY, "cfg", "returning user value |%s| for key |%s|", p, key);
+      Log(LOG_CRAZY, "cfg", "returning configured value for key |%s|", key);
    }
 
    return p;
@@ -1219,10 +1219,10 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
       dict_add(cfg, key, newval);
 
       if (oldcfg && oldval) {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' changed: '%s' => '%s'", key, oldval, newval ? newval : "");
+         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' changed", key);
          changed++;
       } else {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' added: '%s'", key, newval ? newval : "");
+         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' added", key);
          added++;
       }
 

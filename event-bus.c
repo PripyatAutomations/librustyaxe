@@ -707,7 +707,7 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
       return;
    }
 
-   Log(LOG_CRAZY, "event", "send event %s: %s", event, data ? data : "(null)");
+   Log(LOG_CRAZY, "event", "send event %s (%zu bytes)", event, data ? strlen(data) : 0);
 
    pthread_mutex_lock(&event_lock);
 
