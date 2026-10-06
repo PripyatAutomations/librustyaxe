@@ -22,8 +22,7 @@ bool rr_serial_spec_parse(const char *spec, char *target, size_t capacity, rr_se
 bool rr_nmea_valid(const char *line);
 // Format signed decimal-degree coordinates (degrees * 1e7) as a checksum-correct
 // GPRMC sentence without CRLF. Flags are bit 0 valid and bit 1 manual.
-size_t rr_nmea_rmc(int32_t latitude, int32_t longitude, uint8_t flags, time_t utc,
-                   char *out, size_t capacity);
+size_t rr_nmea_rmc(int32_t latitude, int32_t longitude, uint8_t flags, time_t utc, char *out, size_t capacity);
 int rr_serial_pty_open(const char *path, const rr_serial_settings_t *settings, int *keeper, char *slave,
                        size_t capacity);
 void rr_serial_pty_close(int fd, int keeper, const char *path, const char *slave);

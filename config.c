@@ -1012,7 +1012,7 @@ static bool cfg_save_entry_same_section(const cfg_save_entry_t *entry, const cha
 }
 
 /* Keep generated configuration readable by wrapping long values at 80 columns.
- *  Continuation indentation is deliberately part of the syntax:
+ * Continuation indentation is deliberately part of the syntax:
  * cfg_load() removes it before joining the fragments, so it does not become part of the
  * stored value. */
 static void cfg_write_wrapped(FILE *fp, const char *key, const char *value) {

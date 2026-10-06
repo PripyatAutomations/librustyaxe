@@ -55,12 +55,15 @@ extern int tui_cursor_pos;
 static tui_completion_provider_t completion_providers[TUI_MAX_COMPLETION_PROVIDERS];
 static int completion_provider_count = 0;
 static tui_completion_describer_t completion_describer;
-void tui_set_completion_describer(tui_completion_describer_t fn) { completion_describer = fn; }
+void tui_set_completion_describer(tui_completion_describer_t fn) {
+   completion_describer = fn;
+}
 void completion_describe(const char *line, const char *value, char *out, size_t capacity) {
-   if (!out || !capacity) return;
-   snprintf(out,capacity,"%s",value ? value : "");
-   if (completion_describer && value) completion_describer(line,value,out,capacity);
-   out[capacity-1]='\0';
+   if (!out || !capacity) { return; }
+   snprintf(out, capacity, "%s", value ? value : "");
+
+   if (completion_describer && value) { completion_describer(line, value, out, capacity); }
+   out[capacity - 1] = '\0';
 }
 
 bool tui_register_completion_provider(tui_completion_provider_t fn) {
@@ -235,7 +238,7 @@ bool tui_do_completion(tui_window_t *win) {
       int nshown = nmatch > TUI_MAX_COMPLETIONS_SHOWN ? TUI_MAX_COMPLETIONS_SHOWN : nmatch;
 
       for (int i = 0 ; i < nshown ; i++) {
-         completion_describe(input_buf,matches[i],labels[i],sizeof(labels[i]));
+         completion_describe( input_buf, matches[i], labels[i], sizeof(labels[i]) );
          int l = (int)strlen(labels[i]);
 
          if (l > maxlen) {

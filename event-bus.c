@@ -443,7 +443,7 @@ void event_on_dispatch(const char *event, event_cb_t cb, void *user, event_dispa
       return;
    }
 
-   entry->listeners = xrealloc(entry->listeners, sizeof(*entry->listeners) *
+   entry->listeners = xrealloc( entry->listeners, sizeof(*entry->listeners) *
       (entry->listener_count + 1) );
 
    event_listener_t *listener =
@@ -496,7 +496,7 @@ rr_event_token_t event_on_token_dispatch(const char *event, event_cb_t cb, void 
       return NULL;
    }
 
-   entry->listeners = xrealloc(entry->listeners, sizeof(*entry->listeners) * (entry->listener_count + 1) );
+   entry->listeners = xrealloc( entry->listeners, sizeof(*entry->listeners) * (entry->listener_count + 1) );
 
    event_listener_t *listener = &entry->listeners[entry->listener_count++];
 
@@ -545,7 +545,7 @@ rr_event_token_t event_on_binary_token_dispatch(const char *event, event_binary_
       return NULL;
    }
 
-   entry->binary_listeners = xrealloc(entry->binary_listeners,
+   entry->binary_listeners = xrealloc( entry->binary_listeners,
       sizeof(*entry->binary_listeners) * (entry->binary_listener_count + 1) );
 
    event_binary_listener_t *listener =
@@ -600,7 +600,7 @@ void event_off_token(rr_event_token_t token_handle) {
                event_binary_listener_t *l = &entry->binary_listeners[i];
 
                if (l->cb == token->binary_cb && l->user == token->user) {
-                  memmove(&entry->binary_listeners[i], &entry->binary_listeners[i + 1],
+                  memmove( &entry->binary_listeners[i], &entry->binary_listeners[i + 1],
                      (entry->binary_listener_count - i - 1) *
                      sizeof(*entry->binary_listeners) );
                   entry->binary_listener_count--;
@@ -618,7 +618,7 @@ void event_off_token(rr_event_token_t token_handle) {
                event_listener_t *l = &entry->listeners[i];
 
                if (l->cb == token->cb && l->user == token->user) {
-                  memmove(&entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
+                  memmove( &entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
                      sizeof(*entry->listeners) );
                   entry->listener_count--;
                   entry->generation++;
@@ -680,7 +680,7 @@ void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *use
       return;
    }
 
-   entry->binary_listeners = xrealloc(entry->binary_listeners, sizeof(*entry->binary_listeners) *
+   entry->binary_listeners = xrealloc( entry->binary_listeners, sizeof(*entry->binary_listeners) *
       (entry->binary_listener_count + 1) );
 
    event_binary_listener_t *listener =
@@ -870,7 +870,7 @@ void event_off(const char *event, event_cb_t cb, void *user) {
 
       if ( (!cb || listener->cb == cb) &&
            (!user || listener->user == user) ) {
-         memmove(&entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
+         memmove( &entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
             sizeof(*entry->listeners) );
 
          entry->listener_count--;
@@ -924,7 +924,7 @@ void event_off_binary(const char *event, event_binary_cb_t cb, void *user) {
 
       if ( (!cb || listener->cb == cb) &&
            (!user || listener->user == user) ) {
-         memmove(&entry->binary_listeners[i], &entry->binary_listeners[i + 1], (entry->binary_listener_count - i - 1) *
+         memmove( &entry->binary_listeners[i], &entry->binary_listeners[i + 1], (entry->binary_listener_count - i - 1) *
             sizeof(*entry->binary_listeners) );
 
          entry->binary_listener_count--;

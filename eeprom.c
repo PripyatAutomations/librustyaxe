@@ -41,7 +41,7 @@
 //
 #endif
 
-#define	EEPROM_C        // Let the header know we're in the C file
+#define	EEPROM_C      // Let the header know we're in the C file
 #include "eeprom_layout.h"              // in $builddir/ and contains
                                         // offset/size/type data
 
