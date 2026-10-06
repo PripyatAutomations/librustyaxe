@@ -6,6 +6,19 @@
 #include <librustyaxe/core.h>
 #include <librustyaxe/io.serial.h>
 int main(void) {
+   char sentence[128];
+   assert(rr_nmea_rmc(381234567,-807654321,3,1791288000,sentence,sizeof(sentence)));
+   assert(rr_nmea_valid(sentence));
+   assert(strstr(sentence,",A,3807.407402,N,08045.925926,W,") && strstr(sentence,",M*"));
+   assert(rr_nmea_rmc(-900000000,1800000000,1,0,sentence,sizeof(sentence)));
+   assert(rr_nmea_valid(sentence));
+   assert(strstr(sentence,",9000.000000,S,18000.000000,E,"));
+   assert(!rr_nmea_rmc(900000001,0,1,0,sentence,sizeof(sentence)));
+   assert(!rr_nmea_rmc(0,-1800000001,1,0,sentence,sizeof(sentence)));
+   assert(!rr_nmea_rmc(0,0,4,0,sentence,sizeof(sentence)));
+   assert(!rr_nmea_rmc(0,0,1,0,sentence,8));
+   assert(rr_nmea_rmc(0,0,0,0,sentence,sizeof(sentence)));
+   assert(rr_nmea_valid(sentence) && strstr(sentence,",V,,,,,") && strstr(sentence,",N*"));
    char path[]="/tmp/rr-serial-config-XXXXXX";
    int fd=mkstemp(path);assert(fd>=0);
    FILE *f=fdopen(fd,"w");assert(f);

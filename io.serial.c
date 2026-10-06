@@ -194,8 +194,8 @@ static void nmea_angle(int32_t angle, unsigned width, char *out, size_t capacity
 }
 size_t rr_nmea_rmc(int32_t latitude, int32_t longitude, uint8_t flags, time_t utc,
                    char *out, size_t capacity) {
-   if (!out || capacity < 8 || latitude < -900000 || latitude > 900000 ||
-       longitude < -1800000 || longitude > 1800000 || (flags & ~3)) return 0;
+   if (!out || capacity < 8 || latitude < -900000000 || latitude > 900000000 ||
+       longitude < -1800000000 || longitude > 1800000000 || (flags & ~3)) return 0;
    struct tm nmea_tm;
    if (!gmtime_r(&utc, &nmea_tm)) return 0;
    char time_text[16], date_text[16], lat[24], lon[24];
