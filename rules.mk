@@ -62,12 +62,15 @@ ${librustyaxe}: ${BUILD_DIR}/librustyaxe/.timestamp ${real_librustyaxe_objs} ${l
 	@${CC} ${LIB_LDFLAGS} -Wl,-soname,librustyaxe.so.0 -o $@ ${real_librustyaxe_objs}  -lm -ltinfo ${LDFLAGS}|| exit 2
 	@ln -sf librustyaxe.so librustyaxe.so.0
 
-${BUILD_DIR}/librustyaxe/%.o:librustyaxe/%.c GNUmakefile ${librustyaxe_headers}
+# Every object includes build_config.h (via librustyaxe headers), so it must
+# wait for pack-eeprom to generate it.  Order-only avoids relinking on every
+# pack-eeprom run.
+${BUILD_DIR}/librustyaxe/%.o:librustyaxe/%.c GNUmakefile ${librustyaxe_headers} ${OBJECT_ORDER_ONLY}
 	@${RM} $@
 	@echo "[compile] $< => $@"
 	@${CC} ${CFLAGS} -o $@ -c $< || exit 2
 
-${BUILD_DIR}/librustyaxe/mongoose.o:ext/libmongoose/mongoose.c GNUmakefile ${librustyaxe_headers}
+${BUILD_DIR}/librustyaxe/mongoose.o:ext/libmongoose/mongoose.c GNUmakefile ${librustyaxe_headers} ${OBJECT_ORDER_ONLY}
 	@${RM} $@
 	@echo "[compile] $< => $@"
 	@${CC} ${CFLAGS} -o $@ -c $< || exit 2
