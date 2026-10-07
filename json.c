@@ -23,7 +23,9 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-static const char *json_parse_value(const char *s, const char *path, dict *d);
+#define JSON_MAX_DEPTH 64
+
+static const char *json_parse_value(const char *s, const char *path, dict *d, unsigned depth);
 
 // helper: append to path dynamically
 static char *path_append(const char *base, const char *suffix) {
@@ -57,146 +59,89 @@ static char *path_append(const char *base, const char *suffix) {
 /////////////////////////////////
 // helper: skip whitespace
 static const char *skip_ws(const char *s) {
-   while (*s && isspace( (unsigned char)*s ) ) {
+   while (*s && strchr(" \t\r\n", *s)) {
       s++;
    }
    return s;
 }
 
 
-// parse JSON string into a C string
+// Validate the complete quoted token before decoding it. Never skip past NUL.
 static const char *json_parse_str(const char *s, char **out) {
-   if (*s != '"') {
-      return NULL;
-   }
-   s++;
-   const char *start = s;
-   size_t len = 0;
-
+   if (*s != '"') { return NULL; }
+   const char *start = s++;
    while (*s && *s != '"') {
-      if (*s == '\\') {
-         s++;   // skip escaped char
-      }
-      s++; len++;
+      if ((unsigned char)*s < 0x20) { return NULL; }
+      if (*s == '\\' && !*++s) { return NULL; }
+      s++;
    }
-
-   if (*s != '"') {
-      return NULL;
-   }
-   *out = malloc(len + 1);
-
-   if (!*out) {
-      return NULL;
-   }
-   size_t j = 0;
-
-   for (const char *p = start ; p < s ; p++, j++) {
-      if (*p == '\\') {
-         p++;
-      }
-      (*out)[j] = *p;
-   }
-
-   (*out)[j] = '\0';
-
-   return s + 1;
+   if (*s != '"') { return NULL; }
+   char *token = strndup(start, (size_t)(s + 1 - start));
+   if (!token) { return NULL; }
+   *out = json_unescape(token);
+   free(token);
+   return *out ? s + 1 : NULL;
 }
 
-// parse primitive (number, true, false, null)
 static const char *json_parse_primitive(const char *s, char **out) {
    const char *start = s;
-   while (*s && !strchr(",]} \t\r\n", *s) ) {
-      s++;
-   }
-   size_t len = s - start;
-   *out = malloc(len + 1);
-
-   if (!*out) {
-      return NULL;
-   }
-   memcpy(*out, start, len);
-   (*out)[len] = '\0';
-
-   return s;
+   while (*s && !strchr(",]} \t\r\n", *s)) { s++; }
+   if (s == start) { return NULL; }
+   *out = strndup(start, (size_t)(s - start));
+   return *out ? s : NULL;
 }
 
-// parse JSON object
-static const char *json_parse_obj(const char *s, const char *path, dict *d) {
-   if (*s != '{') {
-      return NULL;
-   }
+static const char *json_parse_obj(const char *s, const char *path, dict *d, unsigned depth) {
    s = skip_ws(s + 1);
-
-   while (*s && *s != '}') {
-      s = skip_ws(s);
+   if (*s == '}') { return s + 1; }
+   dict *keys = dict_new();
+   if (!keys) { return NULL; }
+   while (*s) {
       char *key = NULL;
       s = json_parse_str(s, &key);
-
-      if (!s) {
-         return NULL;
+      if (!s) { goto fail; }
+      if (dict_get_type(keys, key) != VAL_END || dict_add_bool(keys, key, true)) {
+         free(key); goto fail;
       }
       s = skip_ws(s);
-
-      if (*s++ != ':') {
-         free(key);
-
-         return NULL;
-      }
+      if (*s != ':') { free(key); goto fail; }
       char *newpath = path_append(path, key);
       free(key);
-
-      if (!newpath) {
-         return NULL;
-      }
-      s = skip_ws(s);
-      s = json_parse_value(s, newpath, d);
+      if (!newpath) { goto fail; }
+      s = json_parse_value(s + 1, newpath, d, depth + 1);
       free(newpath);
-
-      if (!s) {
-         return NULL;
-      }
+      if (!s) { goto fail; }
       s = skip_ws(s);
-
-      if (*s == ',') {
-         s++;
-      }
+      if (*s == '}') { dict_free(keys); return s + 1; }
+      if (*s != ',') { goto fail; }
+      s = skip_ws(s + 1);
+      if (*s == '}') { goto fail; }
    }
-   return (*s == '}') ? s + 1 : NULL;
+fail:
+   dict_free(keys);
+   return NULL;
 }
 
-// parse JSON array
-static const char *json_parse_array(const char *s, const char *path, dict *d) {
-   if (*s != '[') {
-      return NULL;
-   }
+static const char *json_parse_array(const char *s, const char *path, dict *d, unsigned depth) {
    s = skip_ws(s + 1);
-   int idx = 0;
-
-   while (*s && *s != ']') {
+   if (*s == ']') { return s + 1; }
+   unsigned idx = 0;
+   while (*s) {
       char idxbuf[32];
-      snprintf(idxbuf, sizeof(idxbuf), "[%d]", idx++);
-
+      snprintf(idxbuf, sizeof(idxbuf), "[%u]", idx++);
       char *newpath = path_append(path, idxbuf);
-
-      if (!newpath) {
-         return NULL;
-      }
-      s = skip_ws(s);
-      s = json_parse_value(s, newpath, d);
+      if (!newpath) { return NULL; }
+      s = json_parse_value(s, newpath, d, depth + 1);
       free(newpath);
-
-      if (!s) {
-         return NULL;
-      }
+      if (!s) { return NULL; }
       s = skip_ws(s);
-
-      if (*s == ',') {
-         s++;
-      }
+      if (*s == ']') { return s + 1; }
+      if (*s != ',') { return NULL; }
+      s = skip_ws(s + 1);
+      if (*s == ']') { return NULL; }
    }
-   return (*s == ']') ? s + 1 : NULL;
+   return NULL;
 }
-
 
 // escape JSON string (returns malloc'd buffer with quotes included)
 char *json_escape(const char *s) {
@@ -270,122 +215,74 @@ char *json_escape(const char *s) {
    return out;
 }
 
-// unescape JSON string (expects surrounding quotes, returns malloc'd buffer)
+// Decode a JSON string into the library's NUL-terminated UTF-8 representation.
+// Embedded NUL and lone UTF-16 surrogates cannot be represented safely.
+static bool json_hex4(const char *p, const char *end, unsigned *code) {
+   if (end - p < 4) { return false; }
+   *code = 0;
+   for (unsigned i = 0; i < 4; i++) {
+      unsigned char c = p[i];
+      unsigned digit;
+      if (c >= '0' && c <= '9') { digit = c - '0'; }
+      else if (c >= 'a' && c <= 'f') { digit = c - 'a' + 10; }
+      else if (c >= 'A' && c <= 'F') { digit = c - 'A' + 10; }
+      else { return false; }
+      *code = (*code << 4) | digit;
+   }
+   return true;
+}
+
 char *json_unescape(const char *s) {
-   if (!s) {
-      return NULL;
-   }
+   if (!s) { return NULL; }
    size_t len = strlen(s);
-
-   if (len < 2 || s[0] != '"' || s[len - 1] != '"') {
-      Log(LOG_WARN, "librustyaxe", "Invalid JSON string: %s", s);
-
-      return NULL;
-   }
-   // worst case: input shrinks, so allocate len+1
+   if (len < 2 || s[0] != '"' || s[len - 1] != '"') { return NULL; }
    char *out = malloc(len);
-
-   if (!out) {
-      Log(LOG_DEBUG, "librustyaxe", "OOM in json_unescape");
-
-      return NULL;
-   }
-   const char *p = s + 1;         // skip opening quote
-   const char *end = s + len - 1;  // before closing quote
+   if (!out) { return NULL; }
+   const char *p = s + 1, *end = s + len - 1;
    char *q = out;
-
    while (p < end) {
-      if (*p == '\\') {
-         p++;
-
-         if (p >= end) {
+      unsigned char c = *p++;
+      if (c < 0x20 || c == '"') { goto fail; }
+      if (c != '\\') { *q++ = c; continue; }
+      if (p == end) { goto fail; }
+      c = *p++;
+      switch (c) {
+         case '"': case '\\': case '/': *q++ = c; break;
+         case 'b': *q++ = '\b'; break;
+         case 'f': *q++ = '\f'; break;
+         case 'n': *q++ = '\n'; break;
+         case 'r': *q++ = '\r'; break;
+         case 't': *q++ = '\t'; break;
+         case 'u': {
+            unsigned code;
+            if (!json_hex4(p, end, &code) || !code) { goto fail; }
+            p += 4;
+            if (code >= 0xD800 && code <= 0xDBFF) {
+               unsigned low;
+               if (end - p < 6 || p[0] != '\\' || p[1] != 'u' ||
+                   !json_hex4(p + 2, end, &low) || low < 0xDC00 || low > 0xDFFF) { goto fail; }
+               p += 6;
+               code = 0x10000 + ((code - 0xD800) << 10) + low - 0xDC00;
+            } else if (code >= 0xDC00 && code <= 0xDFFF) { goto fail; }
+            if (code < 0x80) { *q++ = code; }
+            else if (code < 0x800) {
+               *q++ = 0xC0 | (code >> 6); *q++ = 0x80 | (code & 0x3F);
+            } else if (code < 0x10000) {
+               *q++ = 0xE0 | (code >> 12); *q++ = 0x80 | ((code >> 6) & 0x3F); *q++ = 0x80 | (code & 0x3F);
+            } else {
+               *q++ = 0xF0 | (code >> 18); *q++ = 0x80 | ((code >> 12) & 0x3F);
+               *q++ = 0x80 | ((code >> 6) & 0x3F); *q++ = 0x80 | (code & 0x3F);
+            }
             break;
          }
-
-         switch (*p) {
-            case '\"': {
-               *q++ = '\"'; break;
-            }
-            case '\\': {
-               *q++ = '\\'; break;
-            }
-            case '/': {
-               *q++ = '/';  break;
-            }
-            case 'b': {
-               *q++ = '\b'; break;
-            }
-            case 'f': {
-               *q++ = '\f'; break;
-            }
-            case 'n': {
-               *q++ = '\n'; break;
-            }
-            case 'r': {
-               *q++ = '\r'; break;
-            }
-            case 't': {
-               *q++ = '\t'; break;
-            }
-            case 'u': {
-               if (end - p < 4) {
-                  // not enough chars
-                  Log(LOG_WARN, "librustyaxe", "Invalid \\u escape");
-                  free(out);
-
-                  return NULL;
-               }
-               unsigned code = 0;
-
-               for (int i = 0 ; i < 4 ; i++) {
-                  p++;
-
-                  if (p >= end) {
-                     free(out);
-
-                     return NULL;
-                  }
-                  char c = *p;
-                  code <<= 4;
-
-                  if (c >= '0' && c <= '9') {
-                     code |= c - '0';
-                  } else if (c >= 'a' && c <= 'f') {
-                     code |= c - 'a' + 10;
-                  } else if (c >= 'A' && c <= 'F') {
-                     code |= c - 'A' + 10;
-                  } else {
-                     free(out);
-
-                     return NULL;
-                  }
-               }
-
-               if (code < 0x80) {
-                  *q++ = code;
-               } else if (code < 0x800) {
-                  *q++ = 0xC0 | (code >> 6);
-                  *q++ = 0x80 | (code & 0x3F);
-               } else {
-                  *q++ = 0xE0 | (code >> 12);
-                  *q++ = 0x80 | ( (code >> 6) & 0x3F);
-                  *q++ = 0x80 | (code & 0x3F);
-               }
-               break;
-            }
-            default: {
-               *q++ = *p;  // unknown escape, just copy
-               break;
-            }
-         }
-      } else {
-         *q++ = *p;
+         default: goto fail;
       }
-      p++;
    }
    *q = '\0';
-
    return out;
+fail:
+   free(out);
+   return NULL;
 }
 
 static json_node *json_make_node(const char *key) {
@@ -794,10 +691,11 @@ static bool json_number_is_integer(const char *s) {
    return !strpbrk(s, ".eE");
 }
 
-static const char *json_parse_value(const char *s, const char *path, dict *d) {
+static const char *json_parse_value(const char *s, const char *path, dict *d, unsigned depth) {
    s = skip_ws(s);
 
-   if (!*s) { return NULL; }
+   if (!*s || depth > JSON_MAX_DEPTH) { return NULL; }
+   if (dict_get_type(d, path) != VAL_END) { return NULL; }
 
    if (*s == '"') {
       char *val = NULL;
@@ -815,9 +713,9 @@ static const char *json_parse_value(const char *s, const char *path, dict *d) {
       return s;
    }
 
-   if (*s == '{') { return json_parse_obj(s, path, d); }
+   if (*s == '{') { return json_parse_obj(s, path, d, depth); }
 
-   if (*s == '[') { return json_parse_array(s, path, d); }
+   if (*s == '[') { return json_parse_array(s, path, d, depth); }
 
    char *val = NULL;
    s = json_parse_primitive(s, &val);
@@ -830,45 +728,63 @@ static const char *json_parse_value(const char *s, const char *path, dict *d) {
       if (dict_add_bool(d, path, true) != 0) { goto fail; }
    } else if ( !strcmp(val, "false") ) {
       if (dict_add_bool(d, path, false) != 0) { goto fail; }
-   } else if ( json_number_is_integer(val) ) {
-      char *ep = NULL;
-      errno = 0;
-      long long ll = strtoll(val, &ep, 10);
-
-      if (errno == 0 && ep != val && *ep == '\0') {
-         if (ll >= INT_MIN && ll <= INT_MAX) {
-            dict_add_int(d, path, (int)ll);
-         } else if (ll >= LONG_MIN && ll <= LONG_MAX) {
-            dict_add_long(d, path, (long)ll);
-         } else {
-            dict_add_llong(d, path, ll);
-         }
-      } else if (val[0] != '-') {
-         errno = 0;
-         unsigned long long ull = strtoull(val, &ep, 10);
-
-         if (errno != 0 || ep == val || *ep != '\0') { goto fail; }
-
-         if (ull <= UINT_MAX) {
-            dict_add_uint(d, path, (unsigned int)ull);
-         } else if (ull <= ULONG_MAX) {
-            dict_add_ulong(d, path, (unsigned long)ull);
-         } else {
-            dict_add_ullong(d, path, ull);
-         }
-      }
    } else {
-      char *ep = NULL;
-      errno = 0;
-      double v = strtod(val, &ep);
-
-      if ( errno == ERANGE || ep == val || *ep != '\0' || !isfinite(v) ) {
-         goto fail;
+      const char *number = val;
+      if (*number == '-') { number++; }
+      if (*number == '0') { number++; }
+      else if (*number >= '1' && *number <= '9') { while (isdigit((unsigned char)*number)) { number++; } }
+      else { goto fail; }
+      if (*number == '.') {
+         number++;
+         if (!isdigit((unsigned char)*number)) { goto fail; }
+         while (isdigit((unsigned char)*number)) { number++; }
       }
+      if (*number == 'e' || *number == 'E') {
+         number++;
+         if (*number == '+' || *number == '-') { number++; }
+         if (!isdigit((unsigned char)*number)) { goto fail; }
+         while (isdigit((unsigned char)*number)) { number++; }
+      }
+      if (*number) { goto fail; }
+      if (json_number_is_integer(val)) {
+         char *ep = NULL;
+         errno = 0;
+         long long ll = strtoll(val, &ep, 10);
 
-      dict_add_double(d, path, v);
+         if (errno == 0 && ep != val && *ep == '\0') {
+            if (ll >= INT_MIN && ll <= INT_MAX) {
+               if (dict_add_int(d, path, (int)ll)) { goto fail; }
+            } else if (ll >= LONG_MIN && ll <= LONG_MAX) {
+               if (dict_add_long(d, path, (long)ll)) { goto fail; }
+            } else {
+               if (dict_add_llong(d, path, ll)) { goto fail; }
+            }
+         } else if (val[0] != '-') {
+            errno = 0;
+            unsigned long long ull = strtoull(val, &ep, 10);
+
+            if (errno != 0 || ep == val || *ep != '\0') { goto fail; }
+
+            if (ull <= UINT_MAX) {
+               if (dict_add_uint(d, path, (unsigned int)ull)) { goto fail; }
+            } else if (ull <= ULONG_MAX) {
+               if (dict_add_ulong(d, path, (unsigned long)ull)) { goto fail; }
+            } else {
+               if (dict_add_ullong(d, path, ull)) { goto fail; }
+            }
+         } else { goto fail; }
+      } else {
+         char *ep = NULL;
+         errno = 0;
+         double v = strtod(val, &ep);
+
+         if ( errno == ERANGE || ep == val || *ep != '\0' || !isfinite(v) ) {
+            goto fail;
+         }
+
+         if (dict_add_double(d, path, v)) { goto fail; }
+      }
    }
-
    free(val);
 
    return s;
@@ -886,7 +802,7 @@ dict *json2dict(const char *json) {
 
    if (!d) { return NULL; }
 
-   const char *res = json_parse_value(json, "", d);
+   const char *res = json_parse_value(json, "", d, 0);
 
    /* A websocket message must contain exactly one JSON value.  Previously trailing bytes
     * were silently ignored, which made truncated or concatenated frames look like valid
@@ -902,5 +818,5 @@ dict *json2dict(const char *json) {
 
 void json_parse_and_flatten(const char *json, dict *dptr) {
    if (!json || !dptr) { return; }
-   json_parse_value(json, "", dptr);
+   json_parse_value(json, "", dptr, 0);
 }

@@ -417,13 +417,13 @@ bool log_remove_callback(struct log_callback *log_callback) {
    return false;   // callback not found
 }
 
-bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap) ) {
+struct log_callback *log_add_callback_token( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap) ) {
    struct log_callback *newcb = malloc( sizeof(struct log_callback) );
 
    if (!newcb) {
       fprintf(stderr, "OOM in log_set_callback!\n");
 
-      return false;
+      return NULL;
    }
    memset( newcb, 0, sizeof(struct log_callback) );
    newcb->callback = log_va_cb;
@@ -447,5 +447,9 @@ bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *su
       log_callbacks = newcb;
    }
 
-   return true;
+   return newcb;
+}
+
+bool log_add_callback(bool (*callback)(logpriority_t priority, const char *subsys, const char *fmt, va_list ap)) {
+   return log_add_callback_token(callback) != NULL;
 }

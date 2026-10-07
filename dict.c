@@ -1110,13 +1110,13 @@ unsigned long dict_get_ulong(dict *d, const char *key, unsigned long def) {
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= 0 && dv <= ULONG_MAX) { return (unsigned long)dv; }
+         if (isfinite(dv) && dv >= 0 && dv < (double)(ULONG_MAX / 2 + 1) * 2.0) { return (unsigned long)dv; }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= 0 && dv <= ULONG_MAX) { return (unsigned long)dv; }
+         if (isfinite(dv) && dv >= 0 && dv < (double)(ULONG_MAX / 2 + 1) * 2.0) { return (unsigned long)dv; }
          break;
       }
       case VAL_BOOL: {
@@ -1172,13 +1172,13 @@ long dict_get_long(dict *d, const char *key, long def) {
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= LONG_MIN && dv <= LONG_MAX) { return (long)dv; }
+         if (isfinite(dv) && dv >= LONG_MIN && dv < -(double)LONG_MIN) { return (long)dv; }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= LONG_MIN && dv <= LONG_MAX) { return (long)dv; }
+         if (isfinite(dv) && dv >= LONG_MIN && dv < -(double)LONG_MIN) { return (long)dv; }
          break;
       }
       case VAL_BOOL: {
@@ -1230,13 +1230,13 @@ long long dict_get_llong(dict *d, const char *key, long long def) {
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= LLONG_MIN && dv <= LLONG_MAX) { return (long long)dv; }
+         if (isfinite(dv) && dv >= LLONG_MIN && dv < -(double)LLONG_MIN) { return (long long)dv; }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= LLONG_MIN && dv <= LLONG_MAX) { return (long long)dv; }
+         if (isfinite(dv) && dv >= LLONG_MIN && dv < -(double)LLONG_MIN) { return (long long)dv; }
          break;
       }
       case VAL_BOOL: {
@@ -1292,13 +1292,13 @@ unsigned long long dict_get_ullong(dict *d, const char *key, unsigned long long 
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= 0 && dv <= ULLONG_MAX) { return (unsigned long long)dv; }
+         if (isfinite(dv) && dv >= 0 && dv < (double)(ULLONG_MAX / 2 + 1) * 2.0) { return (unsigned long long)dv; }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= 0 && dv <= ULLONG_MAX) { return (unsigned long long)dv; }
+         if (isfinite(dv) && dv >= 0 && dv < (double)(ULLONG_MAX / 2 + 1) * 2.0) { return (unsigned long long)dv; }
          break;
       }
       case VAL_BOOL: {

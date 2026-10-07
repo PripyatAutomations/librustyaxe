@@ -62,6 +62,10 @@ extern enum LogPriority log_priority_from_str(const char *priority);
 extern const char *log_priority_to_str(logpriority_t priority);
 extern void logger_end(void);
 
+// Token registrations must be removed before their owner module is unloaded.
+extern struct log_callback *log_add_callback_token(bool (*log_va_cb)(logpriority_t priority,
+   const char *subsys, const char *fmt, va_list ap));
+
 // Add a callback to the Log() call
 extern bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt,
    va_list ap) );
