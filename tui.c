@@ -239,7 +239,7 @@ bool tui_init(void) {
    tui_sigwinch_installed = (previous_sigwinch_handler != SIG_ERR);
 
    // set default status line
-   char *s_status_offline = tui_colorize_string("{bright-black}[{red}OFFLINE{bright-black}]{reset}");
+   char *s_status_offline = tui_colorize_string("\00314[\00304OFFLINE\00314]\017");
    snprintf(status_line, STATUS_LEN, "%s", s_status_offline);
    free(s_status_offline);
 
@@ -611,10 +611,10 @@ void tui_redraw_clock(void) {
       if (tui_over_ssh) {
          // SSH session: HH:MM only, so we can redraw far less often
          snprintf(clock_tagged, sizeof(clock_tagged),
-            "{bright-black}[{cyan}%02d{bright-black}:{cyan}%02d{bright-black}]{reset}", tm.tm_hour, tm.tm_min);
+            "\00314[\00310%02d\00314:\00310%02d\00314]\017", tm.tm_hour, tm.tm_min);
       } else {
          snprintf(clock_tagged, sizeof(clock_tagged),
-            "{bright-black}[{cyan}%02d{bright-black}:{cyan}%02d{bright-black}:{cyan}%02d{bright-black}]{reset}",
+            "\00314[\00310%02d\00314:\00310%02d\00314:\00310%02d\00314]\017",
             tm.tm_hour, tm.tm_min, tm.tm_sec);
       }
       char *clock_colored = tui_colorize_string(clock_tagged);
@@ -671,7 +671,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
 
 // This will take a dict with variables for us to escape anywhere we see
 // ${variable}
-// We then process {color} escapes.
+// The result is rendered with IRC color/style controls.
 char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
    if (!fmt) {
       return NULL;
@@ -947,7 +947,7 @@ void tui_update_input_line(void) {
 
    // --- prepare colored prompt ---
    char prompt[512];
-   snprintf(prompt, sizeof(prompt), "{bright-cyan}%s{cyan}>{reset} ", win->title);
+   snprintf(prompt, sizeof(prompt), "\00311%s\00310>\017 ", win->title);
    char *color_prompt = tui_colorize_string(prompt);
 
    // --- redraw line ---

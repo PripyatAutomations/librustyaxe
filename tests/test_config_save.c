@@ -76,12 +76,19 @@ int main(void) {
    FILE *manual = fopen(path, "w");
    CHECK(manual != NULL);
    if (manual) {
-      fputs("[general]\nwrapped=first\\\n\t   second\\\n    third\n", manual);
+      fputs("[general]\nwrapped=first\\\n\t   second\\\n    third\n"
+         "tui.status-line=\\C04red \\Bbold\\B\\O\n"
+         "theme.literal=\\\\C04\n"
+         "path=C:\\Backup\n", manual);
       fclose(manual);
       dict *loaded = cfg_load(path);
       CHECK(loaded != NULL);
       if (loaded) {
          CHECK(strcmp(dict_get(loaded, "wrapped", ""), "firstsecondthird") == 0);
+                  CHECK(strcmp(dict_get(loaded, "tui.status-line", ""),
+                     "\00304red \002bold\002\017") == 0);
+                  CHECK(strcmp(dict_get(loaded, "theme.literal", ""), "\\C04") == 0);
+                  CHECK(strcmp(dict_get(loaded, "path", ""), "C:\\Backup") == 0);
          dict_free(loaded);
       }
    }

@@ -337,6 +337,53 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
 }
 
 static dict *cfg_load_depth(const char *path, unsigned depth);
+static bool cfg_formatting_key(const char *key) {
+   return !strncmp(key, "theme.", 6) || !strncmp(key, "ui.theme.", 9) ||
+      !strcmp(key, "tui.status-line") || !strcmp(key, "tui.room-status-line");
+}
+
+static void cfg_expand_format_escapes(char *value) {
+   const char *src = value;
+   char *dst = value;
+   while (*src) {
+      if (*src == '\\' && src[1]) {
+         if (src[1] == '\\') {
+            *dst++ = '\\';
+            src += 2;
+            continue;
+         }
+         unsigned char control = 0;
+         switch (src[1]) {
+            case 'B': control = 0x02; break;
+            case 'C': control = 0x03; break;
+            case 'I': control = 0x1d; break;
+            case 'O': control = 0x0f; break;
+            case 'R': control = 0x16; break;
+            case 'S': control = 0x1e; break;
+            case 'U': control = 0x1f; break;
+            case 'M': control = 0x11; break;
+         }
+         if (control) {
+            *dst++ = (char)control;
+            src += 2;
+            if (control == 0x03) {
+               for (int digit = 0; digit < 2 && isdigit((unsigned char)*src); digit++)
+                  *dst++ = *src++;
+               if (*src == ',' && isdigit((unsigned char)src[1])) {
+                  *dst++ = *src++;
+                  for (int digit = 0; digit < 2 && isdigit((unsigned char)*src); digit++)
+                     *dst++ = *src++;
+               }
+            }
+            continue;
+         }
+      }
+      *dst++ = *src++;
+   }
+   *dst = '\0';
+}
+
+static dict *cfg_load_depth(const char *path, unsigned depth);
 
 static bool cfg_merge_dict(dict *dst, dict *src) {
    int rank = 0;
@@ -643,6 +690,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          if (!key && !val) {
             continue;
          }
+         if (val && cfg_formatting_key(key)) cfg_expand_format_escapes(val);
          dict_add(newcfg, key, val);
       } else if (strncasecmp(this_section, "server:", 7) == 0) {
          key = NULL;

@@ -51,11 +51,11 @@ const char *get_chat_ts(time_t ts) {
    if (tmsg.tm_year == tcurr.tm_year &&
        tmsg.tm_yday == tcurr.tm_yday) {
       strftime(chat_ts, sizeof(chat_ts),
-         "{bright-black}[{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ", &tmsg);
+         "\00314[\00310%H\00314:\00310%M\00314:\00310%S\00314]\017 ", &tmsg);
    } else {
       // Include the date for messages before today
-      strftime(chat_ts, sizeof(chat_ts), "{bright-black}[{cyan}%Y-%m-%d{bright-black} "
-         "{cyan}%H{bright-black}:{cyan}%M{bright-black}:{cyan}%S{bright-black}]{reset} ", &tmsg);
+      strftime(chat_ts, sizeof(chat_ts), "\00314[\00310%Y-%m-%d\00314 "
+         "\00310%H\00314:\00310%M\00314:\00310%S\00314]\017 ", &tmsg);
    }
 
    return chat_ts;

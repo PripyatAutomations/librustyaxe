@@ -26,7 +26,7 @@ tui.c:		Simple Text User Interface library
 tui.colorpick.c: Future color selector popup for IRC
 tui.completion.c: Future context-sensistive text completion (tab/space/arrows)
 tui.keys.c:	Keyboard interface for TUI, using libtermkey
-tui.theme.c:	TUI theme/named colors support
+tui.theme.c:	TUI IRC color/style rendering
 tui.window.c:	Window manager for the TUI
 util.file.c:	File related utilities
 util.math.c:	Portable implementations of some maths

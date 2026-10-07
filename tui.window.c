@@ -112,7 +112,7 @@ bool tui_window_destroy(tui_window_t *w) {
    }
 
    if (strcasecmp(w->title, "status") == 0) {
-      tui_print(tui_active_window(), "{red}*** {bright-red}Can't destroy status window! {red}***{reset}.");
+      tui_print(tui_active_window(), "\00304*** Can't destroy status window! ***\017.");
 
       return false;
    }
@@ -170,7 +170,7 @@ bool tui_window_destroy(tui_window_t *w) {
 
 bool tui_window_destroy_id(int id) {
    if (id < 1 || id > tui_num_windows) {
-      tui_print(tui_active_window(), "{bright-red}Invalid window %d, must be between 2 and %d{reset}.", id,
+      tui_print(tui_active_window(), "\00304Invalid window %d, must be between 2 and %d\017.", id,
          tui_num_windows);
 
       return true;
@@ -218,7 +218,7 @@ tui_window_t *tui_window_focus(const char *title) {
 
 tui_window_t *tui_window_focus_id(int id) {
    if (id < 1 || id > tui_num_windows) {
-      tui_print(tui_active_window(), "{bright-red}Invalid window %d, must be between 1 and %d{reset}.", id,
+      tui_print(tui_active_window(), "\00304Invalid window %d, must be between 1 and %d\017.", id,
          tui_num_windows);
 
       return NULL;

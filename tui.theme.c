@@ -19,7 +19,6 @@
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <librustyaxe/core.h>
-#include <librustyaxe/color.h>
 #include <librrprotocol/rrprotocol.h>
 
 bool cfg_tui_colors = true;
@@ -79,123 +78,6 @@ static const ansi_entry_t ansi_table[] = {
       "strike-off", "\033[29m"
    },                                                           // turns off
                                                                 // strike-through
-   // Normal foreground colors
-   {
-      "black", "\033[30m"
-   },
-   {
-      "red", "\033[31m"
-   },
-   {
-      "green", "\033[32m"
-   },
-   {
-      "yellow", "\033[33m"
-   },
-   {
-      "brown", "\033[38;5;94m"
-   },                                                               // mIRC-style brown
-   {
-      "blue", "\033[34m"
-   },
-   {
-      "magenta", "\033[35m"
-   },
-   {
-      "cyan", "\033[36m"
-   },
-   {
-      "white", "\033[37m"
-   },
-   {
-      "orange", "\033[38;5;208m"
-   },                                                                 // mIRC-style orange
-
-   // Bright foreground colors
-   {
-      "bright-black", "\033[90m"
-   },                                                                 // ensure
-                                                                      // bright-black
-                                                                      // exists
-   {
-      "bright-red", "\033[91m"
-   },
-   {
-      "bright-green", "\033[92m"
-   },
-   {
-      "bright-yellow", "\033[93m"
-   },
-   {
-      "bright-blue", "\033[94m"
-   },
-   {
-      "bright-magenta", "\033[95m"
-   },
-   {
-      "bright-cyan", "\033[96m"
-   },
-   {
-      "bright-white", "\033[97m"
-   },
-
-   // Background colors
-   {
-      "bg-black", "\033[40m"
-   },
-   {
-      "bg-red", "\033[41m"
-   },
-   {
-      "bg-green", "\033[42m"
-   },
-   {
-      "bg-yellow", "\033[43m"
-   },
-   {
-      "bg-brown", "\033[48;5;94m"
-   },
-   {
-      "bg-blue", "\033[44m"
-   },
-   {
-      "bg-magenta", "\033[45m"
-   },
-   {
-      "bg-cyan", "\033[46m"
-   },
-   {
-      "bg-white", "\033[47m"
-   },
-   {
-      "bg-orange", "\033[48;5;208m"
-   },
-
-   // Bright backgrounds
-   {
-      "bg-bright-black", "\033[100m"
-   },
-   {
-      "bg-bright-red", "\033[101m"
-   },
-   {
-      "bg-bright-green", "\033[102m"
-   },
-   {
-      "bg-bright-yellow", "\033[103m"
-   },
-   {
-      "bg-bright-blue", "\033[104m"
-   },
-   {
-      "bg-bright-magenta", "\033[105m"
-   },
-   {
-      "bg-bright-cyan", "\033[106m"
-   },
-   {
-      "bg-bright-white", "\033[107m"
-   },
    {
       NULL, NULL
    }
@@ -225,56 +107,13 @@ static const char *ansi_code(const char *tag) {
    return NULL;
 }
 
-// Resolve a theme-configurable tag (e.g. "headers", "completion") through
-// cfg:ui.theme.<tag>. Values may be bare ("cyan") or braced ("{cyan}", as
-// they appear in message templates). Returns NULL if there is no such key
-// or the value doesn't resolve to an ANSI tag. One level deep only, so a
-// bogus config can't loop us.
-static const char *theme_ansi_code(const char *tag) {
-   char key[80];
-
-   if (!tag || !*tag || strlen(tag) > 32) {
-      return NULL;
-   }
-
-   /* Theme names are identifiers. Reject punctuation from ordinary text before consulting
-    * cfg_get(); JSON such as {"ts":123} must stay literal and must never turn into a
-    * lookup for ui.theme."ts":123. */
-   for (const unsigned char *p = (const unsigned char *)tag ; *p ; p++) {
-      if (!isalnum(*p) && *p != '-' && *p != '_') { return NULL; }
-   }
-
-   snprintf(key, sizeof(key), "ui.theme.%s", tag);
-   const char *val = cfg_get(key);
-
-   if (!val || !*val) {
-      return NULL;
-   }
-   // Strip surrounding braces if present
-   char clean[64];
-   size_t vlen = strlen(val);
-
-   if (vlen >= 2 && val[0] == '{' && val[vlen - 1] == '}') {
-      vlen -= 2;
-
-      if ( vlen >= sizeof(clean) ) {
-         vlen = sizeof(clean) - 1;
-      }
-      memcpy(clean, val + 1, vlen);
-      clean[vlen] = '\0';
-      val = clean;
-   }
-
-   return ansi_code(val);
-}
-
 char *tui_colorize_string(const char *in) {
    if (!in) {
       return NULL;
    }
-   // Reuse the existing IRC parser before applying terminal colors. Keep
-   // legacy tags available for user themes and old configuration templates.
-   char *irc = strpbrk(in, "\003\002\037\026\017\035") ? irc_to_tui_colors(in) : NULL;
+   // Convert IRC controls to terminal ANSI before handling TUI style tags.
+   char *irc = strpbrk(in, "\003\002\021\026\035\036\037\017") ? irc_to_tui_colors(in) : NULL;
+   bool converted_irc = irc != NULL;
    if (irc) in = irc;
    size_t len = strlen(in);
    char *out = malloc(len * 8 + 64);  // enough for ANSI codes
@@ -294,10 +133,15 @@ char *tui_colorize_string(const char *in) {
          p++;
 
          if (*p == '[') {
+            const char *sequence_start = p - 1;
             p++;
-            while ( *p && !isalpha( (unsigned char)*p ) ) { p++; }
-
-            if (*p) { p++; }
+            while (*p && !isalpha((unsigned char)*p)) p++;
+            if (*p) p++;
+            if (converted_irc && cfg_tui_colors) {
+               size_t sequence_length = (size_t)(p - sequence_start);
+               memcpy(o, sequence_start, sequence_length);
+               o += sequence_length;
+            }
          }
       } else if (*p == '{') {
          const char *end = strchr(p, '}');
@@ -317,105 +161,14 @@ char *tui_colorize_string(const char *in) {
 
          bool tag_handled = false;
 
-         // if TUI colors are enabled, insert them
-         if (cfg_tui_colors) {
-            // Hex color support: {#rgb}, {#rrggbb}, {#rrggbb:fallback} and
-            // bg- prefixed variants. Picks truecolor/256/named based on what
-            // the terminal reports, falling back to the :named tag (or the
-            // nearest of the 16 base colors) when high color is unavailable.
-            char hexbuf[16], fbbuf[64];
-            bool hex_bg = false;
-
-            if ( color_tag_parse(key, hexbuf, sizeof(hexbuf), fbbuf, sizeof(fbbuf), &hex_bg) ) {
-               static int cap = -1;   // 2 = truecolor, 1 = 256color, 0 = 16
-
-               if (cap < 0) {
-                  const char *ct = getenv("COLORTERM");
-
-                  if ( ct && (strcasecmp(ct, "truecolor") == 0 || strcasecmp(ct, "24bit") == 0) ) {
-                     cap = 2;
-                  } else {
-                     const char *t = getenv("TERM");
-                     cap = ( t && strstr(t, "256color") ) ? 1 : 0;
-                  }
-               }
-
-               int hr = 0, hg = 0, hb = 0;
-               color_parse_hex(hexbuf, &hr, &hg, &hb);
-
-               if (cap == 2) {
-                  o += sprintf(o, "\033[%d;2;%d;%d;%dm", (hex_bg ? 48 : 38), hr, hg, hb);
-               } else if (cap == 1) {
-                  int n = color_rgb_to_ansi256(hr, hg, hb);
-
-                  if (n >= 0) {
-                     o += sprintf(o, "\033[%d;5;%dm", (hex_bg ? 48 : 38), n);
-                  }
-               } else {
-                  // 16-color terminal: use the explicit :fallback if given,
-                  // else the nearest base color
-                  const char *fb = ( fbbuf[0] ? fbbuf : color_nearest_named(hr, hg, hb) );
-                  const char *code = ansi_code(fb);
-
-                  if (!code && !fbbuf[0]) {
-                     // nearest_named returned a name ansi_code() should know
-                  }
-
-                  if (code) {
-                     if (hex_bg) {
-                        // convert fg code (30-97) to bg code (40-107)
-                        const char *p2 = strchr(code, '[');
-                        int n2 = p2 ? atoi(p2 + 1) : 0;
-                        o += sprintf(o, "\033[%dm", n2 + 10);
-                     } else {
-                        o += sprintf(o, "%s", code);
-                     }
-                  }
-               }
-               tag_handled = true;
-               p = end + 1;
-               continue;
-            }
-
-            // look up ANSI escape; theme-config tags (headers, completion,...)
-            // resolve through ui.theme.<tag> if not a literal color name
-            const ansi_entry_t *ae;
-
-            for (ae = ansi_table ; ae->tag ; ae++) {
-               if (strcmp(ae->tag, key) == 0) {
-                  o += sprintf(o, "%s", ae->code);
-                  tag_handled = true;
-                  break;
-               }
-            }
-
-            if (!ae->tag) {
-               const char *code = theme_ansi_code(key);
-
-               if (code) {
-                  o += sprintf(o, "%s", code);
-                  tag_handled = true;
-               }
-            }
-         }
-
-         if (!cfg_tui_colors) {
-            // Color tags are still formatting control when colors are
-            // disabled: consume known tags, while preserving unknown braces.
-            char hexbuf[16], fbbuf[64];
-            bool hex_bg = false;
-
-            if ( color_tag_parse(key, hexbuf, sizeof(hexbuf), fbbuf, sizeof(fbbuf), &hex_bg) || ansi_code(key) ) {
-               tag_handled = true;
-            }
-         }
+         const char *code = ansi_code(key);
+         if (code && cfg_tui_colors) o += sprintf(o, "%s", code);
+         if (code) tag_handled = true;
 
          if (tag_handled) {
             p = end + 1;
          } else {
-            // Braces are ordinary log/chat text unless the contents name a
-            // known color tag. Preserve JSON, config values, and other
-            // literal brace-delimited text verbatim.
+            // Preserve ordinary brace-delimited text verbatim.
             *o++ = *p++;
          }
       } else {
@@ -428,109 +181,65 @@ char *tui_colorize_string(const char *in) {
    return out;
 }
 
-// XXX: Add support for extended colors
 char *irc_to_tui_colors(const char *in) {
    if (!in) {
       return NULL;
    }
-   // IRC color codes
-   // ^C##[,##] for fg/bg colors
-   // ^B bold, ^U underline, ^R reverse, ^O reset, ^_ underline, ^I italic
-   // (rare)
-   const char *colors[] = {
-      "bright-white",   // 0
-      "black",          // 1
-      "blue",           // 2
-      "green",          // 3
-      "bright-red",     // 4
-      "brown",          // 5
-      "magenta",        // 6
-      "orange",         // 7
-      "bright-yellow",  // 8
-      "bright-green",   // 9
-      "cyan",           // 10
-      "bright-cyan",    // 11
-      "bright-blue",    // 12
-      "bright-magenta", // 13
-      "bright-black",   // 14
-      "white"           // 15
+   static const char *foreground[] = {
+      "97", "30", "34", "32", "91", "38;5;94", "35", "38;5;208",
+      "93", "92", "36", "96", "94", "95", "90", "37"
    };
-
-   char *out = malloc(strlen(in) * 16 + 64);
+   static const char *background[] = {
+      "107", "40", "44", "42", "101", "48;5;94", "45", "48;5;208",
+      "103", "102", "46", "106", "104", "105", "100", "47"
+   };
+   char *out = malloc(strlen(in) * 32 + 64);
 
    if (!out) {
       return NULL;
    }
-   const unsigned char *p = (const unsigned char *)in;
-   char *o = out;
-
+   const unsigned char *input_cursor = (const unsigned char *)in;
+   char *output_cursor = out;
    bool bold = false, underline = false, reverse = false, italic = false;
-   while (*p) {
-      if (*p == 0x03) {
-         // ^C color
-         p++;
-         int fg = -1, bg = -1;
-
-         // --- parse foreground (1–2 digits) ---
-         if (isdigit( (unsigned char)p[0] ) ) {
-            fg = p[0] - '0';
-            p++;
-
-            if (isdigit( (unsigned char)p[0] ) ) {
-               fg = fg * 10 + (p[0] - '0');
-               p++;
-            }
+   bool strikethrough = false;
+   while (*input_cursor) {
+      unsigned char control = *input_cursor++;
+      if (control == 0x03) {
+         int foreground_index = -1, background_index = -1;
+         if (isdigit(*input_cursor)) {
+            foreground_index = *input_cursor++ - '0';
+            if (isdigit(*input_cursor)) foreground_index = foreground_index * 10 + (*input_cursor++ - '0');
          }
-
-         // --- parse optional background ---
-         if (*p == ',' && isdigit((unsigned char)p[1])) {
-            p++;
-
-            if (isdigit( (unsigned char)p[0] ) ) {
-               bg = p[0] - '0';
-               p++;
-
-               if (isdigit( (unsigned char)p[0] ) ) {
-                  bg = bg * 10 + (p[0] - '0');
-                  p++;
-               }
-            }
+         if (*input_cursor == ',' && isdigit(input_cursor[1])) {
+            input_cursor++;
+            background_index = *input_cursor++ - '0';
+            if (isdigit(*input_cursor)) background_index = background_index * 10 + (*input_cursor++ - '0');
          }
-
-         // clamp and output
-         if (fg >= 0 && fg < 16) {
-            o += sprintf(o, "{%s}", colors[fg]);
+         if (foreground_index < 0 && background_index < 0) {
+            output_cursor += sprintf(output_cursor, "\033[39;49m");
+         } else {
+            if (foreground_index >= 0 && foreground_index < 16)
+               output_cursor += sprintf(output_cursor, "\033[%sm", foreground[foreground_index]);
+            if (background_index >= 0 && background_index < 16)
+               output_cursor += sprintf(output_cursor, "\033[%sm", background[background_index]);
          }
-
-         if (bg >= 0 && bg < 16) {
-            o += sprintf(o, "{bg-%s}", colors[bg]);
-         }
-         continue;
-      }
-
-      switch (*p) {
-         case 0x02: {
-            o += sprintf(o, bold ? "{bold-off}" : "{bold}"); bold = !bold; break;                 // ^B
-         }
-         case 0x1F: {
-            o += sprintf(o, underline ? "{underline-off}" : "{underline}"); underline = !underline; break;            // ^_
-         }
-         case 0x16: {
-            o += sprintf(o, reverse ? "{reverse-off}" : "{reverse}"); reverse = !reverse; break;              // ^V
-         }
-         case 0x0F: {
-            o += sprintf(o, "{reset}"); bold = underline = reverse = italic = false; break;                // ^O
-         }
-         case 0x1D: {
-            o += sprintf(o, italic ? "{italic-off}" : "{italic}"); italic = !italic; break;               // ^]
-         }
-         default: {
-            *o++ = *p; break;
+      } else {
+         switch (control) {
+            case 0x02: output_cursor += sprintf(output_cursor, bold ? "\033[22m" : "\033[1m"); bold = !bold; break;
+            case 0x0f:
+               output_cursor += sprintf(output_cursor, "\033[0m");
+               bold = underline = reverse = italic = strikethrough = false;
+               break;
+            case 0x16: output_cursor += sprintf(output_cursor, reverse ? "\033[27m" : "\033[7m"); reverse = !reverse; break;
+            case 0x1d: output_cursor += sprintf(output_cursor, italic ? "\033[23m" : "\033[3m"); italic = !italic; break;
+            case 0x1e: output_cursor += sprintf(output_cursor, strikethrough ? "\033[29m" : "\033[9m"); strikethrough = !strikethrough; break;
+            case 0x1f: output_cursor += sprintf(output_cursor, underline ? "\033[24m" : "\033[4m"); underline = !underline; break;
+            case 0x11: break; // Terminal text is already monospace.
+            default: *output_cursor++ = (char)control; break;
          }
       }
-      p++;
    }
-   *o = '\0';
+   *output_cursor = '\0';
 
    return out;
 }
