@@ -5,12 +5,13 @@ INCLUDES = -I$(LIB_DIR) -I$(LIB_DIR)/.. -I../../build/radio
 # Link against the prebuilt shared library instead of recompiling the whole lib
 LIBS = -L../.. -lrustyaxe -Wl,-rpath,$(abspath ../..)
 
-TEST_SOURCES = test_json.c test_dict.c test_list.c test_maidenhead.c test_ringbuffer.c test_util_time.c test_config_save.c test_event_tokens.c test_serial_config.c test_completion_labels.c
+TEST_SOURCES = test_mirc.c test_json.c test_dict.c test_list.c test_maidenhead.c test_ringbuffer.c test_util_time.c test_config_save.c test_event_tokens.c test_serial_config.c test_completion_labels.c
 
-# Keep test artifacts out of the source directory.  The top-level build already
+# Keep test artifacts out of the source directory. The top-level build already
 # owns generated files, so running a test suite must not leave .o files beside
 # the test sources.
 TEST_BUILD_DIR ?= ../../build/tests/librustyaxe
+
 
 # Object files and test executables
 TEST_OBJECTS = $(addprefix $(TEST_BUILD_DIR)/,$(TEST_SOURCES:.c=.o))

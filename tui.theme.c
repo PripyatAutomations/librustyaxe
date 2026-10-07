@@ -272,10 +272,15 @@ char *tui_colorize_string(const char *in) {
    if (!in) {
       return NULL;
    }
+   // Reuse the existing IRC parser before applying terminal colors. Keep
+   // legacy tags available for user themes and old configuration templates.
+   char *irc = strpbrk(in, "\003\002\037\026\017\035") ? irc_to_tui_colors(in) : NULL;
+   if (irc) in = irc;
    size_t len = strlen(in);
    char *out = malloc(len * 8 + 64);  // enough for ANSI codes
 
    if (!out) {
+      free(irc);
       return NULL;
    }
    const char *p = in;
@@ -419,6 +424,7 @@ char *tui_colorize_string(const char *in) {
    }
    *o = '\0';
 
+   free(irc);
    return out;
 }
 
@@ -450,7 +456,7 @@ char *irc_to_tui_colors(const char *in) {
       "white"           // 15
    };
 
-   char *out = malloc(strlen(in) * 8 + 64);
+   char *out = malloc(strlen(in) * 16 + 64);
 
    if (!out) {
       return NULL;
@@ -458,6 +464,7 @@ char *irc_to_tui_colors(const char *in) {
    const unsigned char *p = (const unsigned char *)in;
    char *o = out;
 
+   bool bold = false, underline = false, reverse = false, italic = false;
    while (*p) {
       if (*p == 0x03) {
          // ^C color
@@ -476,7 +483,7 @@ char *irc_to_tui_colors(const char *in) {
          }
 
          // --- parse optional background ---
-         if (*p == ',') {
+         if (*p == ',' && isdigit((unsigned char)p[1])) {
             p++;
 
             if (isdigit( (unsigned char)p[0] ) ) {
@@ -498,28 +505,24 @@ char *irc_to_tui_colors(const char *in) {
          if (bg >= 0 && bg < 16) {
             o += sprintf(o, "{bg-%s}", colors[bg]);
          }
-         // skip any remaining digits or commas (safety)
-         while (isdigit( (unsigned char)*p ) || *p == ',') {
-            p++;
-         }
          continue;
       }
 
       switch (*p) {
          case 0x02: {
-            o += sprintf(o, "{bold}"); break;                 // ^B
+            o += sprintf(o, bold ? "{bold-off}" : "{bold}"); bold = !bold; break;                 // ^B
          }
          case 0x1F: {
-            o += sprintf(o, "{underline}"); break;            // ^_
+            o += sprintf(o, underline ? "{underline-off}" : "{underline}"); underline = !underline; break;            // ^_
          }
          case 0x16: {
-            o += sprintf(o, "{reverse}"); break;              // ^V
+            o += sprintf(o, reverse ? "{reverse-off}" : "{reverse}"); reverse = !reverse; break;              // ^V
          }
          case 0x0F: {
-            o += sprintf(o, "{reset}"); break;                // ^O
+            o += sprintf(o, "{reset}"); bold = underline = reverse = italic = false; break;                // ^O
          }
          case 0x1D: {
-            o += sprintf(o, "{italic}"); break;               // ^]
+            o += sprintf(o, italic ? "{italic-off}" : "{italic}"); italic = !italic; break;               // ^]
          }
          default: {
             *o++ = *p; break;
