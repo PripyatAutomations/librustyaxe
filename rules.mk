@@ -21,6 +21,7 @@ librustyaxe_objs += cfg.modules.o
 librustyaxe_objs += module.o
 librustyaxe_objs += mongoose.o
 librustyaxe_objs += posix.o
+librustyaxe_objs += runtime-globals.o
 librustyaxe_objs += ringbuffer.o
 # XXX: This needs cleanup to remove remnants of termbox/old logger
 librustyaxe_objs += subproc.o
