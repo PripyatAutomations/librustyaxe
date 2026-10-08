@@ -7,10 +7,6 @@
 *: Merge cfg_get_* and eeprom_get_* so we have just cfg_get_*
   - we should just load the whole eeprom into the config dict at startup???
 
-*: Make modules able to register their event handlers on loading
-
-*: Ensure modules are completely freed and unloaded. Use dicts or memblocks for internal storage
-
 *: Add memblocks, simple allocator who maintains small allocations (replace malloc,realloc,free,etc) with page tracking for release on module unload
 
 *: IRC protocol will be used to link sites, with large messages enabled (16k)
@@ -40,9 +36,6 @@
 * Add support for masking out messages such as '-*.noisy'
 
 ? Add support for rate limiting messages by subsys major (first dot)
-
-[config]
-* Make config exporter put a comment with the description and default value, if found in defconfig, for each key saved.
 
 [Porting]
 minimal inet_ntop() for non-posix
