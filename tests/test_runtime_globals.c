@@ -6,7 +6,8 @@ bool dying = true;
 bool restarting = true;
 time_t now = 123;
 
-int main(void) {
+int main(void)
+{
    assert(dying);
    assert(restarting);
    assert(now == 123);
