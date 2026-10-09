@@ -15,14 +15,12 @@ time_t now;
 
 static int failures = 0;
 #define CHECK(cond)                                                      \
-   do                                                                    \
-   {                                                                     \
-      if (!(cond))                                                       \
-      {                                                                  \
-         fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-         failures++;                                                     \
-      }                                                                  \
-   } while (0)
+        do {                                                                     \
+           if (!(cond)) {                                                                  \
+              fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+              failures++;                                                     \
+           }                                                                  \
+        } while (0)
 
 static void test_dhms2time_t(void)
 {
@@ -90,17 +88,27 @@ static void test_format_timestamp(void)
 
 static void test_timespec_diff_ms(void)
 {
-   struct timespec a = {.tv_sec = 10, .tv_nsec = 500000000};
-   struct timespec b = {.tv_sec = 10, .tv_nsec = 0};
+   struct timespec a = {
+      .tv_sec = 10, .tv_nsec = 500000000
+   };
+   struct timespec b = {
+      .tv_sec = 10, .tv_nsec = 0
+   };
    CHECK(timespec_diff_ms(&a, &b) == 500);
    CHECK(timespec_diff_ms(&b, &a) == -500);
 
-   struct timespec c = {.tv_sec = 12, .tv_nsec = 250000000};
+   struct timespec c = {
+      .tv_sec = 12, .tv_nsec = 250000000
+   };
    CHECK(timespec_diff_ms(&c, &a) == 1750);
 
    // Sub-millisecond truncation
-   struct timespec d = {.tv_sec = 0, .tv_nsec = 999999};
-   struct timespec z = {.tv_sec = 0, .tv_nsec = 0};
+   struct timespec d = {
+      .tv_sec = 0, .tv_nsec = 999999
+   };
+   struct timespec z = {
+      .tv_sec = 0, .tv_nsec = 0
+   };
    CHECK(timespec_diff_ms(&d, &z) == 0);
 }
 
@@ -111,11 +119,12 @@ int main(void)
    test_format_timestamp();
    test_timespec_diff_ms();
 
-   if (failures > 0)
-   {
+   if (failures > 0) {
       fprintf(stderr, "%s: %d failure(s)\n", __FILE__, failures);
+
       return 1;
    }
    printf("%s: all tests passed\n", __FILE__);
+
    return 0;
 }

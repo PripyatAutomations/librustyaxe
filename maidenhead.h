@@ -6,11 +6,11 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(_maidenhead_h)
-#define	_maidenhead_h
+#define _maidenhead_h
 #include <math.h>
 #include <stdint.h>
 #if     !defined(pi)
-#define	pi 3.14159265358979323846
+#define pi 3.14159265358979323846
 #endif
 
 

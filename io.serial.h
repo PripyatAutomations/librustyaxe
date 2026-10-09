@@ -6,7 +6,7 @@
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 // POSIX serial line settings shared by native-client and server transports.
 #ifndef RUSTYAXE_IO_SERIAL_H
-#define	RUSTYAXE_IO_SERIAL_H
+#define RUSTYAXE_IO_SERIAL_H
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -23,8 +23,7 @@ bool rr_nmea_valid(const char *line);
 // Format signed decimal-degree coordinates (degrees * 1e7) as a checksum-correct
 // GPRMC sentence without CRLF. Flags are bit 0 valid and bit 1 manual.
 size_t rr_nmea_rmc(int32_t latitude, int32_t longitude, uint8_t flags, time_t utc, char *out, size_t capacity);
-int rr_serial_pty_open(const char *path, const rr_serial_settings_t *settings, int *keeper, char *slave,
-                       size_t capacity);
+int rr_serial_pty_open(const char *path, const rr_serial_settings_t *settings, int *keeper, char *slave, size_t capacity);
 void rr_serial_pty_close(int fd, int keeper, const char *path, const char *slave);
 bool rr_serial_mode_parse(const char *mode, rr_serial_settings_t *settings);
 void rr_serial_mode_format(const rr_serial_settings_t *settings, char mode[4]);

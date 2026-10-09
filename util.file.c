@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #ifdef _WIN32
-#define	WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <direct.h>
 #endif
@@ -34,7 +34,7 @@ bool file_exists(const char *path) {
 
    // Skip file not found and only show other errors
    if (rv != 0) {
-      Log( LOG_CRAZY, "core", "file_exists: %s returned %d (%s)", path, errno, strerror(errno) );
+      Log(LOG_CRAZY, "core", "file_exists: %s returned %d (%s)", path, errno, strerror(errno) );
 
       return false;
    } else {
@@ -49,7 +49,7 @@ bool is_dir(const char *path) {
 
    // Skip file not found and only show other errors
    if (rv != 0) {
-      Log( LOG_CRAZY, "core", "is_dir: %s returned %d (%s)", path, errno, strerror(errno) );
+      Log(LOG_CRAZY, "core", "is_dir: %s returned %d (%s)", path, errno, strerror(errno) );
 
       return false;
    } else {
@@ -135,7 +135,7 @@ bool mkdir_p(const char *path) {
          int rv = mkdir(work, 0755);
 #endif
 
-         if ( rv != 0 && ( errno != EEXIST || !is_dir(work) ) ) {
+         if (rv != 0 && (errno != EEXIST || !is_dir(work) ) ) {
             *p = saved;
             free(work);
 
@@ -159,7 +159,7 @@ char *expand_path(const char *path) {
       return NULL;
    }
 #ifdef _WIN32
-#define	WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
    const char *home = getenv("USERPROFILE");
@@ -168,7 +168,9 @@ char *expand_path(const char *path) {
       home = ".";
    }
 
-   if (!home || strlen(home) > 1024) { return NULL; }
+   if (!home || strlen(home) > 1024) {
+      return NULL;
+   }
    int home_allocated = 0;
    const char *drive = NULL;
    const char *path_part = NULL;
@@ -202,7 +204,7 @@ char *expand_path(const char *path) {
 
       if (!expanded) {
          if (home_allocated) {
-            free( (void *)home );
+            free( (void *)home);
          }
 
          return NULL;
@@ -210,7 +212,7 @@ char *expand_path(const char *path) {
       snprintf(expanded, len, "%s\\%s", home, suffix);
 
       if (home_allocated) {
-         free( (void *)home );
+         free( (void *)home);
       }
 
       return expanded;
@@ -230,27 +232,37 @@ char *expand_path(const char *path) {
    // these forms relative to the current directory.
    const char *home = getenv("HOME");
 
-   if (!home || !*home) { home = "."; }
+   if (!home || !*home) {
+      home = ".";
+   }
    const char *suffix = NULL;
 
-   if ( path[0] == '~' && (path[1] == '\0' || path[1] == '/') ) {
+   if (path[0] == '~' && (path[1] == '\0' || path[1] == '/') ) {
       suffix = path + (path[1] == '/' ? 2 : 1);
-   } else if ( strncmp(path, "$HOME", 5) == 0 &&
-               (path[5] == '\0' || path[5] == '/') ) {
+   } else if (strncmp(path, "$HOME", 5) == 0 &&
+      (path[5] == '\0' || path[5] == '/') ) {
       suffix = path + (path[5] == '/' ? 6 : 5);
-   } else if ( strncmp(path, "${HOME}", 7) == 0 &&
-               (path[7] == '\0' || path[7] == '/') ) {
+   } else if (strncmp(path, "${HOME}", 7) == 0 &&
+      (path[7] == '\0' || path[7] == '/') ) {
       suffix = path + (path[7] == '/' ? 8 : 7);
    }
 
-   if (!suffix) { return strdup(path); }
+   if (!suffix) {
+      return strdup(path);
+   }
 
    size_t len = strlen(home) + strlen(suffix) + 2;
    char *expanded = malloc(len);
 
-   if (!expanded) { return NULL; }
+   if (!expanded) {
+      return NULL;
+   }
 
-   if (*suffix) { snprintf(expanded, len, "%s/%s", home, suffix); } else { snprintf(expanded, len, "%s", home); }
+   if (*suffix) {
+      snprintf(expanded, len, "%s/%s", home, suffix);
+   } else {
+      snprintf(expanded, len, "%s", home);
+   }
 
    return expanded;
 #endif

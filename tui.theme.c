@@ -114,29 +114,38 @@ char *tui_colorize_string(const char *in) {
    // Convert IRC controls to terminal ANSI before handling TUI style tags.
    char *irc = strpbrk(in, "\003\002\021\026\035\036\037\017") ? irc_to_tui_colors(in) : NULL;
    bool converted_irc = irc != NULL;
-   if (irc) in = irc;
+
+   if (irc) {
+      in = irc;
+   }
    size_t len = strlen(in);
    char *out = malloc(len * 8 + 64);  // enough for ANSI codes
 
    if (!out) {
       free(irc);
+
       return NULL;
    }
    const char *p = in;
    char *o = out;
 
    while (*p) {
-      if ( (unsigned char)*p == 0x1b ) {
-         /* fwdsp/GStreamer may emit ANSI CSI styling. The TUI owns the terminal stream,
-          * so consume those sequences instead of allowing them to corrupt the line
+      if ( (unsigned char)*p == 0x1b) {
+         /* fwdsp/GStreamer may emit ANSI CSI styling. The TUI owns the terminal stream, so consume those sequences instead of allowing them to corrupt the line
           * renderer. */
          p++;
 
          if (*p == '[') {
             const char *sequence_start = p - 1;
             p++;
-            while (*p && !isalpha((unsigned char)*p)) p++;
-            if (*p) p++;
+            while (*p && !isalpha((unsigned char)*p)) {
+               p++;
+            }
+
+            if (*p) {
+               p++;
+            }
+
             if (converted_irc && cfg_tui_colors) {
                size_t sequence_length = (size_t)(p - sequence_start);
                memcpy(o, sequence_start, sequence_length);
@@ -162,8 +171,14 @@ char *tui_colorize_string(const char *in) {
          bool tag_handled = false;
 
          const char *code = ansi_code(key);
-         if (code && cfg_tui_colors) o += sprintf(o, "%s", code);
-         if (code) tag_handled = true;
+
+         if (code && cfg_tui_colors) {
+            o += sprintf(o, "%s", code);
+         }
+
+         if (code) {
+            tag_handled = true;
+         }
 
          if (tag_handled) {
             p = end + 1;
@@ -178,6 +193,7 @@ char *tui_colorize_string(const char *in) {
    *o = '\0';
 
    free(irc);
+
    return out;
 }
 
@@ -204,38 +220,77 @@ char *irc_to_tui_colors(const char *in) {
    bool strikethrough = false;
    while (*input_cursor) {
       unsigned char control = *input_cursor++;
+
       if (control == 0x03) {
          int foreground_index = -1, background_index = -1;
+
          if (isdigit(*input_cursor)) {
             foreground_index = *input_cursor++ - '0';
-            if (isdigit(*input_cursor)) foreground_index = foreground_index * 10 + (*input_cursor++ - '0');
+
+            if (isdigit(*input_cursor)) {
+               foreground_index = foreground_index * 10 + (*input_cursor++ - '0');
+            }
          }
+
          if (*input_cursor == ',' && isdigit(input_cursor[1])) {
             input_cursor++;
             background_index = *input_cursor++ - '0';
-            if (isdigit(*input_cursor)) background_index = background_index * 10 + (*input_cursor++ - '0');
+
+            if (isdigit(*input_cursor)) {
+               background_index = background_index * 10 + (*input_cursor++ - '0');
+            }
          }
+
          if (foreground_index < 0 && background_index < 0) {
             output_cursor += sprintf(output_cursor, "\033[39;49m");
          } else {
-            if (foreground_index >= 0 && foreground_index < 16)
+            if (foreground_index >= 0 && foreground_index < 16) {
                output_cursor += sprintf(output_cursor, "\033[%sm", foreground[foreground_index]);
-            if (background_index >= 0 && background_index < 16)
+            }
+
+            if (background_index >= 0 && background_index < 16) {
                output_cursor += sprintf(output_cursor, "\033[%sm", background[background_index]);
+            }
          }
       } else {
          switch (control) {
-            case 0x02: output_cursor += sprintf(output_cursor, bold ? "\033[22m" : "\033[1m"); bold = !bold; break;
-            case 0x0f:
+            case 0x02: {
+               output_cursor += sprintf(output_cursor, bold ? "\033[22m" : "\033[1m");
+               bold = !bold;
+               break;
+            }
+            case 0x0f: {
                output_cursor += sprintf(output_cursor, "\033[0m");
                bold = underline = reverse = italic = strikethrough = false;
                break;
-            case 0x16: output_cursor += sprintf(output_cursor, reverse ? "\033[27m" : "\033[7m"); reverse = !reverse; break;
-            case 0x1d: output_cursor += sprintf(output_cursor, italic ? "\033[23m" : "\033[3m"); italic = !italic; break;
-            case 0x1e: output_cursor += sprintf(output_cursor, strikethrough ? "\033[29m" : "\033[9m"); strikethrough = !strikethrough; break;
-            case 0x1f: output_cursor += sprintf(output_cursor, underline ? "\033[24m" : "\033[4m"); underline = !underline; break;
-            case 0x11: break; // Terminal text is already monospace.
-            default: *output_cursor++ = (char)control; break;
+            }
+            case 0x16: {
+               output_cursor += sprintf(output_cursor, reverse ? "\033[27m" : "\033[7m");
+               reverse = !reverse;
+               break;
+            }
+            case 0x1d: {
+               output_cursor += sprintf(output_cursor, italic ? "\033[23m" : "\033[3m");
+               italic = !italic;
+               break;
+            }
+            case 0x1e: {
+               output_cursor += sprintf(output_cursor, strikethrough ? "\033[29m" : "\033[9m");
+               strikethrough = !strikethrough;
+               break;
+            }
+            case 0x1f: {
+               output_cursor += sprintf(output_cursor, underline ? "\033[24m" : "\033[4m");
+               underline = !underline;
+               break;
+            }
+            case 0x11: {
+               break;         // Terminal text is already monospace.
+            }
+            default: {
+               *output_cursor++ = (char)control;
+               break;
+            }
          }
       }
    }
@@ -288,11 +343,9 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
       win->log_count++;
    }
 
-   /* Only active-window output changes the visible scrollback.  In particular, logging
-    * performed by a top/status-line renderer must not start a nested full-screen redraw
-    * while the current frame is being painted.  Inactive windows will be rendered when
-    * they are focused. */
-   if ( win == tui_active_window() ) {
+   /* Only active-window output changes the visible scrollback.  In particular, logging performed by a top/status-line renderer must not start a nested
+    * full-screen redraw while the current frame is being painted.  Inactive windows will be rendered when they are focused. */
+   if (win == tui_active_window() ) {
       tui_redraw_request();
 
       if (tui_redraw_defer_count == 0) {
@@ -330,22 +383,22 @@ char *strip_mirc_formatting(const char *input) {
       unsigned char c = *p;
 
       if (c == 0x02  // Bold
-          || c == 0x1D // Italic
-          || c == 0x1F // Underline
-          || c == 0x0F // Reset
-          || c == 0x11 // Reverse (mIRC specific)
-          ) {
+         || c == 0x1D  // Italic
+         || c == 0x1F  // Underline
+         || c == 0x0F  // Reset
+         || c == 0x11  // Reverse (mIRC specific)
+         ) {
          p++;  // skip formatting
       } else if (c == 0x03) {
          // Color
          p++;
 
          // skip up to two digits for foreground
-         if (isdigit( (unsigned char)*p ) ) {
+         if (isdigit( (unsigned char)*p) ) {
             p++;
          }
 
-         if (isdigit( (unsigned char)*p ) ) {
+         if (isdigit( (unsigned char)*p) ) {
             p++;
          }
 
@@ -353,11 +406,11 @@ char *strip_mirc_formatting(const char *input) {
          if (*p == ',') {
             p++;
 
-            if (isdigit( (unsigned char)*p ) ) {
+            if (isdigit( (unsigned char)*p) ) {
                p++;
             }
 
-            if (isdigit( (unsigned char)*p ) ) {
+            if (isdigit( (unsigned char)*p) ) {
                p++;
             }
          }

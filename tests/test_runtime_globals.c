@@ -11,5 +11,6 @@ int main(void)
    assert(dying);
    assert(restarting);
    assert(now == 123);
+
    return 0;
 }

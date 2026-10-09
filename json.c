@@ -76,20 +76,24 @@ static const char *json_parse_str(const char *s, char **out) {
       if ((unsigned char)*s < 0x20) {
          return NULL;
       }
+
       if (*s == '\\' && !*++s) {
          return NULL;
       }
       s++;
    }
+
    if (*s != '"') {
       return NULL;
    }
    char *token = strndup(start, (size_t)(s + 1 - start));
+
    if (!token) {
       return NULL;
    }
    *out = json_unescape(token);
    free(token);
+
    return *out ? s + 1 : NULL;
 }
 
@@ -98,37 +102,44 @@ static const char *json_parse_primitive(const char *s, char **out) {
    while (*s && !strchr(",]} \t\r\n", *s)) {
       s++;
    }
+
    if (s == start) {
       return NULL;
    }
    *out = strndup(start, (size_t)(s - start));
+
    return *out ? s : NULL;
 }
 
 static const char *json_parse_obj(const char *s, const char *path, dict *d, unsigned depth) {
    s = skip_ws(s + 1);
+
    if (*s == '}') {
       return s + 1;
    }
 
    dict *keys = dict_new();
+
    if (!keys) {
       return NULL;
    }
-   
+
    while (*s) {
       char *key = NULL;
 
       s = json_parse_str(s, &key);
+
       if (!s) {
          goto fail;
       }
 
       if (dict_get_type(keys, key) != VAL_END || dict_add_bool(keys, key, true)) {
-         free(key); goto fail;
+         free(key);
+         goto fail;
       }
 
       s = skip_ws(s);
+
       if (*s != ':') {
          free(key);
          goto fail;
@@ -143,13 +154,16 @@ static const char *json_parse_obj(const char *s, const char *path, dict *d, unsi
 
       s = json_parse_value(s + 1, newpath, d, depth + 1);
       free(newpath);
+
       if (!s) {
          goto fail;
       }
 
       s = skip_ws(s);
+
       if (*s == '}') {
          dict_free(keys);
+
          return s + 1;
       }
 
@@ -158,17 +172,20 @@ static const char *json_parse_obj(const char *s, const char *path, dict *d, unsi
       }
 
       s = skip_ws(s + 1);
+
       if (*s == '}') {
          goto fail;
       }
    }
 fail:
    dict_free(keys);
+
    return NULL;
 }
 
 static const char *json_parse_array(const char *s, const char *path, dict *d, unsigned depth) {
    s = skip_ws(s + 1);
+
    if (*s == ']') {
       return s + 1;
    }
@@ -177,22 +194,27 @@ static const char *json_parse_array(const char *s, const char *path, dict *d, un
       char idxbuf[32];
       snprintf(idxbuf, sizeof(idxbuf), "[%u]", idx++);
       char *newpath = path_append(path, idxbuf);
+
       if (!newpath) {
          return NULL;
       }
       s = json_parse_value(s, newpath, d, depth + 1);
       free(newpath);
+
       if (!s) {
          return NULL;
       }
       s = skip_ws(s);
+
       if (*s == ']') {
          return s + 1;
       }
+
       if (*s != ',') {
          return NULL;
       }
       s = skip_ws(s + 1);
+
       if (*s == ']') {
          return NULL;
       }
@@ -279,20 +301,23 @@ static bool json_hex4(const char *p, const char *end, unsigned *code) {
       return false;
    }
    *code = 0;
-   for (unsigned i = 0; i < 4; i++) {
+
+   for (unsigned i = 0 ; i < 4 ; i++) {
       unsigned char c = p[i];
       unsigned digit;
+
       if (c >= '0' && c <= '9') {
          digit = c - '0';
       } else if (c >= 'a' && c <= 'f') {
          digit = c - 'a' + 10;
       } else if (c >= 'A' && c <= 'F') {
-         digit = c - 'A' + 10; 
+         digit = c - 'A' + 10;
       } else {
          return false;
       }
       *code = (*code << 4) | digit;
    }
+
    return true;
 }
 
@@ -302,11 +327,13 @@ char *json_unescape(const char *s) {
    }
 
    size_t len = strlen(s);
+
    if (len < 2 || s[0] != '"' || s[len - 1] != '"') {
       return NULL;
    }
 
    char *out = malloc(len);
+
    if (!out) {
       return NULL;
    }
@@ -320,7 +347,8 @@ char *json_unescape(const char *s) {
       }
 
       if (c != '\\') {
-         *q++ = c; continue;
+         *q++ = c;
+         continue;
       }
 
       if (p == end) {
@@ -328,21 +356,43 @@ char *json_unescape(const char *s) {
       }
 
       c = *p++;
+
       switch (c) {
-         case '"': case '\\': case '/': *q++ = c; break;
-         case 'b': *q++ = '\b'; break;
-         case 'f': *q++ = '\f'; break;
-         case 'n': *q++ = '\n'; break;
-         case 'r': *q++ = '\r'; break;
-         case 't': *q++ = '\t'; break;
+         case '"': case '\\': case '/': {
+            *q++ = c;
+            break;
+         }
+         case 'b': {
+            *q++ = '\b';
+            break;
+         }
+         case 'f': {
+            *q++ = '\f';
+            break;
+         }
+         case 'n': {
+            *q++ = '\n';
+            break;
+         }
+         case 'r': {
+            *q++ = '\r';
+            break;
+         }
+         case 't': {
+            *q++ = '\t';
+            break;
+         }
          case 'u': {
             unsigned code;
+
             if (!json_hex4(p, end, &code) || !code) {
                goto fail;
             }
             p += 4;
+
             if (code >= 0xD800 && code <= 0xDBFF) {
                unsigned low;
+
                if (end - p < 6 || p[0] != '\\' || p[1] != 'u' || !json_hex4(p + 2, end, &low) || low < 0xDC00 || low > 0xDFFF) {
                   goto fail;
                }
@@ -355,27 +405,36 @@ char *json_unescape(const char *s) {
             if (code < 0x80) {
                *q++ = code;
             } else if (code < 0x800) {
-               *q++ = 0xC0 | (code >> 6); *q++ = 0x80 | (code & 0x3F);
+               *q++ = 0xC0 | (code >> 6);
+               *q++ = 0x80 | (code & 0x3F);
             } else if (code < 0x10000) {
-               *q++ = 0xE0 | (code >> 12); *q++ = 0x80 | ((code >> 6) & 0x3F); *q++ = 0x80 | (code & 0x3F);
+               *q++ = 0xE0 | (code >> 12);
+               *q++ = 0x80 | ((code >> 6) & 0x3F);
+               *q++ = 0x80 | (code & 0x3F);
             } else {
-               *q++ = 0xF0 | (code >> 18); *q++ = 0x80 | ((code >> 12) & 0x3F);
-               *q++ = 0x80 | ((code >> 6) & 0x3F); *q++ = 0x80 | (code & 0x3F);
+               *q++ = 0xF0 | (code >> 18);
+               *q++ = 0x80 | ((code >> 12) & 0x3F);
+               *q++ = 0x80 | ((code >> 6) & 0x3F);
+               *q++ = 0x80 | (code & 0x3F);
             }
             break;
          }
-         default: goto fail;
+         default: {
+            goto fail;
+         }
       }
    }
    *q = '\0';
+
    return out;
 fail:
    free(out);
+
    return NULL;
 }
 
 static json_node *json_make_node(const char *key) {
-   json_node *n = calloc( 1, sizeof(*n) );
+   json_node *n = calloc(1, sizeof(*n) );
 
    if (!n) {
       Log(LOG_CRIT, "librustyaxe", "OOM in json_make_node");
@@ -396,7 +455,7 @@ static json_node *json_make_node(const char *key) {
 
 static json_node *find_child(json_node *parent, const char *key) {
    for (json_node *c = parent->child ; c ; c = c->next) {
-      if ( !strcmp(c->key, key) ) {
+      if (!strcmp(c->key, key) ) {
          return c;
       }
    }
@@ -414,8 +473,7 @@ static json_node *find_child(json_node *parent, const char *key) {
 }
 
 /*
- * Store a value as its final JSON representation. This means the JSON tree itself remains
- * compatible with the existing json_node structure.
+ * Store a value as its final JSON representation. This means the JSON tree itself remains compatible with the existing json_node structure.
  */
 static int json_insert(json_node *root, const char *fullkey, const dict_value_t *v, val_type_t type) {
    char *tmp = strdup(fullkey);
@@ -664,7 +722,7 @@ char *dict2json(dict *d) {
       return NULL;
    }
 
-   while ( ( rank = dict_enumerate_typed(d, rank, &key, &val, &type) ) >= 0 ) {
+   while ( (rank = dict_enumerate_typed(d, rank, &key, &val, &type) ) >= 0) {
       if (json_insert(&root, key, &val, type) != 0) {
          free_json(root.child);
 
@@ -694,40 +752,52 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
 
       switch (type) {
          case VAL_NULL: {
-            dict_add_null(d, key); break;
+            dict_add_null(d, key);
+            break;
          }
          case VAL_STR: {
-            dict_add( d, key, va_arg(ap, const char *) ); break;
+            dict_add(d, key, va_arg(ap, const char *) );
+            break;
          }
          case VAL_CHAR: {
-            dict_add_char( d, key, (char)va_arg(ap, int) ); break;
+            dict_add_char(d, key, (char)va_arg(ap, int) );
+            break;
          }
          case VAL_INT: {
-            dict_add_int( d, key, va_arg(ap, int) ); break;
+            dict_add_int(d, key, va_arg(ap, int) );
+            break;
          }
          case VAL_UINT: {
-            dict_add_uint( d, key, va_arg(ap, unsigned int) ); break;
+            dict_add_uint(d, key, va_arg(ap, unsigned int) );
+            break;
          }
          case VAL_LONG: {
-            dict_add_long( d, key, va_arg(ap, long) ); break;
+            dict_add_long(d, key, va_arg(ap, long) );
+            break;
          }
          case VAL_ULONG: {
-            dict_add_ulong( d, key, va_arg(ap, unsigned long) ); break;
+            dict_add_ulong(d, key, va_arg(ap, unsigned long) );
+            break;
          }
          case VAL_LLONG: {
-            dict_add_llong( d, key, va_arg(ap, long long) ); break;
+            dict_add_llong(d, key, va_arg(ap, long long) );
+            break;
          }
          case VAL_ULLONG: {
-            dict_add_ullong( d, key, va_arg(ap, unsigned long long) ); break;
+            dict_add_ullong(d, key, va_arg(ap, unsigned long long) );
+            break;
          }
          case VAL_FLOAT: {
-            dict_add_float( d, key, (float)va_arg(ap, double) ); break;
+            dict_add_float(d, key, (float)va_arg(ap, double) );
+            break;
          }
          case VAL_DOUBLE: {
-            dict_add_double( d, key, va_arg(ap, double) ); break;
+            dict_add_double(d, key, va_arg(ap, double) );
+            break;
          }
          case VAL_BOOL: {
-            dict_add_bool(d, key, va_arg(ap, int) != 0); break;
+            dict_add_bool(d, key, va_arg(ap, int) != 0);
+            break;
          }
          case VAL_FLOATP: {
             double v = va_arg(ap, double);
@@ -830,27 +900,28 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
       return NULL;
    }
 
-   if ( !strcmp(val, "null") ) {
+   if (!strcmp(val, "null") ) {
       if (dict_add_null(d, path) != 0) {
          goto fail;
       }
-   } else if ( !strcmp(val, "true") ) {
+   } else if (!strcmp(val, "true") ) {
       if (dict_add_bool(d, path, true) != 0) {
          goto fail;
       }
-   } else if ( !strcmp(val, "false") ) {
+   } else if (!strcmp(val, "false") ) {
       if (dict_add_bool(d, path, false) != 0) {
          goto fail;
       }
    } else {
       const char *number = val;
+
       if (*number == '-') {
          number++;
       }
+
       if (*number == '0') {
          number++;
-      }
-      else if (*number >= '1' && *number <= '9') {
+      } else if (*number >= '1' && *number <= '9') {
          while (isdigit((unsigned char)*number)) {
             number++;
          }
@@ -860,6 +931,7 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
 
       if (*number == '.') {
          number++;
+
          if (!isdigit((unsigned char)*number)) {
             goto fail;
          }
@@ -871,6 +943,7 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
 
       if (*number == 'e' || *number == 'E') {
          number++;
+
          if (*number == '+' || *number == '-') {
             number++;
          }
@@ -895,11 +968,17 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
 
          if (errno == 0 && ep != val && *ep == '\0') {
             if (ll >= INT_MIN && ll <= INT_MAX) {
-               if (dict_add_int(d, path, (int)ll)) { goto fail; }
+               if (dict_add_int(d, path, (int)ll)) {
+                  goto fail;
+               }
             } else if (ll >= LONG_MIN && ll <= LONG_MAX) {
-               if (dict_add_long(d, path, (long)ll)) { goto fail; }
+               if (dict_add_long(d, path, (long)ll)) {
+                  goto fail;
+               }
             } else {
-               if (dict_add_llong(d, path, ll)) { goto fail; }
+               if (dict_add_llong(d, path, ll)) {
+                  goto fail;
+               }
             }
          } else if (val[0] != '-') {
             errno = 0;
@@ -930,7 +1009,7 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
          errno = 0;
          double v = strtod(val, &ep);
 
-         if ( errno == ERANGE || ep == val || *ep != '\0' || !isfinite(v) ) {
+         if (errno == ERANGE || ep == val || *ep != '\0' || !isfinite(v) ) {
             goto fail;
          }
 
@@ -962,11 +1041,11 @@ dict *json2dict(const char *json) {
 
    const char *res = json_parse_value(json, "", d, 0);
 
-   /* A websocket message must contain exactly one JSON value.  Previously trailing bytes
-    * were silently ignored, which made truncated or concatenated frames look like valid
-    * dictionaries and sent the failure much later through the event bus. */
+   /* A websocket message must contain exactly one JSON value.  Previously trailing bytes were silently ignored, which made truncated or concatenated frames
+    * look like valid dictionaries and sent the failure much later through the event bus. */
    if (!res || *skip_ws(res) != '\0') {
       dict_free(d);
+
       return NULL;
    }
 

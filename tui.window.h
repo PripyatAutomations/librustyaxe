@@ -6,11 +6,11 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_tui_window_h)
-#define	__librustyaxe_tui_window_h
+#define __librustyaxe_tui_window_h
 
-#define	TUI_INPUTLEN 512
+#define TUI_INPUTLEN 512
 #ifndef TUI_HISTORY_LINES
-#define	TUI_HISTORY_LINES 50
+#define TUI_HISTORY_LINES 50
 #endif
 
 typedef struct tui_window {

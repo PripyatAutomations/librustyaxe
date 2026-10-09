@@ -5,8 +5,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 /*
- * Utility functions for dealing with maidenhead coordinates and translating to/from
- * WGS-84.
+ * Utility functions for dealing with maidenhead coordinates and translating to/from WGS-84.
  */
 #include <ctype.h>
 #include <stdlib.h>
@@ -17,7 +16,7 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-#define	RADIUS_EARTH 6371.0 // Earth's radius in kilometers
+#define RADIUS_EARTH 6371.0 // Earth's radius in kilometers
 
 double rad2deg(double rad) {
    return(rad * 180 / M_PI);
@@ -26,7 +25,7 @@ double rad2deg(double rad) {
 // from SP6Q's code
 static char *complete_mh(const char *locator) {
    static char locator2[11],                            // our scratch storage
-               locator2_init[11] = "LL55LL55LL";         // Contains an initial
+      locator2_init[11] = "LL55LL55LL";                  // Contains an initial
                                                          // value reloaded into
                                                          // locator
 
@@ -34,8 +33,7 @@ static char *complete_mh(const char *locator) {
 
    if (len > 10 || len < 4) {
       Log(LOG_CRIT, "librustyaxe",
-         "complete_mh: grid square must be between 4 and 10 digits. More digits provides more accuracy. Current length: %d. Returning NULL!",
-         len);
+         "complete_mh: grid square must be between 4 and 10 digits. More digits provides more accuracy. Current length: %d. Returning NULL!", len);
 
       return NULL;
    }
@@ -43,8 +41,7 @@ static char *complete_mh(const char *locator) {
    // Alert that we got an odd length string
    if (len % 2 != 0) {
       Log(LOG_CRIT, "librustyaxe",
-         "complete_mh: grid squares must contain an even number of digits. Your request of %d digits was invalid, returning NULL!\n\n",
-         len);
+         "complete_mh: grid squares must contain an even number of digits. Your request of %d digits was invalid, returning NULL!\n\n", len);
 
       return NULL;
    }
@@ -84,8 +81,7 @@ Coordinates maidenhead2latlon(const char *locator) {
 
    // if grid square is odd length, return error
    if ( (len % 2) != 0) {
-      Log(LOG_CRIT, "librustyaxe",
-         "maidenhead2latlon: grid squares must be 4-10 digits (A-Z, 0-9) long and even length.");
+      Log(LOG_CRIT, "librustyaxe", "maidenhead2latlon: grid squares must be 4-10 digits (A-Z, 0-9) long and even length.");
 
       return c;
    }
@@ -95,8 +91,7 @@ Coordinates maidenhead2latlon(const char *locator) {
    if (len < 10) {
       if ( (lp = complete_mh(locator) ) == NULL) {
          // Invalid (uneven length?) grid square passed
-         Log(LOG_CRIT, "librustyaxe",
-            "maidenhead2latlon: grid squares must be 4-10 digits (A-Z, 0-9) long and even length.\n");
+         Log(LOG_CRIT, "librustyaxe", "maidenhead2latlon: grid squares must be 4-10 digits (A-Z, 0-9) long and even length.\n");
 
          return c;
       }
@@ -183,9 +178,9 @@ double deg2rad(double degrees) {
 
 double calculateBearing(double lat1, double lon1, double lat2, double lon2) {
    double dLon = deg2rad(lon2 - lon1);
-   double y = sin(dLon) * cos( deg2rad(lat2) );
-   double x = cos( deg2rad(lat1) ) * sin( deg2rad(lat2) ) - sin( deg2rad(lat1) ) *
-              cos( deg2rad(lat2) ) * cos(dLon);
+   double y = sin(dLon) * cos(deg2rad(lat2) );
+   double x = cos(deg2rad(lat1) ) * sin(deg2rad(lat2) ) - sin(deg2rad(lat1) ) *
+      cos(deg2rad(lat2) ) * cos(dLon);
    double bearing = atan2(y, x);
    bearing = fmod(bearing + 2 * M_PI, 2 * M_PI);   // Convert to positive value
    bearing = bearing * 180.0 / M_PI;               // Convert to degrees
@@ -197,9 +192,9 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
    double dLat = deg2rad(lat2 - lat1);
    double dLon = deg2rad(lon2 - lon1);
    double a = sin(dLat / 2) * sin(dLat / 2) +
-              cos( deg2rad(lat1) ) * cos( deg2rad(lat2) ) *
-              sin(dLon / 2) * sin(dLon / 2);
-   double c = 2 * atan2( sqrt(a), sqrt(1 - a) );
+      cos(deg2rad(lat1) ) * cos(deg2rad(lat2) ) *
+      sin(dLon / 2) * sin(dLon / 2);
+   double c = 2 * atan2(sqrt(a), sqrt(1 - a) );
    double distance = RADIUS_EARTH * c;
 
    return distance;

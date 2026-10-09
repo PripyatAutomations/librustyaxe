@@ -6,7 +6,7 @@
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 // Generic RustyRig subprocess transport and lifecycle helpers.
 #if !defined(_rr_subproc_h)
-#define	_rr_subproc_h
+#define _rr_subproc_h
 
 #include <stdbool.h>
 #include <stddef.h>

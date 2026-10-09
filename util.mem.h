@@ -12,7 +12,7 @@
 // PARITY: keep behavior identical to Log(LOG_CRIT) + exit(ENOMEM) convention
 // used in librustyaxe/ringbuffer.c and librustyaxe/subproc.c
 #if     !defined(__rr_util_mem_h)
-#define	__rr_util_mem_h
+#define __rr_util_mem_h
 
 #include <stddef.h>
 

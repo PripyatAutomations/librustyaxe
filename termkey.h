@@ -1,13 +1,13 @@
 #ifndef GUARD_TERMKEY_H_
-#define	GUARD_TERMKEY_H_
+#define GUARD_TERMKEY_H_
 
 #include <stdint.h>
 #include <stdlib.h>
 
-#define	TERMKEY_VERSION_MAJOR 0
-#define	TERMKEY_VERSION_MINOR 22
+#define TERMKEY_VERSION_MAJOR 0
+#define TERMKEY_VERSION_MINOR 22
 
-#define	TERMKEY_CHECK_VERSION \
+#define TERMKEY_CHECK_VERSION \
         termkey_check_version(TERMKEY_VERSION_MAJOR, TERMKEY_VERSION_MINOR)
 
 typedef enum {
@@ -134,8 +134,7 @@ typedef struct {
 
    int modifiers;
 
-   /* Any Unicode character can be UTF-8 encoded in no more than 6 bytes, plus terminating
-    * NUL */
+   /* Any Unicode character can be UTF-8 encoded in no more than 6 bytes, plus terminating NUL */
    char utf8[7];
 } TermKeyKey;
 
@@ -150,8 +149,7 @@ enum {
    TERMKEY_FLAG_NOTERMIOS = 1 << 4,  /* Do not make initial termios calls on construction
                                       */
    TERMKEY_FLAG_SPACESYMBOL = 1 << 5, /* Sets TERMKEY_CANON_SPACESYMBOL */
-   TERMKEY_FLAG_CTRLC = 1 << 6,      /* Allow Ctrl-C to be read as normal, disabling
-                                      * SIGINT */
+   TERMKEY_FLAG_CTRLC = 1 << 6,      /* Allow Ctrl-C to be read as normal, disabling SIGINT */
    TERMKEY_FLAG_EINTR = 1 << 7,      /* Return ERROR on signal (EINTR) rather than retry
                                       */
    TERMKEY_FLAG_NOSTART = 1 << 8     /* Do not call termkey_start() in constructor */
@@ -210,8 +208,7 @@ const char *termkey_lookup_keyname(TermKey *tk, const char *str, TermKeySym *sym
 
 TermKeySym termkey_keyname2sym(TermKey *tk, const char *keyname);
 
-TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKeyMouseEvent *event, int *button,
-                                      int *line, int *col);
+TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKeyMouseEvent *event, int *button, int *line, int *col);
 
 TermKeyResult termkey_interpret_position(TermKey *tk, const TermKeyKey *key, int *line, int *col);
 
@@ -237,10 +234,10 @@ typedef enum {
 
 /* Some useful combinations */
 
-#define	TERMKEY_FORMAT_VIM (TermKeyFormat)(TERMKEY_FORMAT_ALTISMETA | TERMKEY_FORMAT_WRAPBRACKET)
-#define	TERMKEY_FORMAT_URWID (TermKeyFormat)(TERMKEY_FORMAT_LONGMOD | TERMKEY_FORMAT_ALTISMETA | \
-                                             TERMKEY_FORMAT_LOWERMOD | TERMKEY_FORMAT_SPACEMOD | \
-                                             TERMKEY_FORMAT_LOWERSPACE)
+#define TERMKEY_FORMAT_VIM (TermKeyFormat)(TERMKEY_FORMAT_ALTISMETA | TERMKEY_FORMAT_WRAPBRACKET)
+#define TERMKEY_FORMAT_URWID (TermKeyFormat)(TERMKEY_FORMAT_LONGMOD | TERMKEY_FORMAT_ALTISMETA | \
+   TERMKEY_FORMAT_LOWERMOD | TERMKEY_FORMAT_SPACEMOD | \
+   TERMKEY_FORMAT_LOWERSPACE)
 
 size_t termkey_strfkey(TermKey *tk, char *buffer, size_t len, TermKeyKey *key, TermKeyFormat format);
 const char *termkey_strpkey(TermKey *tk, const char *str, TermKeyKey *key, TermKeyFormat format);

@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__rr_common_logger_h)
-#define	__rr_common_logger_h
+#define __rr_common_logger_h
 #include <stdarg.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -63,12 +63,10 @@ extern const char *log_priority_to_str(logpriority_t priority);
 extern void logger_end(void);
 
 // Token registrations must be removed before their owner module is unloaded.
-extern struct log_callback *log_add_callback_token(bool (*log_va_cb)(logpriority_t priority,
-   const char *subsys, const char *fmt, va_list ap));
+extern struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap));
 
 // Add a callback to the Log() call
-extern bool log_add_callback( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt,
-   va_list ap) );
+extern bool log_add_callback(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap) );
 extern bool log_remove_callback(struct log_callback *log_callback);
 
 // Filters

@@ -29,7 +29,7 @@
 //
 // Here we deal with loading and unloading modules
 //
-#define	RUSTY_MODULE_API_VER 100
+#define RUSTY_MODULE_API_VER 100
 
 rr_module_t *modules = NULL;
 
@@ -59,7 +59,7 @@ char *rr_find_module(const char *name) {
    if (cpath) {
       // dlopen() does not append .so to paths containing a slash, so add
       // the suffix unless the caller already included one.
-      if ( strstr(name, ".so") ) {
+      if (strstr(name, ".so") ) {
          tmp = concat_path(cpath, name, NULL);
       } else {
          tmp = concat_path(cpath, name, "so");
@@ -76,7 +76,7 @@ bool rr_load_module(const char *name) {
    }
 
    // Already loaded?
-   if ( rr_find_loaded_module(name) ) {
+   if (rr_find_loaded_module(name) ) {
       Log(LOG_WARN, "module", "rr_load_module: %s is already loaded", name);
 
       return false;
@@ -94,13 +94,13 @@ bool rr_load_module(const char *name) {
    void *dp = dlopen(mod_path, RTLD_NOW | RTLD_GLOBAL);
 
    if (!dp) {
-      Log( LOG_WARN, "module", "rr_load_module: Failed opening module %s: %s", mod_path, dlerror() );
+      Log(LOG_WARN, "module", "rr_load_module: Failed opening module %s: %s", mod_path, dlerror() );
       free(mod_path);
 
       return true;
    }
    Log(LOG_DEBUG, "module", "rr_load_module: Module %s opened from %s at <%p>", name, mod_path, dp);
-   rr_module_t *mp = calloc( 1, sizeof(rr_module_t) );
+   rr_module_t *mp = calloc(1, sizeof(rr_module_t) );
 
    if (mp == NULL) {
       Log(LOG_CRIT, "librustyaxe", "OOM in rr_load_module!");
@@ -124,11 +124,11 @@ bool rr_load_module(const char *name) {
    // failed init leaves no half-initialized module behind.
    bool (*mod_init)(void) = dlsym(mp->dlptr, "rr_module_init");
 
-   if ( mod_init && mod_init() ) {
+   if (mod_init && mod_init() ) {
       Log(LOG_CRIT, "module", "rr_load_module: init failed for %s", mod_path);
       dlclose(mp->dlptr);
-      free( (void *)mp->mod_name );
-      free( (void *)mp->mod_path );
+      free( (void *)mp->mod_name);
+      free( (void *)mp->mod_path);
       free(mp);
       free(mod_path);
 
@@ -166,7 +166,7 @@ void *rr_find_loaded_module(const char *name) {
    }
 
    for (rr_module_t *mp = modules ; mp ; mp = mp->next) {
-      if ( mp->mod_name && !strcmp(mp->mod_name, name) ) {
+      if (mp->mod_name && !strcmp(mp->mod_name, name) ) {
          return mp;
       }
    }
@@ -179,7 +179,7 @@ bool rr_unload_module(const char *name) {
       return true;
    }
    rr_module_t **link = &modules;
-   while (*link && strcmp( (*link)->mod_name ? (*link)->mod_name : "", name ) != 0) {
+   while (*link && strcmp( (*link)->mod_name ? (*link)->mod_name : "", name) != 0) {
       link = &(*link)->next;
    }
 
@@ -201,12 +201,12 @@ bool rr_unload_module(const char *name) {
    bool failed = dlclose(mp->dlptr) != 0;
 
    if (failed) {
-      Log( LOG_CRIT, "module", "rr_unload_module: dlclose(%s) failed: %s", name, dlerror() );
+      Log(LOG_CRIT, "module", "rr_unload_module: dlclose(%s) failed: %s", name, dlerror() );
    } else {
       Log(LOG_INFO, "module", "rr_unload_module: Module %s unloaded", name);
    }
-   free( (void *)mp->mod_name );
-   free( (void *)mp->mod_path );
+   free( (void *)mp->mod_name);
+   free( (void *)mp->mod_path);
    free(mp);
 
    return failed;

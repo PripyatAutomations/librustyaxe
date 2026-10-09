@@ -49,9 +49,8 @@ const char *get_chat_ts(time_t ts) {
 
    // Check if the message is from today
    if (tmsg.tm_year == tcurr.tm_year &&
-       tmsg.tm_yday == tcurr.tm_yday) {
-      strftime(chat_ts, sizeof(chat_ts),
-         "\00314[\00310%H\00314:\00310%M\00314:\00310%S\00314]\017 ", &tmsg);
+      tmsg.tm_yday == tcurr.tm_yday) {
+      strftime(chat_ts, sizeof(chat_ts), "\00314[\00310%H\00314:\00310%M\00314:\00310%S\00314]\017 ", &tmsg);
    } else {
       // Include the date for messages before today
       strftime(chat_ts, sizeof(chat_ts), "\00314[\00310%Y-%m-%d\00314 "
@@ -115,9 +114,8 @@ time_t dhms2time_t(const char *str) {
          }
       }
 
-      /* strtol leaves ptr at the unit, or at the terminating NUL when the value has no
-       * unit.  Only advance over a real character; advancing past the NUL makes the next
-       * loop condition read out of bounds. */
+      /* strtol leaves ptr at the unit, or at the terminating NUL when the value has no unit.  Only advance over a real character; advancing past the NUL makes
+       * the next loop condition read out of bounds. */
       if (unit == '\0') {
          break;
       }
@@ -180,7 +178,7 @@ void format_timestamp(time_t t, char *buf, size_t buflen) {
    }
    buf[0] = '\0';
 
-   if ( !localtime_r(&t, &tm) ) {
+   if (!localtime_r(&t, &tm) ) {
       return;
    }
 

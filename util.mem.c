@@ -15,7 +15,7 @@
 #include <librustyaxe/util.mem.h>
 
 void oom_fatal(const char *what) {
-   Log( LOG_CRIT, "mem", "out of memory%s%s", (what ? ": " : ""), (what ? what : "") );
+   Log(LOG_CRIT, "mem", "out of memory%s%s", (what ? ": " : ""), (what ? what : "") );
    exit(ENOMEM);
 }
 

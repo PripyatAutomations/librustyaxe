@@ -25,7 +25,7 @@ rrlist_t *rrlist_add(rrlist_t **list, void *ptr, enum rrlist_direction direction
    if (!list || !ptr) {
       return NULL;
    }
-   rrlist_t *np = calloc( 1, sizeof(rrlist_t) );
+   rrlist_t *np = calloc(1, sizeof(rrlist_t) );
 
    if (!np) {
       fprintf(stderr, "OOM in rrlist_add\n");

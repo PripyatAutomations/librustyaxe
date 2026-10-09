@@ -1,4 +1,4 @@
-#define	_XOPEN_SOURCE 600
+#define _XOPEN_SOURCE 600
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
@@ -26,9 +26,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define	streq(a, b) (!strcmp(a, b) )
+#define streq(a, b) (!strcmp(a, b) )
 
-#define	MAX_FUNCNAME 9
+#define MAX_FUNCNAME 9
 
 static struct {
    const char *funcname;
@@ -195,10 +195,8 @@ static const char *unibi_get_str_by_name(const unibi_term *ut, const char *name)
 }
 #endif
 
-/* To be efficient at lookups, we store the byte sequence => keyinfo mapping in a trie.
- * This avoids a slow linear search through a flat list of sequences. Because it is likely
- * most nodes will be very sparse, we optimise vector to store an extent map after the
- * database is loaded.
+/* To be efficient at lookups, we store the byte sequence => keyinfo mapping in a trie. This avoids a slow linear search through a flat list of sequences.
+ * Because it is likely most nodes will be very sparse, we optimise vector to store an extent map after the database is loaded.
  */
 
 typedef enum {
@@ -239,7 +237,7 @@ typedef struct {
 static int insert_seq(TermKeyTI *ti, const char *seq, struct trie_node *node);
 
 static struct trie_node *new_node_key(TermKeyType type, TermKeySym sym, int modmask, int modset) {
-   struct trie_node_key *n = malloc( sizeof(*n) );
+   struct trie_node_key *n = malloc(sizeof(*n) );
 
    if (!n) {
       return NULL;
@@ -255,13 +253,14 @@ static struct trie_node *new_node_key(TermKeyType type, TermKeySym sym, int modm
 }
 
 static struct trie_node *new_node_arr(unsigned char min, unsigned char max) {
-   struct trie_node_arr *n = malloc( sizeof(*n) + ( (int)max - min + 1) * sizeof(n->arr[0]) );
+   struct trie_node_arr *n = malloc(sizeof(*n) + ( (int)max - min + 1) * sizeof(n->arr[0]) );
 
    if (!n) {
       return NULL;
    }
    n->type = TYPE_ARR;
-   n->min = min; n->max = max;
+   n->min = min;
+   n->max = max;
 
    int i;
 
@@ -384,7 +383,7 @@ static bool try_load_terminfo_key(TermKeyTI *ti, const char *name, struct keyinf
    }
    struct trie_node *node = new_node_key(info->type, info->sym, info->modifier_mask, info->modifier_set);
 
-   if ( !insert_seq(ti, value, node) ) {
+   if (!insert_seq(ti, value, node) ) {
       free(node);
 
       return false;
@@ -403,9 +402,8 @@ static int load_terminfo(TermKeyTI *ti)
    {
       int err;
 
-      /* Have to cast away the const. But it's OK - we know terminfo won't really modify
-       * term */
-      if (setupterm( (char*)ti->term, 1, &err ) != OK) {
+      /* Have to cast away the const. But it's OK - we know terminfo won't really modify term */
+      if (setupterm( (char*)ti->term, 1, &err) != OK) {
          return 0;
       }
    }
@@ -463,13 +461,13 @@ static int load_terminfo(TermKeyTI *ti)
       .type = TERMKEY_TYPE_MOUSE,
    });
 
-   /* Take copies of these terminfo strings, in case we build multiple termkey instances
-    * for multiple different termtypes, and it's different by the time we want to use it
+   /* Take copies of these terminfo strings, in case we build multiple termkey instances for multiple different termtypes, and it's different by the time we
+    * want to use it
     */
 #ifdef HAVE_UNIBILIUM
    const char *keypad_xmit = unibi ?
-                             unibi_get_str(unibi, unibi_keypad_xmit) :
-                             NULL;
+      unibi_get_str(unibi, unibi_keypad_xmit) :
+      NULL;
 #endif
 
    if (keypad_xmit) {
@@ -479,8 +477,8 @@ static int load_terminfo(TermKeyTI *ti)
    }
 #ifdef HAVE_UNIBILIUM
    const char *keypad_local = unibi ?
-                              unibi_get_str(unibi, unibi_keypad_local) :
-                              NULL;
+      unibi_get_str(unibi, unibi_keypad_local) :
+      NULL;
 #endif
 
    if (keypad_local) {
@@ -528,8 +526,8 @@ static void *new_driver(TermKey *tk, const char *term)
 
       return NULL;
    }
-   /* ti->unibi may be NULL if errno == ENOENT. That means the terminal wasn't known. Lets
-    * keep going because if we get getstr hook that might invent new strings for us
+   /* ti->unibi may be NULL if errno == ENOENT. That means the terminal wasn't known. Lets keep going because if we get getstr hook that might invent new
+    * strings for us
     */
 #else
    {
@@ -537,9 +535,8 @@ static void *new_driver(TermKey *tk, const char *term)
 
       ti->term = NULL;
 
-      /* Have to cast away the const. But it's OK - we know terminfo won't really modify
-       * term */
-      if (setupterm( (char*)term, 1, &err ) == OK) {
+      /* Have to cast away the const. But it's OK - we know terminfo won't really modify term */
+      if (setupterm( (char*)term, 1, &err) == OK) {
          ti->term = strdup(term);
       }
    }
@@ -564,8 +561,7 @@ static int start_driver(TermKey *tk, void *info)
       return 1;
    }
 
-   /* The terminfo database will contain keys in application cursor key mode. We may need
-    * to enable that mode
+   /* The terminfo database will contain keys in application cursor key mode. We may need to enable that mode
     */
    /* There's no point trying to write() to a pipe */
    if (fstat(tk->fd, &statbuf) == -1) {
@@ -614,8 +610,7 @@ static int stop_driver(TermKey *tk, void *info)
    }
 #endif
 
-   /* The terminfo database will contain keys in application cursor key mode. We may need
-    * to enable that mode
+   /* The terminfo database will contain keys in application cursor key mode. We may need to enable that mode
     */
 
    // Can't call putp or tputs because they suck and don't give us fd control
@@ -660,7 +655,7 @@ static void free_driver(void *info)
    free(ti);
 }
 
-#define	CHARAT(i) (tk->buffer[tk->buffstart + (i)])
+#define CHARAT(i) (tk->buffer[tk->buffstart + (i)])
 
 static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force, size_t *nbytep)
 {
@@ -673,7 +668,7 @@ static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force
 
    unsigned int pos = 0;
    while (pos < tk->buffcount) {
-      p = lookup_next( p, CHARAT(pos) );
+      p = lookup_next(p, CHARAT(pos) );
 
       if (!p) {
          break;
@@ -755,8 +750,7 @@ static int insert_seq(TermKeyTI *ti, const char *seq, struct trie_node *node)
             struct trie_node_arr *nar = (struct trie_node_arr*)p;
 
             if (b < nar->min || b > nar->max) {
-               fprintf(stderr, "ASSERT FAIL: Trie insert at 0x%02x is outside of extent bounds (0x%02x..0x%02x)\n", b,
-                  nar->min, nar->max);
+               fprintf(stderr, "ASSERT FAIL: Trie insert at 0x%02x is outside of extent bounds (0x%02x..0x%02x)\n", b, nar->min, nar->max);
                abort();
             }
             nar->arr[b - nar->min] = next;

@@ -39,8 +39,7 @@ static void count_cb(const char *event, const char *data, rrconn_t *cptr, void *
    hits++;
 }
 
-static void count_binary_cb(const char *event, const void *data, size_t len,
-                            rrconn_t *cptr, void *user)
+static void count_binary_cb(const char *event, const void *data, size_t len, rrconn_t *cptr, void *user)
 {
    (void)event;
    (void)data;
@@ -52,8 +51,7 @@ static void count_binary_cb(const char *event, const void *data, size_t len,
 
 static rr_event_token_t self_token;
 
-static void self_unregister_cb(const char *event, const char *data,
-                               rrconn_t *cptr, void *user)
+static void self_unregister_cb(const char *event, const char *data, rrconn_t *cptr, void *user)
 {
    (void)event;
    (void)data;
@@ -67,17 +65,14 @@ int main(void)
 {
    int failures = 0;
 #define CHECK(cond, msg)                     \
-   do                                        \
-   {                                         \
-      if (!(cond))                           \
-      {                                      \
-         fprintf(stderr, "FAIL: %s\n", msg); \
-         failures++;                         \
-      }                                      \
-   } while (0)
+        do {                                         \
+           if (!(cond)) {                                      \
+              fprintf(stderr, "FAIL: %s\n", msg); \
+              failures++;                         \
+           }                                      \
+        } while (0)
 
    event_init();
-
    // 1. token registration receives events
    hits = 0;
    rr_event_token_t t1 = event_on_token("tok.test", count_cb, NULL);
@@ -156,11 +151,12 @@ int main(void)
 
    event_shutdown();
 
-   if (failures)
-   {
+   if (failures) {
       fprintf(stderr, "%d failure(s)\n", failures);
+
       return 1;
    }
    printf("PASS: event token lifecycle\n");
+
    return 0;
 }

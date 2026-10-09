@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__inc_config_h)
-#define	__inc_config_h
+#define __inc_config_h
 #include <stdbool.h>
 #include <stdint.h>
 #include <librustyaxe/dict.h>
@@ -16,11 +16,11 @@
 
 // Maximum length of an expanded string, XXX: Move to header file
 // librustyaxe/config.h
-#define	MAX_CFG_EXP_STRLEN 65535
+#define MAX_CFG_EXP_STRLEN 65535
 // Maximum depth to recurse when expanding strings (cfg_get_exp)
-#define	MAX_CFG_EXP_RECURSION 6
+#define MAX_CFG_EXP_RECURSION 6
 // maximum supported section callbacks
-#define	CONFIG_MAX_CALLBACKS 512
+#define CONFIG_MAX_CALLBACKS 512
 
 typedef enum defconfig_type {
    DEFCONFIG_STRING = 0,
@@ -104,8 +104,7 @@ extern bool cfg_apply_new(dict *oldcfg, dict *newcfg);
 // dict.
 extern bool cfg_reload(const char *filename);
 
-/* Release process-wide configuration dictionaries, callbacks, and reload registrations
- * during application shutdown. Safe to call more than once. */
+/* Release process-wide configuration dictionaries, callbacks, and reload registrations during application shutdown. Safe to call more than once. */
 extern void cfg_fini(void);
 
 // Save the dict into a file
@@ -134,7 +133,7 @@ extern unsigned int cfg_get_uint(const char *key, unsigned int def);
 
 ///////////
 // Register a section parser; true means registered, false means invalid input.
-extern bool cfg_add_callback( const char *path, const char *section, bool (*cb) () );
+extern bool cfg_add_callback(const char *path, const char *section, bool (*cb) () );
 
 /////////////
 extern reload_event_t *reload_events;
@@ -142,7 +141,7 @@ extern reload_event_t *reload_events;
 extern bool run_reload_events(const char *key);
 
 // Find an event in the linked list
-extern reload_event_t *reload_event_find( const char *key, bool (*callback) () );
+extern reload_event_t *reload_event_find(const char *key, bool (*callback) () );
 
 // Add a reload event to the list.  A NULL key is invoked once after a
 // complete cfg_apply_new() reload, after all individual key events.

@@ -29,8 +29,7 @@ extern int tui_cursor_pos;
 /*
  *  completion:
  *  - This needs to become aware of the focused window if line starts with / and no space:
- * cli_command_t.cmd if word starts with & or #, check channels joined Else, show users in
- * current channel if a channel window
+ * cli_command_t.cmd if word starts with & or #, check channels joined Else, show users in current channel if a channel window
  */
 
 // ---------------------------------------------------------------
@@ -48,7 +47,7 @@ extern int tui_cursor_pos;
 // returned memory.
 // ---------------------------------------------------------------
 
-#define	TUI_MAX_COMPLETION_PROVIDERS 8
+#define TUI_MAX_COMPLETION_PROVIDERS 8
 
 //typedef char **(*tui_completion_provider_t)(const char *line, const char *word);
 
@@ -93,8 +92,7 @@ bool tui_unregister_completion_provider(tui_completion_provider_t fn) {
 
    for (int i = 0 ; i < completion_provider_count ; i++) {
       if (completion_providers[i] == fn) {
-         memmove( &completion_providers[i], &completion_providers[i + 1],
-            (completion_provider_count - i - 1) * sizeof(completion_providers[0]) );
+         memmove(&completion_providers[i], &completion_providers[i + 1], (completion_provider_count - i - 1) * sizeof(completion_providers[0]) );
          completion_provider_count--;
 
          return true;
@@ -122,7 +120,7 @@ char **completion_collect(const char *line, const char *word) {
       }
 
       for (int j = 0 ; sub[j] ; j++) {
-         char **tmp = realloc( matches, (count + 2) * sizeof(char *) );
+         char **tmp = realloc(matches, (count + 2) * sizeof(char *) );
 
          if (!tmp) {
             free(sub[j]);
@@ -167,10 +165,9 @@ bool tui_do_completion(tui_window_t *win) {
    int word_len = tui_cursor_pos - start;
    char word[TUI_INPUTLEN];
 
-   /* An empty word is allowed when the cursor sits directly after a space, so providers
-    * can complete a full argument list (i.e. /server<space>TAB)
+   /* An empty word is allowed when the cursor sits directly after a space, so providers can complete a full argument list (i.e. /server<space>TAB)
     */
-   if ( word_len < 0 || ( word_len == 0 && !(tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] == ' ') ) ) {
+   if (word_len < 0 || (word_len == 0 && !(tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] == ' ') ) ) {
       return false;
    }
 
@@ -242,7 +239,7 @@ bool tui_do_completion(tui_window_t *win) {
       int nshown = nmatch > TUI_MAX_COMPLETIONS_SHOWN ? TUI_MAX_COMPLETIONS_SHOWN : nmatch;
 
       for (int i = 0 ; i < nshown ; i++) {
-         completion_describe( input_buf, matches[i], labels[i], sizeof(labels[i]) );
+         completion_describe(input_buf, matches[i], labels[i], sizeof(labels[i]) );
          int l = (int)strlen(labels[i]);
 
          if (l > maxlen) {

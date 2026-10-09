@@ -9,7 +9,10 @@
 
 static int failures = 0;
 #define CHECK(cond) do { \
-   if (!(cond)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } \
+           if (!(cond)) { \
+              fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+              failures++; \
+           } \
 } while (0)
 
 static void test_str_basic(void) {
@@ -53,31 +56,37 @@ static void test_typed(void) {
 static void test_many_and_remove(void) {
    dict *d = dict_new();
    char key[32], val[32];
-   for (int i = 0; i < 200; i++) {
+
+   for (int i = 0 ; i < 200 ; i++) {
       snprintf(key, sizeof(key), "key%d", i);
       snprintf(val, sizeof(val), "val%d", i);
       CHECK(dict_add(d, key, val) == 0);
    }
-   for (int i = 0; i < 200; i++) {
+
+   for (int i = 0 ; i < 200 ; i++) {
       snprintf(key, sizeof(key), "key%d", i);
       snprintf(val, sizeof(val), "val%d", i);
       const char *v = dict_get(d, key, NULL);
       CHECK(v != NULL && strcmp(v, val) == 0);
    }
+
    // Remove every other one, verify
-   for (int i = 0; i < 200; i += 2) {
+   for (int i = 0 ; i < 200 ; i += 2) {
       snprintf(key, sizeof(key), "key%d", i);
       CHECK(dict_del(d, key) == 0);
    }
-   for (int i = 0; i < 200; i++) {
+
+   for (int i = 0 ; i < 200 ; i++) {
       snprintf(key, sizeof(key), "key%d", i);
       const char *v = dict_get(d, key, NULL);
+
       if (i % 2 == 0) {
          CHECK(v == NULL);
       } else {
          CHECK(v != NULL);
       }
    }
+
    CHECK(dict_del(d, "missing") != 0);   // deleting missing key fails
    dict_free(d);
 }
@@ -112,10 +121,13 @@ int main(void) {
    test_typed();
    test_many_and_remove();
    test_merge_and_diff();
+
    if (failures) {
       fprintf(stderr, "%d failure(s)\n", failures);
+
       return 1;
    }
    printf("test_dict: all tests passed\n");
+
    return 0;
 }

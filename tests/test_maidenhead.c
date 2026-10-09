@@ -10,14 +10,12 @@
 
 static int failures = 0;
 #define CHECK(cond)                                                      \
-   do                                                                    \
-   {                                                                     \
-      if (!(cond))                                                       \
-      {                                                                  \
-         fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-         failures++;                                                     \
-      }                                                                  \
-   } while (0)
+        do {                                                                     \
+           if (!(cond)) {                                                                  \
+              fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+              failures++;                                                     \
+           }                                                                  \
+        } while (0)
 
 static void test_locator_to_latlon(void)
 {
@@ -35,7 +33,9 @@ static void test_locator_to_latlon(void)
 
 static void test_latlon_to_locator(void)
 {
-   Coordinates c = {.latitude = 51.5, .longitude = -1.0};
+   Coordinates c = {
+      .latitude = 51.5, .longitude = -1.0
+   };
    const char *loc = latlon2maidenhead(&c);
    CHECK(loc != NULL);
    CHECK(strlen(loc) >= 4);
@@ -44,7 +44,9 @@ static void test_latlon_to_locator(void)
 
 static void test_roundtrip(void)
 {
-   Coordinates c = {.latitude = 37.7749, .longitude = -122.4194}; // San Francisco
+   Coordinates c = {
+      .latitude = 37.7749, .longitude = -122.4194
+   };                                                             // San Francisco
    const char *loc = latlon2maidenhead(&c);
    CHECK(loc != NULL);
    Coordinates back = maidenhead2latlon(loc);
@@ -70,11 +72,13 @@ int main(void)
    test_latlon_to_locator();
    test_roundtrip();
    test_bearing_distance();
-   if (failures)
-   {
+
+   if (failures) {
       fprintf(stderr, "%d failure(s)\n", failures);
+
       return 1;
    }
    printf("test_maidenhead: all tests passed\n");
+
    return 0;
 }

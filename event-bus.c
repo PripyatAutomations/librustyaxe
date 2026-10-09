@@ -26,7 +26,7 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-#define	EVENT_NOMATCH "NOMATCH"
+#define EVENT_NOMATCH "NOMATCH"
 
 typedef struct event_entry {
    event_listener_t *listeners;
@@ -78,7 +78,7 @@ static void event_profile_dump_locked(void) {
    event_profile_last_dump = current;
 
    size_t capacity = event_store ? event_store->used : 0;
-   event_profile_row_t *rows = capacity ? xcalloc( capacity, sizeof(*rows) ) : NULL;
+   event_profile_row_t *rows = capacity ? xcalloc(capacity, sizeof(*rows) ) : NULL;
    size_t used = 0;
    int rank = 0;
    const char *key = NULL;
@@ -86,7 +86,7 @@ static void event_profile_dump_locked(void) {
    val_type_t type;
 
    while (event_store && rows &&
-          ( rank = dict_enumerate_typed(event_store, rank, &key, &value, &type) ) >= 0) {
+      (rank = dict_enumerate_typed(event_store, rank, &key, &value, &type) ) >= 0) {
       if (type == VAL_PTR && value.p) {
          event_entry_t *entry = value.p;
 
@@ -144,11 +144,9 @@ typedef struct queued_binary_event {
 /*
  * Opaque registration token records.
  *
- * A token identifies exactly one listener: the owning event, the callback, the user
- * pointer, and a generation stamped by the entry. Registration order alone is not enough
- * because listeners may be removed by wildcards out from under a token; the generation
- * counter lets event_off_token() verify the indexed slot still holds the listener it was
- * issued for.
+ * A token identifies exactly one listener: the owning event, the callback, the user pointer, and a generation stamped by the entry. Registration order alone is
+ * not enough because listeners may be removed by wildcards out from under a token; the generation counter lets event_off_token() verify the indexed slot still
+ * holds the listener it was issued for.
  */
 struct rr_event_token {
    char *event;
@@ -191,7 +189,7 @@ static event_entry_t *event_get_or_create_locked(const char *event) {
       return entry;
    }
 
-   entry = xcalloc( 1, sizeof(*entry) );
+   entry = xcalloc(1, sizeof(*entry) );
 
    if (dict_add_ptr(event_store, event, entry) != 0) {
       free(entry);
@@ -206,8 +204,7 @@ static event_entry_t *event_get_or_create_locked(const char *event) {
 /*
  * Free an event entry and its listener arrays.
  *
- * Listener structures are stored directly in the arrays, so there are no individual
- * listener allocations to release.
+ * Listener structures are stored directly in the arrays, so there are no individual listener allocations to release.
  */
 static void event_entry_free(event_entry_t *entry) {
    if (!entry) {
@@ -231,13 +228,12 @@ static void event_remove_if_empty_locked(const char *event, event_entry_t *entry
    }
 
    if (entry->listener_count != 0 ||
-       entry->binary_listener_count != 0) {
+      entry->binary_listener_count != 0) {
       return;
    }
 
    /*
-    * dict_del() frees the dictionary key but VAL_PTR does not free the pointed-to object,
-    * so free the entry ourselves.
+    * dict_del() frees the dictionary key but VAL_PTR does not free the pointed-to object, so free the entry ourselves.
     */
    dict_del(event_store, event);
    event_entry_free(entry);
@@ -289,15 +285,14 @@ static void event_fire_listener(const event_listener_t *listener, const char *ev
    }
 
    if (!listener->dispatch) {
-      Log(LOG_CRAZY, "event", "Firing event %s from cptr:<%p> with data:<%p> user:<%p>", event, cptr, data,
-         listener->user);
+      Log(LOG_CRAZY, "event", "Firing event %s from cptr:<%p> with data:<%p> user:<%p>", event, cptr, data, listener->user);
 
       listener->cb(event, data, cptr, listener->user);
 
       return;
    }
 
-   queued_event_t *queued = xcalloc( 1, sizeof(*queued) );
+   queued_event_t *queued = xcalloc(1, sizeof(*queued) );
 
    queued->cb = listener->cb;
    queued->user = listener->user;
@@ -314,8 +309,7 @@ static void event_fire_listener(const event_listener_t *listener, const char *ev
 /*
  * Deliver one binary event to one listener.
  */
-static void event_fire_binary_listener(const event_binary_listener_t *listener, const char *event, rrconn_t *cptr,
-                                       const void *data, size_t len) {
+static void event_fire_binary_listener(const event_binary_listener_t *listener, const char *event, rrconn_t *cptr, const void *data, size_t len) {
    if (!listener || !listener->cb) {
       return;
    }
@@ -330,7 +324,7 @@ static void event_fire_binary_listener(const event_binary_listener_t *listener, 
    }
 
    queued_binary_event_t *queued =
-      xcalloc( 1, sizeof(*queued) );
+      xcalloc(1, sizeof(*queued) );
 
    queued->cb = listener->cb;
    queued->user = listener->user;
@@ -353,9 +347,8 @@ static void event_fire_binary_listener(const event_binary_listener_t *listener, 
 /*
  * Snapshot the text listener array.
  *
- * This is what allows event_off() or event_on() to safely execute while callbacks are
- * running. The snapshot contains listener structures by value, not pointers into the live
- * registry.
+ * This is what allows event_off() or event_on() to safely execute while callbacks are running. The snapshot contains listener structures by value, not pointers
+ * into the live registry.
  *
  * Caller must hold event_lock.
  */
@@ -447,13 +440,13 @@ void event_on_dispatch(const char *event, event_cb_t cb, void *user, event_dispa
       return;
    }
 
-   entry->listeners = xrealloc( entry->listeners, sizeof(*entry->listeners) *
+   entry->listeners = xrealloc(entry->listeners, sizeof(*entry->listeners) *
       (entry->listener_count + 1) );
 
    event_listener_t *listener =
       &entry->listeners[entry->listener_count++];
 
-   memset( listener, 0, sizeof(*listener) );
+   memset(listener, 0, sizeof(*listener) );
 
    listener->cb = cb;
    listener->user = user;
@@ -468,8 +461,7 @@ void event_on_dispatch(const char *event, event_cb_t cb, void *user, event_dispa
 /*
  * Register a listener and return an opaque token owning it.
  *
- * Tokens are allocated here and recorded on a module-agnostic list so shutdown paths can
- * audit outstanding registrations.
+ * Tokens are allocated here and recorded on a module-agnostic list so shutdown paths can audit outstanding registrations.
  */
 
 rr_event_token_t event_on_token(const char *event, event_cb_t cb, void *user) {
@@ -480,8 +472,7 @@ rr_event_token_t event_on_binary_token(const char *event, event_binary_cb_t cb, 
    return event_on_binary_token_dispatch(event, cb, user, NULL, NULL);
 }
 
-rr_event_token_t event_on_token_dispatch(const char *event, event_cb_t cb, void *user, event_dispatch_t dispatch,
-                                         void *dispatch_user) {
+rr_event_token_t event_on_token_dispatch(const char *event, event_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user) {
    if (!event || !cb) {
       return NULL;
    }
@@ -500,11 +491,11 @@ rr_event_token_t event_on_token_dispatch(const char *event, event_cb_t cb, void 
       return NULL;
    }
 
-   entry->listeners = xrealloc( entry->listeners, sizeof(*entry->listeners) * (entry->listener_count + 1) );
+   entry->listeners = xrealloc(entry->listeners, sizeof(*entry->listeners) * (entry->listener_count + 1) );
 
    event_listener_t *listener = &entry->listeners[entry->listener_count++];
 
-   memset( listener, 0, sizeof(*listener) );
+   memset(listener, 0, sizeof(*listener) );
 
    listener->cb = cb;
    listener->user = user;
@@ -512,9 +503,8 @@ rr_event_token_t event_on_token_dispatch(const char *event, event_cb_t cb, void 
    listener->dispatch_user = dispatch_user;
    entry->generation++;
 
-   /* The token is issued after the listener exists, using the current generation; a later
-    * wildcard removal bumps it and invalidates the slot match. */
-   struct rr_event_token *token = xcalloc( 1, sizeof(*token) );
+   /* The token is issued after the listener exists, using the current generation; a later wildcard removal bumps it and invalidates the slot match. */
+   struct rr_event_token *token = xcalloc(1, sizeof(*token) );
    token->event = xstrdup(event);
    token->binary = false;
    token->cb = cb;
@@ -529,8 +519,7 @@ rr_event_token_t event_on_token_dispatch(const char *event, event_cb_t cb, void 
    return token;
 }
 
-rr_event_token_t event_on_binary_token_dispatch(const char *event, event_binary_cb_t cb, void *user,
-                                                event_dispatch_t dispatch, void *dispatch_user) {
+rr_event_token_t event_on_binary_token_dispatch(const char *event, event_binary_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user) {
    if (!event || !cb) {
       return NULL;
    }
@@ -549,13 +538,12 @@ rr_event_token_t event_on_binary_token_dispatch(const char *event, event_binary_
       return NULL;
    }
 
-   entry->binary_listeners = xrealloc( entry->binary_listeners,
-      sizeof(*entry->binary_listeners) * (entry->binary_listener_count + 1) );
+   entry->binary_listeners = xrealloc(entry->binary_listeners, sizeof(*entry->binary_listeners) * (entry->binary_listener_count + 1) );
 
    event_binary_listener_t *listener =
       &entry->binary_listeners[entry->binary_listener_count++];
 
-   memset( listener, 0, sizeof(*listener) );
+   memset(listener, 0, sizeof(*listener) );
 
    listener->cb = cb;
    listener->user = user;
@@ -563,7 +551,7 @@ rr_event_token_t event_on_binary_token_dispatch(const char *event, event_binary_
    listener->dispatch_user = dispatch_user;
    entry->generation++;
 
-   struct rr_event_token *token = xcalloc( 1, sizeof(*token) );
+   struct rr_event_token *token = xcalloc(1, sizeof(*token) );
    token->event = xstrdup(event);
    token->binary = true;
    token->binary_cb = cb;
@@ -581,10 +569,8 @@ rr_event_token_t event_on_binary_token_dispatch(const char *event, event_binary_
 /*
  * Unregister the listener a token owns.
  *
- * The token identifies its listener by event + callback + user; the generation check
- * detects when that listener was already removed (e.g. by a wildcard event_off()) so the
- * wrong listener is never dropped when several share a callback. Already-unregistered
- * tokens are a no-op.
+ * The token identifies its listener by event + callback + user; the generation check detects when that listener was already removed (e.g. by a wildcard
+ * event_off()) so the wrong listener is never dropped when several share a callback. Already-unregistered tokens are a no-op.
  */
 void event_off_token(rr_event_token_t token_handle) {
    struct rr_event_token *token = token_handle;
@@ -604,8 +590,7 @@ void event_off_token(rr_event_token_t token_handle) {
                event_binary_listener_t *l = &entry->binary_listeners[i];
 
                if (l->cb == token->binary_cb && l->user == token->user) {
-                  memmove( &entry->binary_listeners[i], &entry->binary_listeners[i + 1],
-                     (entry->binary_listener_count - i - 1) *
+                  memmove(&entry->binary_listeners[i], &entry->binary_listeners[i + 1], (entry->binary_listener_count - i - 1) *
                      sizeof(*entry->binary_listeners) );
                   entry->binary_listener_count--;
                   entry->generation++;
@@ -622,7 +607,7 @@ void event_off_token(rr_event_token_t token_handle) {
                event_listener_t *l = &entry->listeners[i];
 
                if (l->cb == token->cb && l->user == token->user) {
-                  memmove( &entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
+                  memmove(&entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
                      sizeof(*entry->listeners) );
                   entry->listener_count--;
                   entry->generation++;
@@ -660,8 +645,7 @@ void event_register_binary(const char *event, event_binary_cb_t cb, void *user) 
 /*
  * Subscribe to a binary event using a dispatcher.
  */
-void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *user, event_dispatch_t dispatch,
-                              void *dispatch_user) {
+void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user) {
    event_entry_t *entry;
 
    if (!event || !cb) {
@@ -684,7 +668,7 @@ void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *use
       return;
    }
 
-   entry->binary_listeners = xrealloc( entry->binary_listeners, sizeof(*entry->binary_listeners) *
+   entry->binary_listeners = xrealloc(entry->binary_listeners, sizeof(*entry->binary_listeners) *
       (entry->binary_listener_count + 1) );
 
    event_binary_listener_t *listener =
@@ -692,7 +676,7 @@ void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *use
          entry->binary_listener_count++
       ];
 
-   memset( listener, 0, sizeof(*listener) );
+   memset(listener, 0, sizeof(*listener) );
 
    listener->cb = cb;
    listener->user = user;
@@ -833,7 +817,7 @@ void event_emit_dict(const char *event, rrconn_t *cptr, dict *data) {
 
    if (jp) {
       event_emit(event, cptr, jp);
-      free( (void *)jp );
+      free( (void *)jp);
    }
 }
 
@@ -873,8 +857,8 @@ void event_off(const char *event, event_cb_t cb, void *user) {
          &entry->listeners[i];
 
       if ( (!cb || listener->cb == cb) &&
-           (!user || listener->user == user) ) {
-         memmove( &entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
+         (!user || listener->user == user) ) {
+         memmove(&entry->listeners[i], &entry->listeners[i + 1], (entry->listener_count - i - 1) *
             sizeof(*entry->listeners) );
 
          entry->listener_count--;
@@ -922,13 +906,13 @@ void event_off_binary(const char *event, event_binary_cb_t cb, void *user) {
    }
 
    for (size_t i = 0 ;
-        i < entry->binary_listener_count ; ) {
+      i < entry->binary_listener_count ; ) {
       event_binary_listener_t *listener =
          &entry->binary_listeners[i];
 
       if ( (!cb || listener->cb == cb) &&
-           (!user || listener->user == user) ) {
-         memmove( &entry->binary_listeners[i], &entry->binary_listeners[i + 1], (entry->binary_listener_count - i - 1) *
+         (!user || listener->user == user) ) {
+         memmove(&entry->binary_listeners[i], &entry->binary_listeners[i + 1], (entry->binary_listener_count - i - 1) *
             sizeof(*entry->binary_listeners) );
 
          entry->binary_listener_count--;
@@ -952,12 +936,10 @@ void event_off_binary(const char *event, event_binary_cb_t cb, void *user) {
 /*
  * Optional cleanup.
  *
- * event_store contains VAL_PTR values, so dict_free() deliberately does not free the
- * event_entry_t objects. Enumerate and release them first.
+ * event_store contains VAL_PTR values, so dict_free() deliberately does not free the event_entry_t objects. Enumerate and release them first.
  *
- * Do not call event_shutdown() while dispatched callbacks remain queued if their
- * user/dispatch_user objects are being destroyed at the same time. The queued callback
- * itself owns its copied event payload, but user pointers remain borrowed.
+ * Do not call event_shutdown() while dispatched callbacks remain queued if their user/dispatch_user objects are being destroyed at the same time. The queued
+ * callback itself owns its copied event payload, but user pointers remain borrowed.
  */
 void event_shutdown(void) {
    pthread_mutex_lock(&event_lock);
@@ -973,7 +955,7 @@ void event_shutdown(void) {
    val_type_t type;
    int rank = 0;
 
-   while ( ( rank = dict_enumerate_typed(event_store, rank, &key, &val, &type) ) >= 0 ) {
+   while ( (rank = dict_enumerate_typed(event_store, rank, &key, &val, &type) ) >= 0) {
       if (type == VAL_PTR) {
          event_entry_free(val.p);
       }

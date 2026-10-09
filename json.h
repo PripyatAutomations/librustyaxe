@@ -8,7 +8,7 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(__librustyaxe_json_h)
-#define	__librustyaxe_json_h
+#define __librustyaxe_json_h
 #include <stdarg.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -27,8 +27,7 @@ typedef struct json_node {
  * dict2jsonump - Convert a dict into a JSON string.
  *
  * Params:
- *   d   - pointer to dict to convert out - optional FILE* to also write the JSON into
- * (may be NULL)
+ *   d   - pointer to dict to convert out - optional FILE* to also write the JSON into (may be NULL)
  *
  * Returns:
  *   A malloc'd JSON string (null-terminated). Caller MUST free() it when done.
@@ -42,7 +41,7 @@ extern char *dict2json(dict *d);
 extern dict *dict_new_ext(int first_type, ...);
 extern void dict_import_real(dict *d, int first_type, ...);
 extern void dict_import_va(dict *d, int first_type, va_list ap);
-#define	dict_import(d, ...) dict_import_va( (d), __VA_ARGS__, VAL_END )
+#define dict_import(d, ...) dict_import_va( (d), __VA_ARGS__, VAL_END)
 extern char *json_escape(const char *s);
 extern char *json_unescape(const char *s);
 
@@ -51,6 +50,6 @@ extern dict *json2dict(const char *json);
 
 // Turn type/key/val pairs into just -- You *MUST* free the returned string!
 extern const char *dict2json_mkstr_real(int first_type, ...);
-#define	dict2json_mkstr(...) dict2json_mkstr_real(__VA_ARGS__, VAL_END)
+#define dict2json_mkstr(...) dict2json_mkstr_real(__VA_ARGS__, VAL_END)
 
 #endif // !defined(__librustyaxe_json_h)

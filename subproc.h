@@ -6,13 +6,13 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #if     !defined(_subproc_h)
-#define	_subproc_h
+#define _subproc_h
 #include <limits.h>
 #include <stdlib.h>
-#define	MAX_SUBPROC 128               // i doubt we'll ever reach this
-                                       // limit, but it'd be cool if we
-                                       // could (that's a lot of
-                                       // bands!)
+#define MAX_SUBPROC 128           // i doubt we'll ever reach this
+                                  // limit, but it'd be cool if we
+                                  // could (that's a lot of
+                                  // bands!)
 
 typedef struct subproc subproc_t;
 struct subproc {

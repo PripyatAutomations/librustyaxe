@@ -4,7 +4,7 @@
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-#define	_GNU_SOURCE
+#define _GNU_SOURCE
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -19,7 +19,7 @@
 #include <librustyaxe/io.serial.h>
 
 static bool baud_speed(unsigned baud, speed_t *speed) {
-#define	RATE(n) case n: *speed = B ## n; return true
+#define RATE(n) case n: *speed = B ## n; return true
 
    switch (baud) {
    RATE(0);
@@ -42,17 +42,18 @@ static bool baud_speed(unsigned baud, speed_t *speed) {
 #endif
       default: {
          errno = EINVAL;
+
          return false;
       }
    }
 #undef RATE
 }
 bool rr_serial_mode_parse(const char *mode, rr_serial_settings_t *s) {
-   if ( !mode || !s || strlen(mode) != 3 || mode[0] < '5' || mode[0] > '8' ||
-        (mode[2] != '1' && mode[2] != '2') ) {
+   if (!mode || !s || strlen(mode) != 3 || mode[0] < '5' || mode[0] > '8' ||
+      (mode[2] != '1' && mode[2] != '2') ) {
       return false;
    }
-   char parity = tolower( (unsigned char)mode[1] );
+   char parity = tolower( (unsigned char)mode[1]);
 
    if (parity != 'n' && parity != 'e' && parity != 'o') {
       return false;
@@ -73,17 +74,17 @@ bool rr_serial_settings_apply(int fd, const rr_serial_settings_t *s) {
    struct termios settings;
    speed_t rate;
 
-   if ( !s || s->bits < 5 || s->bits > 8 || s->stops < 1 || s->stops > 2 ||
-        (s->parity != 'n' && s->parity != 'e' && s->parity != 'o') || !baud_speed(s->baud, &rate) || tcgetattr(fd,
-           &settings) ) {
+   if (!s || s->bits < 5 || s->bits > 8 || s->stops < 1 || s->stops > 2 ||
+      (s->parity != 'n' && s->parity != 'e' && s->parity != 'o') || !baud_speed(s->baud, &rate) || tcgetattr(fd, &settings) ) {
       return false;
    }
    char mode[4];
    rr_serial_mode_format(s, mode);
    rr_serial_settings_t validated = *s;
 
-   if ( !rr_serial_mode_parse(mode, &validated) ) {
+   if (!rr_serial_mode_parse(mode, &validated) ) {
       errno = EINVAL;
+
       return false;
    }
    cfmakeraw(&settings);
@@ -116,7 +117,7 @@ bool rr_serial_settings_apply(int fd, const rr_serial_settings_t *s) {
 bool rr_serial_settings_read(int fd, rr_serial_settings_t *s) {
    struct termios settings;
 
-   if ( !s || tcgetattr(fd, &settings) ) {
+   if (!s || tcgetattr(fd, &settings) ) {
       return false;
    }
    speed_t rate = cfgetospeed(&settings);
@@ -165,6 +166,7 @@ bool rr_serial_settings_read(int fd, rr_serial_settings_t *s) {
 int rr_serial_device_open(const char *path, const rr_serial_settings_t *settings, struct termios *original) {
    if (!path || !original) {
       errno = EINVAL;
+
       return -1;
    }
    int fd = open(path, O_RDWR | O_NONBLOCK | O_NOCTTY | O_CLOEXEC);
@@ -174,17 +176,19 @@ int rr_serial_device_open(const char *path, const rr_serial_settings_t *settings
    }
    struct stat status;
 
-   if ( fstat(fd, &status) || !S_ISCHR(status.st_mode) || tcgetattr(fd, original) ) {
+   if (fstat(fd, &status) || !S_ISCHR(status.st_mode) || tcgetattr(fd, original) ) {
       close(fd);
       errno = ENOTTY;
+
       return -1;
    }
 
-   if ( !rr_serial_settings_apply(fd, settings) ) {
+   if (!rr_serial_settings_apply(fd, settings) ) {
       int error = errno;
       tcsetattr(fd, TCSANOW, original);
       close(fd);
       errno = error;
+
       return -1;
    }
 
@@ -216,44 +220,45 @@ bool rr_serial_spec_parse(const char *spec, char *target, size_t capacity, rr_se
    if (at) {
       const char *tail = at + 1;
 
-      if ( !rr_serial_mode_parse(tail, &parsed) ) {
+      if (!rr_serial_mode_parse(tail, &parsed) ) {
          char *end = NULL;
          errno = 0;
          unsigned long baud = strtoul(tail, &end, 10);
 
-         if ( errno || end == tail || baud > 921600 || (*end && *end != ',') ) {
+         if (errno || end == tail || baud > 921600 || (*end && *end != ',') ) {
             return false;
          }
          parsed.baud = baud;
 
-         if ( *end == ',' && !rr_serial_mode_parse(end + 1, &parsed) ) {
+         if (*end == ',' && !rr_serial_mode_parse(end + 1, &parsed) ) {
             return false;
          }
       }
    }
    speed_t rate;
 
-   if ( !baud_speed(parsed.baud, &rate) ) {
+   if (!baud_speed(parsed.baud, &rate) ) {
       return false;
    }
    memcpy(target, spec, len);
    target[len] = '\0';
    *settings = parsed;
+
    return true;
 }
 bool rr_nmea_valid(const char *line) {
-   if ( !line || (line[0] != '$' && line[0] != '!') ) {
+   if (!line || (line[0] != '$' && line[0] != '!') ) {
       return false;
    }
    const char *end = strchr(line, '*');
 
-   if ( !end || end == line + 1 || strlen(end) != 3 || !isxdigit( (unsigned char)end[1] ) || !isxdigit( (unsigned char)end[2] ) ) {
+   if (!end || end == line + 1 || strlen(end) != 3 || !isxdigit( (unsigned char)end[1]) || !isxdigit( (unsigned char)end[2]) ) {
       return false;
    }
    unsigned checksum = 0;
 
    for (const char *p = line + 1 ; p < end ; p++) {
-      if ( (unsigned char)*p < 32 || (unsigned char)*p > 126 ) {
+      if ( (unsigned char)*p < 32 || (unsigned char)*p > 126) {
          return false;
       }
       checksum ^= (unsigned char)*p;
@@ -270,12 +275,11 @@ static void nmea_angle(int32_t angle, unsigned width, char *out, size_t capacity
       degrees++;
       minutes = 0;
    }
-   snprintf( out, capacity, "%0*u%02u.%06u", width, degrees, (unsigned)(minutes / 1000000),
-      (unsigned)(minutes % 1000000) );
+   snprintf(out, capacity, "%0*u%02u.%06u", width, degrees, (unsigned)(minutes / 1000000), (unsigned)(minutes % 1000000) );
 }
 size_t rr_nmea_rmc(int32_t latitude, int32_t longitude, uint8_t flags, time_t utc, char *out, size_t capacity) {
    if (!out || capacity < 8 || latitude < -900000000 || latitude > 900000000 ||
-       longitude < -1800000000 || longitude > 1800000000 || (flags & ~3) ) {
+      longitude < -1800000000 || longitude > 1800000000 || (flags & ~3) ) {
       return 0;
    }
    struct tm nmea_tm;
@@ -286,16 +290,16 @@ size_t rr_nmea_rmc(int32_t latitude, int32_t longitude, uint8_t flags, time_t ut
    char time_text[16], date_text[16], lat[24], lon[24];
 
    if (!strftime(time_text, sizeof(time_text), "%H%M%S", &nmea_tm) ||
-       !strftime(date_text, sizeof(date_text), "%d%m%y", &nmea_tm) ) {
+      !strftime(date_text, sizeof(date_text), "%d%m%y", &nmea_tm) ) {
       return 0;
    }
    int len;
 
    if (flags & 1) {
-      nmea_angle( latitude, 2, lat, sizeof(lat) );
-      nmea_angle( longitude, 3, lon, sizeof(lon) );
-      len = snprintf(out, capacity, "$GPRMC,%s,A,%s,%c,%s,%c,0.0,,%s,,,%c", time_text, lat, latitude < 0 ? 'S' : 'N',
-         lon, longitude < 0 ? 'W' : 'E', date_text, flags & 2 ? 'M' : 'A');
+      nmea_angle(latitude, 2, lat, sizeof(lat) );
+      nmea_angle(longitude, 3, lon, sizeof(lon) );
+      len = snprintf(out, capacity, "$GPRMC,%s,A,%s,%c,%s,%c,0.0,,%s,,,%c", time_text, lat, latitude < 0 ? 'S' : 'N', lon, longitude < 0 ? 'W' : 'E', date_text,
+         flags & 2 ? 'M' : 'A');
    } else {
       len = snprintf(out, capacity, "$GPRMC,%s,V,,,,,0.0,,%s,,,N", time_text, date_text);
    }
@@ -314,10 +318,10 @@ size_t rr_nmea_rmc(int32_t latitude, int32_t longitude, uint8_t flags, time_t ut
    return suffix == 3 ? (size_t)len + (size_t)suffix : 0;
 }
 
-int rr_serial_pty_open(const char *path, const rr_serial_settings_t *settings, int *keeper, char *slave,
-                       size_t capacity) {
+int rr_serial_pty_open(const char *path, const rr_serial_settings_t *settings, int *keeper, char *slave, size_t capacity) {
    if (!path || !keeper || !slave || capacity < 2) {
       errno = EINVAL;
+
       return -1;
    }
    int fd = posix_openpt(O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC), hold = -1;
@@ -326,15 +330,16 @@ int rr_serial_pty_open(const char *path, const rr_serial_settings_t *settings, i
       return -1;
    }
 
-   if ( grantpt(fd) || unlockpt(fd) || ptsname_r(fd, slave, capacity) ) {
+   if (grantpt(fd) || unlockpt(fd) || ptsname_r(fd, slave, capacity) ) {
       goto failed;
    }
    hold = open(slave, O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
 
-   if ( hold < 0 || !rr_serial_settings_apply(hold, settings) || symlink(slave, path) ) {
+   if (hold < 0 || !rr_serial_settings_apply(hold, settings) || symlink(slave, path) ) {
       goto failed;
    }
    *keeper = hold;
+
    return fd;
 failed: {
       int error = errno;
@@ -344,6 +349,7 @@ failed: {
       }
       close(fd);
       errno = error;
+
       return -1;
    }
 }
@@ -363,15 +369,14 @@ void rr_serial_pty_close(int fd, int keeper, const char *path, const char *slave
       if (len >= 0) {
          target[len] = '\0';
 
-         if ( !strcmp(target, slave) ) {
+         if (!strcmp(target, slave) ) {
             unlink(path);
          }
       }
    }
 }
 
-/* The loader dispatches named sections to their component's callback. The dotted form
- * also accepts cfg_save()'s [serial] NAME.option representation. */
+/* The loader dispatches named sections to their component's callback. The dotted form also accepts cfg_save()'s [serial] NAME.option representation. */
 static bool serial_config(const char *path, int line, const char *section, const char *buf) {
    char *copy = strdup(buf);
 
@@ -384,28 +389,28 @@ static bool serial_config(const char *path, int line, const char *section, const
    if (value) {
       *value++ = '\0';
       char *key = copy;
-      while ( isspace( (unsigned char)*key ) ) {
+      while (isspace( (unsigned char)*key) ) {
          key++;
       }
       char *end = key + strlen(key);
-      while ( end > key && isspace( (unsigned char)end[-1] ) ) {
+      while (end > key && isspace( (unsigned char)end[-1]) ) {
          *--end = '\0';
       }
-      while ( isspace( (unsigned char)*value ) ) {
+      while (isspace( (unsigned char)*value) ) {
          value++;
       }
       end = value + strlen(value);
-      while ( end > value && isspace( (unsigned char)end[-1] ) ) {
+      while (end > value && isspace( (unsigned char)end[-1]) ) {
          *--end = '\0';
       }
       char full[256];
       int len = snprintf(full, sizeof(full), "%s.%s", section, key);
 
-      if ( !strcmp(section, "serial") && strchr(key, '.') ) {
+      if (!strcmp(section, "serial") && strchr(key, '.') ) {
          full[6] = ':';
       }
 
-      if ( *key && len > 0 && (size_t)len < sizeof(full) ) {
+      if (*key && len > 0 && (size_t)len < sizeof(full) ) {
          failed = dict_add(cfg, full, value) != 0;
       }
    }

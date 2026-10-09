@@ -39,7 +39,7 @@ int rr_io_open(rr_io_context_t *ctx, rr_io_type_t type, const char *path, int po
             return -1;
          }
          struct sockaddr_in server_addr;
-         memset( &server_addr, 0, sizeof(server_addr) );
+         memset(&server_addr, 0, sizeof(server_addr) );
          server_addr.sin_family = AF_INET;
          server_addr.sin_port = htons(port);
 
@@ -49,7 +49,7 @@ int rr_io_open(rr_io_context_t *ctx, rr_io_type_t type, const char *path, int po
             return -1;
          }
 
-         if (connect( ctx->fd, (struct sockaddr*)&server_addr, sizeof(server_addr) ) < 0) {
+         if (connect(ctx->fd, (struct sockaddr*)&server_addr, sizeof(server_addr) ) < 0) {
             close(ctx->fd);
 
             return -1;

@@ -28,7 +28,9 @@ static int tui_active_win = 0;
 static int tui_num_windows = 0;
 
 static void tui_window_free_history(tui_window_t *w) {
-   if (!w) { return; }
+   if (!w) {
+      return;
+   }
 
    for (int i = 0 ; i < w->history_count ; i++) {
       free(w->input_history[i]);
@@ -88,15 +90,15 @@ tui_window_t *tui_window_create(const char *title) {
       return NULL;
    }
    // Nope, lets create it
-   w = calloc( 1, sizeof(*w) );
+   w = calloc(1, sizeof(*w) );
 
    if (!w) {
       fprintf(stderr, "OOM in tui_window_create!\n");
 
       return NULL;
    }
-   strlcpy( w->title, title, sizeof(w->title) );
-   memset( w->status_line, 0, sizeof(w->status_line) );
+   strlcpy(w->title, title, sizeof(w->title) );
+   memset(w->status_line, 0, sizeof(w->status_line) );
    snprintf(w->status_line, sizeof(w->status_line), "%s", title);
    w->title[sizeof(w->title) - 1] = '\0';
 
@@ -170,8 +172,7 @@ bool tui_window_destroy(tui_window_t *w) {
 
 bool tui_window_destroy_id(int id) {
    if (id < 1 || id > tui_num_windows) {
-      tui_print(tui_active_window(), "\00304Invalid window %d, must be between 2 and %d\017.", id,
-         tui_num_windows);
+      tui_print(tui_active_window(), "\00304Invalid window %d, must be between 2 and %d\017.", id, tui_num_windows);
 
       return true;
    }
@@ -218,8 +219,7 @@ tui_window_t *tui_window_focus(const char *title) {
 
 tui_window_t *tui_window_focus_id(int id) {
    if (id < 1 || id > tui_num_windows) {
-      tui_print(tui_active_window(), "\00304Invalid window %d, must be between 1 and %d\017.", id,
-         tui_num_windows);
+      tui_print(tui_active_window(), "\00304Invalid window %d, must be between 1 and %d\017.", id, tui_num_windows);
 
       return NULL;
    }
@@ -240,7 +240,7 @@ void tui_window_init(void) {
       char *sl = tui_windows[0]->status_line;
 
       if (sl) {
-         memset( sl, 0, sizeof(tui_windows[0]->status_line) );
+         memset(sl, 0, sizeof(tui_windows[0]->status_line) );
          snprintf(sl, sizeof(tui_windows[0]->status_line), "%s", "status");
       }
       tui_num_windows = 1;
@@ -252,7 +252,9 @@ void tui_window_fini(void) {
    for (int i = 0 ; i < tui_num_windows ; i++) {
       tui_window_t *w = tui_windows[i];
 
-      if (!w) { continue; }
+      if (!w) {
+         continue;
+      }
       tui_window_free_history(w);
 
       for (int line = 0 ; line < LOG_LINES ; line++) {

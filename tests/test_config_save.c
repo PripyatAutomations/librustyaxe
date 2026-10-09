@@ -12,30 +12,37 @@ extern dict *default_cfg;
 static int failures = 0;
 static bool test_reload_callback(const char *key) {
    (void)key;
+
    return true;
 }
 #define CHECK(cond) do { \
-   if (!(cond)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); failures++; } \
+           if (!(cond)) { \
+              fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+              failures++; \
+           } \
 } while (0)
 
 int main(void) {
    char path[] = "/tmp/rustyrig-config-save-XXXXXX";
    int fd = mkstemp(path);
    CHECK(fd >= 0);
-   if (fd >= 0) close(fd);
+
+   if (fd >= 0) {
+      close(fd);
+   }
    unlink(path);
 
    default_cfg = dict_new();
    cfg = dict_new();
    CHECK(default_cfg != NULL && cfg != NULL);
+
    if (cfg && default_cfg) {
       CHECK(dict_add(cfg, "zeta", "last") == 0);
       CHECK(dict_add(cfg, "fwdsp:path", "/usr/bin/fwdsp") == 0);
       CHECK(dict_add(cfg, "pipeline:pc16.rx", "appsrc ! sink") == 0);
       CHECK(dict_add(cfg, "site:gridsquare", "EM98") == 0);
       CHECK(dict_add(cfg, "callsign-lookup:use-qrz", "true") == 0);
-      CHECK(dict_add(cfg, "long-value",
-         "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      CHECK(dict_add(cfg, "long-value", "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
          "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
          "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == 0);
       CHECK(cfg_save(cfg, path));
@@ -43,6 +50,7 @@ int main(void) {
 
    FILE *fp = fopen(path, "r");
    CHECK(fp != NULL);
+
    if (fp) {
       char text[4096] = "";
       size_t used = fread(text, 1, sizeof(text) - 1, fp);
@@ -62,12 +70,16 @@ int main(void) {
          char *newline = strchr(line, '\n');
          size_t length = newline ? (size_t)(newline - line) : strlen(line);
          CHECK(length <= 80);
+
          if (newline && length > 0 && line[length - 1] == '\\') {
             char *next = newline + 1;
             size_t indent = strlen("long-value=");
             CHECK(strncmp(next, "           ", indent) == 0);
          }
-         if (!newline) break;
+
+         if (!newline) {
+            break;
+         }
          line = newline + 1;
       }
    }
@@ -75,6 +87,7 @@ int main(void) {
    /* Continuation indentation is syntax, not part of the loaded value. */
    FILE *manual = fopen(path, "w");
    CHECK(manual != NULL);
+
    if (manual) {
       fputs("[general]\nwrapped=first\\\n\t   second\\\n    third\n"
          "tui.status-line=\\C04red \\Bbold\\B\\O\n"
@@ -83,24 +96,27 @@ int main(void) {
       fclose(manual);
       dict *loaded = cfg_load(path);
       CHECK(loaded != NULL);
+
       if (loaded) {
          CHECK(strcmp(dict_get(loaded, "wrapped", ""), "firstsecondthird") == 0);
-                  CHECK(strcmp(dict_get(loaded, "tui.status-line", ""),
-                     "\00304red \002bold\002\017") == 0);
-                  CHECK(strcmp(dict_get(loaded, "theme.literal", ""), "\\C04") == 0);
-                  CHECK(strcmp(dict_get(loaded, "path", ""), "C:\\Backup") == 0);
+         CHECK(strcmp(dict_get(loaded, "tui.status-line", ""), "\00304red \002bold\002\017") == 0);
+         CHECK(strcmp(dict_get(loaded, "theme.literal", ""), "\\C04") == 0);
+         CHECK(strcmp(dict_get(loaded, "path", ""), "C:\\Backup") == 0);
          dict_free(loaded);
       }
    }
 
-   reload_event_t *event = reload_event_add("test.key", test_reload_callback,
-      "test event");
+   reload_event_t *event = reload_event_add("test.key", test_reload_callback, "test event");
    CHECK(event != NULL);
    CHECK(reload_event_remove(event));
 
    unlink(path);
    cfg_fini();
-   if (failures) return 1;
+
+   if (failures) {
+      return 1;
+   }
    puts("test_config_save: all tests passed");
+
    return 0;
 }

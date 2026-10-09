@@ -7,8 +7,7 @@
 /*
  * A reusable implementation of a ring buffer with timestamps for FIFO usage
  *
- * This is mostly intended for servicing media buffers which need to be kept strictly
- * bounded in maximum size.
+ * This is mostly intended for servicing media buffers which need to be kept strictly bounded in maximum size.
  *
  * It would be beneficial to keep
  */
@@ -21,9 +20,9 @@
 #include <librrprotocol/rrprotocol.h>
 
 rb_buffer_t *rb_create(int max_size, const char *name) {
-   rb_buffer_t *buffer = malloc( sizeof(rb_buffer_t) );
+   rb_buffer_t *buffer = malloc(sizeof(rb_buffer_t) );
    const char *safe_name = name ? name : "";
-   size_t name_len = strnlen( safe_name, sizeof(buffer->name) ) + 1;  // add one for
+   size_t name_len = strnlen(safe_name, sizeof(buffer->name) ) + 1;   // add one for
    // null
    // terminator
    char *buffer_name = malloc(name_len);
@@ -55,8 +54,7 @@ void rb_destroy(rb_buffer_t *buffer) {
 
    while (current != NULL) {
       rb_node_t *next = current->next;
-      Log(LOG_DEBUG, "ringbuffer", "rb: Destroying entry rb:%p (%s) to %p, needs_freed: %d", current, buffer->name,
-         current->data, current->needs_freed);
+      Log(LOG_DEBUG, "ringbuffer", "rb: Destroying entry rb:%p (%s) to %p, needs_freed: %d", current, buffer->name, current->data, current->needs_freed);
 
       if (current->needs_freed && current->data != NULL) {
          free(current->data);
@@ -72,7 +70,7 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    struct timespec timestamp;
    clock_gettime(CLOCK_MONOTONIC, &timestamp);
 
-   rb_node_t *node = malloc( sizeof(rb_node_t) );
+   rb_node_t *node = malloc(sizeof(rb_node_t) );
 
    if (node == NULL) {
       Log(LOG_CRIT, "librustyaxe", "rb_add: out of memory!");
@@ -83,8 +81,7 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    node->next = NULL;
    node->needs_freed = needs_freed;
 
-   Log(LOG_DEBUG, "ringbuffer", "Adding entry %p to rb:%p (%s), needs_freed: %d", data, buffer, buffer->name,
-      needs_freed);
+   Log(LOG_DEBUG, "ringbuffer", "Adding entry %p to rb:%p (%s), needs_freed: %d", data, buffer, buffer->name, needs_freed);
 
    if (buffer->current_size == 0) {
       buffer->head = node;
@@ -133,8 +130,8 @@ rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
 
    while (current != NULL) {
       if (current->timestamp.tv_sec > latest_node->timestamp.tv_sec ||
-          (current->timestamp.tv_sec == latest_node->timestamp.tv_sec &&
-           current->timestamp.tv_nsec > latest_node->timestamp.tv_nsec) ) {
+         (current->timestamp.tv_sec == latest_node->timestamp.tv_sec &&
+         current->timestamp.tv_nsec > latest_node->timestamp.tv_nsec) ) {
          latest_node = current;
       }
       current = current->next;
@@ -160,7 +157,7 @@ void **rb_get_range(rb_buffer_t *buffer, int start, int count) {
 
       return NULL;
    }
-   void **array = malloc( count * sizeof(void*) );
+   void **array = malloc(count * sizeof(void*) );
 
    if ( (void *)array == NULL) {
       Log(LOG_CRIT, "librustyaxe", "rb_get_range: out of memory!");

@@ -9,20 +9,21 @@
 
 static int failures = 0;
 #define CHECK(cond)                                                      \
-   do                                                                    \
-   {                                                                     \
-      if (!(cond))                                                       \
-      {                                                                  \
-         fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-         failures++;                                                     \
-      }                                                                  \
-   } while (0)
+        do {                                                                     \
+           if (!(cond)) {                                                                  \
+              fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+              failures++;                                                     \
+           }                                                                  \
+        } while (0)
 
 static int list_len(rrlist_t **list)
 {
    int n = 0;
-   for (rrlist_t *lp = *list; lp; lp = lp->next)
+
+   for (rrlist_t *lp = *list ; lp ; lp = lp->next) {
       n++;
+   }
+
    return n;
 }
 
@@ -90,11 +91,13 @@ int main(void)
    test_find_missing();
    test_remove();
    test_order();
-   if (failures)
-   {
+
+   if (failures) {
       fprintf(stderr, "%d failure(s)\n", failures);
+
       return 1;
    }
    printf("test_list: all tests passed\n");
+
    return 0;
 }

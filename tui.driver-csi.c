@@ -45,8 +45,7 @@ static TermKeyResult handle_csi_ss3_full(TermKey *tk, TermKeyKey *key, int cmd, 
    return TERMKEY_RES_KEY;
 }
 
-static void register_csi_ss3_full(TermKeyType type, TermKeySym sym, int modifier_set, int modifier_mask,
-                                  unsigned char cmd)
+static void register_csi_ss3_full(TermKeyType type, TermKeySym sym, int modifier_set, int modifier_mask, unsigned char cmd)
 {
    if (cmd < 0x40 || cmd >= 0x80) {
       return;
@@ -84,9 +83,8 @@ static void register_ss3kpalt(TermKeyType type, TermKeySym sym, unsigned char cm
  * Handler for CSI number ~ function keys
  */
 
-static struct keyinfo csifuncs[35];  /* This value must be increased if more CSI function
-                                      * keys are added */
-#define	NCSIFUNCS (sizeof(csifuncs) / sizeof(csifuncs[0]) )
+static struct keyinfo csifuncs[35];  /* This value must be increased if more CSI function keys are added */
+#define NCSIFUNCS (sizeof(csifuncs) / sizeof(csifuncs[0]) )
 
 static TermKeyResult handle_csifunc(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
 {
@@ -161,8 +159,7 @@ static TermKeyResult handle_csi_u(TermKey *tk, TermKeyKey *key, int cmd, long *a
 }
 
 /*
- * Handler for CSI M / CSI m mouse events in SGR and rxvt encodings Note: This does not
- * handle X10 encoding
+ * Handler for CSI M / CSI m mouse events in SGR and rxvt encodings Note: This does not handle X10 encoding
  */
 
 static TermKeyResult handle_csi_m(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
@@ -214,8 +211,7 @@ static TermKeyResult handle_csi_m(TermKey *tk, TermKeyKey *key, int cmd, long *a
    return TERMKEY_RES_NONE;
 }
 
-TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKeyMouseEvent *event, int *button,
-                                      int *line, int *col)
+TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKeyMouseEvent *event, int *button, int *line, int *col)
 {
    if (key->type != TERMKEY_TYPE_MOUSE) {
       return TERMKEY_RES_NONE;
@@ -276,8 +272,7 @@ TermKeyResult termkey_interpret_mouse(TermKey *tk, const TermKeyKey *key, TermKe
 }
 
 /*
- * Handler for CSI ? R position reports A plain CSI R with no arguments is probably
- * actually <F3>
+ * Handler for CSI ? R position reports A plain CSI R with no arguments is probably actually <F3>
  */
 
 static TermKeyResult handle_csi_R(TermKey *tk, TermKeyKey *key, int cmd, long *arg, int args)
@@ -357,10 +352,9 @@ TermKeyResult termkey_interpret_modereport(TermKey *tk, const TermKeyKey *key, i
    return TERMKEY_RES_KEY;
 }
 
-#define	CHARAT(i) (tk->buffer[tk->buffstart + (i)])
+#define CHARAT(i) (tk->buffer[tk->buffstart + (i)])
 
-static TermKeyResult parse_csi(TermKey *tk, size_t introlen, size_t *csi_len, long args[], size_t *nargs,
-                               unsigned long *commandp)
+static TermKeyResult parse_csi(TermKey *tk, size_t introlen, size_t *csi_len, long args[], size_t *nargs, unsigned long *commandp)
 {
    size_t csi_end = introlen;
 
@@ -559,8 +553,7 @@ static void free_driver(void *info)
    free(csi);
 }
 
-static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force,
-                                 size_t *nbytep)
+static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force, size_t *nbytep)
 {
    size_t csi_len;
    size_t args = 16;
@@ -624,8 +617,7 @@ static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, 
             break;
          }
          default: {
-            fprintf(stderr, "CSI: Unknown arg1=%ld arg2=%ld arg3=%ld ... args=%zu cmd=%c\n", arg[0], arg[1], arg[2],
-               args, (char)cmd);
+            fprintf(stderr, "CSI: Unknown arg1=%ld arg2=%ld arg3=%ld ... args=%zu cmd=%c\n", arg[0], arg[1], arg[2], args, (char)cmd);
             break;
          }
       }
@@ -644,8 +636,7 @@ static TermKeyResult peekkey_csi(TermKey *tk, TermKeyCsi *csi, size_t introlen, 
    return result;
 }
 
-static TermKeyResult peekkey_ss3(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force,
-                                 size_t *nbytep)
+static TermKeyResult peekkey_ss3(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force, size_t *nbytep)
 {
    if (tk->buffcount < introlen + 1) {
       if (!force) {
@@ -693,8 +684,7 @@ static TermKeyResult peekkey_ss3(TermKey *tk, TermKeyCsi *csi, size_t introlen, 
    return TERMKEY_RES_KEY;
 }
 
-static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force,
-                                        size_t *nbytep)
+static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t introlen, TermKeyKey *key, int force, size_t *nbytep)
 {
    size_t str_end = introlen;
 
@@ -705,8 +695,8 @@ static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t int
       }
 
       if (CHARAT(str_end) == 0x1b &&
-          (str_end + 1) < tk->buffcount &&
-          CHARAT(str_end + 1) == 0x5c) {
+         (str_end + 1) < tk->buffcount &&
+         CHARAT(str_end + 1) == 0x5c) {
          // ESC-prefixed ST
          break;
       }
@@ -738,7 +728,7 @@ static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t int
    csi->saved_string[len] = 0;
 
    key->type = (CHARAT(introlen - 1) & 0x1f) == 0x10 ?
-               TERMKEY_TYPE_DCS : TERMKEY_TYPE_OSC;
+      TERMKEY_TYPE_DCS : TERMKEY_TYPE_OSC;
    key->code.number = csi->saved_string_id;
    key->modifiers = 0;
 
@@ -829,7 +819,7 @@ TermKeyResult termkey_interpret_string(TermKey *tk, const TermKeyKey *key, const
    }
 
    if (key->type != TERMKEY_TYPE_DCS &&
-       key->type != TERMKEY_TYPE_OSC) {
+      key->type != TERMKEY_TYPE_OSC) {
       return TERMKEY_RES_NONE;
    }
    TermKeyCsi *csi = p->info;

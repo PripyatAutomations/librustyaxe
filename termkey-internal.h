@@ -6,9 +6,9 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #ifndef GUARD_TERMKEY_INTERNAL_H_
-#define	GUARD_TERMKEY_INTERNAL_H_
+#define GUARD_TERMKEY_INTERNAL_H_
 
-#define	HAVE_TERMIOS
+#define HAVE_TERMIOS
 
 #ifdef _WIN32
 #undef HAVE_TERMIOS
@@ -57,8 +57,7 @@ struct TermKey {
    size_t buffstart;  // First offset in buffer
    size_t buffcount;  // NUMBER of entires valid in buffer
    size_t buffsize;  // Total malloc'ed size
-   size_t hightide;  /* Position beyond buffstart at which peekkey() should next start
-                      * normally 0, but see also termkey_interpret_csi */
+   size_t hightide;  /* Position beyond buffstart at which peekkey() should next start normally 0, but see also termkey_interpret_csi */
 
 #ifdef HAVE_TERMIOS
    struct termios restore_termios;
@@ -98,7 +97,7 @@ static inline void termkey_key_get_linecol(const TermKeyKey *key, int *line, int
 
    if (line) {
       *line = (unsigned char)key->code.mouse[2] | ( (unsigned char)key->code.mouse[3] & 0x70) <<
-              4;
+         4;
    }
 }
 

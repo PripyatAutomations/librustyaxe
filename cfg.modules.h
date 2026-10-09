@@ -9,7 +9,7 @@
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 //
 #if     !defined(__librustyaxe_cfg_modules_h)
-#define	__librustyaxe_cfg_modules_h
+#define __librustyaxe_cfg_modules_h
 
 // Install the [modules] section callback (call once before cfg_load()).
 extern bool cfg_modules_init(void);

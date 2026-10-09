@@ -23,7 +23,7 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-#define	DEFAULT_LOG_LEVEL LOG_DEBUG
+#define DEFAULT_LOG_LEVEL LOG_DEBUG
 
 // These are in main
 extern char latest_timestamp[64];
@@ -104,7 +104,7 @@ struct log_filter {
 static struct log_filter *log_filters = NULL;
 
 bool log_add_filter(const char *pattern, logpriority_t level) {
-   struct log_filter *f = malloc( sizeof(*f) );
+   struct log_filter *f = malloc(sizeof(*f) );
 
    if (f == NULL) {
       fprintf(stderr, "OOM in log_add_filter\n");
@@ -143,7 +143,7 @@ void load_log_filters_from_config(void) {
    }
 
    char *copy = strdup(cfg);
-   free( (void *)cfg );
+   free( (void *)cfg);
 
    if (!copy) {
       abort();
@@ -152,7 +152,7 @@ void load_log_filters_from_config(void) {
    char *tok = copy;
 
    while (*tok) {
-      while ( *tok && (isspace( (unsigned char)*tok ) || *tok == ',') ) {
+      while (*tok && (isspace( (unsigned char)*tok) || *tok == ',') ) {
          tok++;
       }
 
@@ -161,7 +161,7 @@ void load_log_filters_from_config(void) {
       }
 
       char *end = tok;
-      while (*end && !isspace( (unsigned char)*end ) && *end != ',') {
+      while (*end && !isspace( (unsigned char)*end) && *end != ',') {
          end++;
       }
 
@@ -209,7 +209,7 @@ bool debug_filter(const char *subsys, logpriority_t msg_level) {
 
    while (f) {
       if (fnmatch(f->pattern, subsys, 0) == 0) {
-         if ( !best || strlen(f->pattern) > strlen(best->pattern) ) {
+         if (!best || strlen(f->pattern) > strlen(best->pattern) ) {
             best = f;
          }
       }
@@ -229,7 +229,7 @@ void log_dump_log_filters(void) {
    printf("---- Log Filters ----\n");
    struct log_filter *f = log_filters;
    while (f) {
-      printf( "  '%s' = %d (%s)\n", f->pattern, f->level, log_priority_to_str(f->level) );
+      printf("  '%s' = %d (%s)\n", f->pattern, f->level, log_priority_to_str(f->level) );
       f = f->next;
    }
    printf("---------------------\n");
@@ -300,13 +300,13 @@ int update_timestamp(void) {
       return 0;
    }
    last_ts_update = now;
-   memset( latest_timestamp, 0, sizeof(latest_timestamp) );
+   memset(latest_timestamp, 0, sizeof(latest_timestamp) );
 
    if ( (tmp = localtime(&now) ) ) {
       /* success, proceed */
       if (strftime(latest_timestamp, sizeof(latest_timestamp), "%Y/%m/%d %H:%M:%S", tmp) == 0) {
          /* handle the error */
-         memset( latest_timestamp, 0, sizeof(latest_timestamp) );
+         memset(latest_timestamp, 0, sizeof(latest_timestamp) );
          snprintf(latest_timestamp, sizeof(latest_timestamp), "<%lu>", (unsigned long)now);
       }
    } else {
@@ -359,13 +359,12 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    }
 
    /* clear the message buffer */
-   memset( msgbuf, 0, sizeof(msgbuf) );
+   memset(msgbuf, 0, sizeof(msgbuf) );
 
    /* Expand the format string */
    vsnprintf(msgbuf, sizeof(msgbuf) - 1, fmt, ap);
-   memset( log_msg, 0, sizeof(log_msg) );
-   int log_prefix_len = snprintf( log_msg, sizeof(log_msg), "<%s@%s> ", subsys ? subsys : "core",
-      log_priority_to_str(priority) );
+   memset(log_msg, 0, sizeof(log_msg) );
+   int log_prefix_len = snprintf(log_msg, sizeof(log_msg), "<%s@%s> ", subsys ? subsys : "core", log_priority_to_str(priority) );
 
    if (log_prefix_len < 0) {
       log_msg[0] = '\0';
@@ -384,8 +383,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    }
 
    if (!tui_mode_enabled) {
-      /* Only spew to the console if logfile is closed or log.stdout == true, but avoid
-       * duplicating messages */
+      /* Only spew to the console if logfile is closed or log.stdout == true, but avoid duplicating messages */
       if ( (!logfp || log_stdout) && (logfp != stdout) ) {
          if (cfg_log_show_ts) {
             fprintf(stdout, "[%s] %s\n", latest_timestamp, log_msg);
@@ -417,15 +415,15 @@ bool log_remove_callback(struct log_callback *log_callback) {
    return false;   // callback not found
 }
 
-struct log_callback *log_add_callback_token( bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap) ) {
-   struct log_callback *newcb = malloc( sizeof(struct log_callback) );
+struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap) ) {
+   struct log_callback *newcb = malloc(sizeof(struct log_callback) );
 
    if (!newcb) {
       fprintf(stderr, "OOM in log_set_callback!\n");
 
       return NULL;
    }
-   memset( newcb, 0, sizeof(struct log_callback) );
+   memset(newcb, 0, sizeof(struct log_callback) );
    newcb->callback = log_va_cb;
 
    if (log_callbacks) {
@@ -450,6 +448,6 @@ struct log_callback *log_add_callback_token( bool (*log_va_cb) (logpriority_t pr
    return newcb;
 }
 
-bool log_add_callback(bool (*callback)(logpriority_t priority, const char *subsys, const char *fmt, va_list ap)) {
+bool log_add_callback(bool (*callback) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap)) {
    return log_add_callback_token(callback) != NULL;
 }

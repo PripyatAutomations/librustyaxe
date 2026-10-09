@@ -16,22 +16,18 @@
 #include <librustyaxe/rr_subproc.h>
 
 /*
- * The old automatic-restart supervisor below is retained as historical source. It depends
- * on removed application globals and had no in-tree callers. The standalone
- * request/response transport that follows is the supported API.
+ * The old automatic-restart supervisor below is retained as historical source. It depends on removed application globals and had no in-tree callers. The
+ * standalone request/response transport that follows is the supported API.
  */
 #if 0
 /*
  * subprocess management:
- * Here we deal with keeping subprocesses alive. Steps (performed on all subprocesses)
- * Start process Watch for process to exit If zero (success) exit status, immediately
- * restart If non-zero (failure) exit status, delay randomly up to 15 seconds before
- * restarting process If a process has crashed more than cfg:supervisor/max-crashes in the
- * last cfg:supervisor/max-crash-time then don't bother respawning it.. XXX: Add more
- * error checking!
+ * Here we deal with keeping subprocesses alive. Steps (performed on all subprocesses) Start process Watch for process to exit If zero (success) exit status,
+ * immediately restart If non-zero (failure) exit status, delay randomly up to 15 seconds before restarting process If a process has crashed more than
+ * cfg:supervisor/max-crashes in the last cfg:supervisor/max-crash-time then don't bother respawning it.. XXX: Add more error checking!
  *
- * NB: process exit detection is done by polling via subproc_check_all() from the periodic
- * timer, rather than with an event loop (formerly libev ev_child watchers).
+ * NB: process exit detection is done by polling via subproc_check_all() from the periodic timer, rather than with an event loop (formerly libev ev_child
+ * watchers).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,9 +55,7 @@ bool subproc_start(int slot) {
    subproc_t *p = NULL;
 
    if (slot < 0 || slot > max_subprocess) {
-      log_send(mainlog, LOG_CRIT,
-         "subproc_start called with slot %d that isn't between 0 and max_subprocess (%d), cancelling!", slot,
-         max_subprocess);
+      log_send(mainlog, LOG_CRIT, "subproc_start called with slot %d that isn't between 0 and max_subprocess (%d), cancelling!", slot, max_subprocess);
 
       return false;
    }
@@ -81,7 +75,7 @@ bool subproc_start(int slot) {
       // callsign-lookupd about sockets.
       // create the pipes for stdio
       if (pipe(p->_stdin) == -1 || pipe(p->_stdout) == -1 || pipe(p->_stderr) == -1) {
-         log_send( mainlog, LOG_CRIT, "subproc_start(%d): pipe() failed: %d: %s", slot, errno, strerror(errno) );
+         log_send(mainlog, LOG_CRIT, "subproc_start(%d): pipe() failed: %d: %s", slot, errno, strerror(errno) );
 
          return false;
       }
@@ -90,8 +84,7 @@ bool subproc_start(int slot) {
 
       // if it was successful, store it in the process
       if (pid < 0) {
-         log_send( mainlog, LOG_CRIT, "error forking subprocess %d: %s - %d: %s", slot, children[slot]->name,
-            saved_errno, strerror(saved_errno) );
+         log_send(mainlog, LOG_CRIT, "error forking subprocess %d: %s - %d: %s", slot, children[slot]->name, saved_errno, strerror(saved_errno) );
 
          return false;
       } else if (pid == 0) {
@@ -109,12 +102,11 @@ bool subproc_start(int slot) {
          // spawn the process
          if (execv(p->path, p->argv) == -1) {
             saved_errno = errno;
-            log_send( mainlog, LOG_CRIT, "subproc_start(%d): error in execv(%s,%p): %d: %s", slot, p->path, p->argv,
-               saved_errno, strerror(saved_errno) );
+            log_send(mainlog, LOG_CRIT, "subproc_start(%d): error in execv(%s,%p): %d: %s", slot, p->path, p->argv, saved_errno, strerror(saved_errno) );
          }
          exit(1);
       } else if (pid == -1) {
-         log_send( mainlog, LOG_CRIT, "subproc_start(%d): error in fork(): %d: %s", slot, errno, strerror(errno) );
+         log_send(mainlog, LOG_CRIT, "subproc_start(%d): error in fork(): %d: %s", slot, errno, strerror(errno) );
 
          return false;
       } else {
@@ -145,12 +137,12 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
    // figure out our subprocess slot...
    int myslot = -1;
 
-   if ( (sp = malloc( sizeof(subproc_t) ) ) == NULL) {
+   if ( (sp = malloc(sizeof(subproc_t) ) ) == NULL) {
       Log(LOG_CRIT, "librustyaxe", "subproc_create: out of memory!");
       exit(ENOMEM);
    }
    // and zero it!
-   memset( sp, 0, sizeof(subproc_t) );
+   memset(sp, 0, sizeof(subproc_t) );
 
    // store the name of the process (for PSLIST command, etc)
    size_t name_len = strlen(name);
@@ -179,8 +171,7 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
          log_send(mainlog, LOG_DEBUG, "subproc_create: using slot %d for %s", myslot, name);
          break;
       } else {
-         log_send(mainlog, LOG_DEBUG, "subproc_create: skipping slot %d, it points to %p, while storing %s", myslot,
-            children[myslot], name);
+         log_send(mainlog, LOG_DEBUG, "subproc_create: skipping slot %d, it points to %p, while storing %s", myslot, children[myslot], name);
       }
    }
 
@@ -239,8 +230,7 @@ int subproc_killall(int signum) {
    if (max_subprocess > MAX_SUBPROC) {
 //      ta_printf(msgbox, "$RED$subproc_killall: max_subprocess (%d) >
 // MAX_SUBPROC (%d), this is wrong!", max_subprocess, MAX_SUBPROC);
-      log_send(mainlog, LOG_CRIT, "subproc_killall: max_subprocess (%d) > MAX_SUBPROC (%d), this is wrong!",
-         max_subprocess, MAX_SUBPROC);
+      log_send(mainlog, LOG_CRIT, "subproc_killall: max_subprocess (%d) > MAX_SUBPROC (%d), this is wrong!", max_subprocess, MAX_SUBPROC);
 //      tb_present();
       exit(200);
    }
@@ -350,8 +340,7 @@ int subproc_check_all(void) {
 
       if (pid == -1) {
          // an error occured
-         log_send( mainlog, LOG_DEBUG, "subproc_check_all: waitpid on subprocess %d returned %d (%s)", i, errno,
-            strerror(errno) );
+         log_send(mainlog, LOG_DEBUG, "subproc_check_all: waitpid on subprocess %d returned %d (%s)", i, errno, strerror(errno) );
          continue;
       } else if (pid == 0) {
          // process is still alive, count it
@@ -376,16 +365,14 @@ int subproc_check_all(void) {
             if (sp->watchdog_start + watchdog_expire <= now) {
                // has there been a reasonable number of watchdog events?
                if (sp->watchdog_events < watchdog_max_events) {
-                  log_send( mainlog, LOG_NOTICE,
-                     "subprocess %d (%s) has restored normal operation. It crashed %d times in %lu seconds.", i,
-                     sp->name, sp->watchdog_events, (now - sp->watchdog_start) );
+                  log_send(mainlog, LOG_NOTICE, "subprocess %d (%s) has restored normal operation. It crashed %d times in %lu seconds.", i, sp->name, sp->
+                     watchdog_events, (now - sp->watchdog_start) );
                   sp->watchdog_start = 0;
                   sp->watchdog_events = 0;
                } else {
                   // disable the service
-                  log_send( mainlog, LOG_CRIT,
-                     "subprocess %d (%s) has crashed %d times in %lu seconds. disabling restarts", i, sp->name,
-                     sp->watchdog_events, (now - sp->watchdog_start) );
+                  log_send(mainlog, LOG_CRIT, "subprocess %d (%s) has crashed %d times in %lu seconds. disabling restarts", i, sp->name, sp->watchdog_events, (
+                     now - sp->watchdog_start) );
                }
                // either way, we don't need a restart...
                sp->needs_restarted = 0;
@@ -395,9 +382,8 @@ int subproc_check_all(void) {
             // watchdog is still active
             sp->needs_restarted = 1;
             sp->watchdog_events++;
-            log_send(mainlog, LOG_DEBUG,
-               "subprocess %d (%s) has crashed. This is the %d time in %lu seconds. It will be disabled after %d times.",
-               i, sp->name, sp->watchdog_events, (now - sp->watchdog_start), watchdog_max_events);
+            log_send(mainlog, LOG_DEBUG, "subprocess %d (%s) has crashed. This is the %d time in %lu seconds. It will be disabled after %d times.", i, sp->name,
+               sp->watchdog_events, (now - sp->watchdog_start), watchdog_max_events);
          }
       } else {
          log_send(mainlog, LOG_DEBUG, "unexpected return value %d from waitpid(%d) for subproc %d", pid, sp->pid, i);
@@ -406,8 +392,7 @@ int subproc_check_all(void) {
       // schedule 3-15 seconds in the future, if not already set...
       if (!dying && sp->needs_restarted && (sp->restart_time == 0) ) {
          sp->restart_time = get_random_interval(3, 15) + now;
-         log_send( mainlog, LOG_CRIT, "subprocess %d (%s) exited, registering it for restart in %lu seconds", i,
-            sp->name, (sp->restart_time - now) );
+         log_send(mainlog, LOG_CRIT, "subprocess %d (%s) exited, registering it for restart in %lu seconds", i, sp->name, (sp->restart_time - now) );
       }
    }
 
@@ -415,7 +400,7 @@ int subproc_check_all(void) {
 }
 
 bool subproc_init(void) {
-   memset( children, 0, sizeof(children) );
+   memset(children, 0, sizeof(children) );
 
    return true;
 }
@@ -474,7 +459,7 @@ bool rr_subproc_spawn(rr_subproc_t *process, const char *path, const char *const
       -1, -1
    };
 
-   if ( pipe(child_input) < 0 || pipe(child_output) < 0 || (!merge_stderr && pipe(child_error) < 0) ) {
+   if (pipe(child_input) < 0 || pipe(child_output) < 0 || (!merge_stderr && pipe(child_error) < 0) ) {
       if (child_input[0] >= 0) {
          close(child_input[0]);
       }
@@ -519,10 +504,10 @@ bool rr_subproc_spawn(rr_subproc_t *process, const char *path, const char *const
    }
 
    if (pid == 0) {
-      if ( dup2(child_input[0], STDIN_FILENO) < 0 ||
-           dup2(child_output[1], STDOUT_FILENO) < 0 ||
-           (merge_stderr ? dup2(child_output[1], STDERR_FILENO) < 0 :
-            dup2(child_error[1], STDERR_FILENO) < 0) ) {
+      if (dup2(child_input[0], STDIN_FILENO) < 0 ||
+         dup2(child_output[1], STDOUT_FILENO) < 0 ||
+         (merge_stderr ? dup2(child_output[1], STDERR_FILENO) < 0 :
+         dup2(child_error[1], STDERR_FILENO) < 0) ) {
          _exit(126);
       }
       close(child_input[0]);
@@ -535,7 +520,7 @@ bool rr_subproc_spawn(rr_subproc_t *process, const char *path, const char *const
          close(child_error[1]);
       }
       execv(path, (char *const *)argv);
-      dprintf( STDERR_FILENO, "rr_subproc: exec %s failed: %s\n", path, strerror(errno) );
+      dprintf(STDERR_FILENO, "rr_subproc: exec %s failed: %s\n", path, strerror(errno) );
       _exit(127);
    }
 
@@ -552,9 +537,8 @@ bool rr_subproc_spawn(rr_subproc_t *process, const char *path, const char *const
    process->running = process->input && process->output;
 
    if (process->running) {
-      /* Keep poll() and fgets() synchronized.  A buffered FILE can read several protocol
-       * lines at once, leaving later lines hidden from the next poll even though they are
-       * already available to fgets(). */
+      /* Keep poll() and fgets() synchronized.  A buffered FILE can read several protocol lines at once, leaving later lines hidden from the next poll even
+       * though they are already available to fgets(). */
       setvbuf(process->input, NULL, _IOLBF, 0);
       setvbuf(process->output, NULL, _IONBF, 0);
    }
@@ -583,11 +567,11 @@ bool rr_subproc_readline(rr_subproc_t *process, char *line, size_t length, int t
       .fd = fileno(process->output), .events = POLLIN
    };
    int result;
-   do{
+   do {
       result = poll(&descriptor, 1, timeout_ms);
    } while (result < 0 && errno == EINTR);
 
-   if ( result <= 0 || !( descriptor.revents & (POLLIN | POLLHUP) ) ) {
+   if (result <= 0 || !(descriptor.revents & (POLLIN | POLLHUP) ) ) {
       return false;
    }
 
@@ -652,7 +636,7 @@ bool rr_subproc_stop(rr_subproc_t *process, int signal_number) {
    for (int i = 0 ; i < 20 ; i++) {
       pid_t result = waitpid(process->pid, &status, WNOHANG);
 
-      if ( result == process->pid || (result < 0 && errno == ECHILD) ) {
+      if (result == process->pid || (result < 0 && errno == ECHILD) ) {
          rr_subproc_reset(process);
 
          return true;
@@ -671,7 +655,8 @@ bool rr_subproc_stop(rr_subproc_t *process, int signal_number) {
       return false;
    }
 
-   while (waitpid(process->pid, &status, 0) < 0 && errno == EINTR) { ; }
+   while (waitpid(process->pid, &status, 0) < 0 && errno == EINTR) {
+   }
    rr_subproc_reset(process);
 
    return true;

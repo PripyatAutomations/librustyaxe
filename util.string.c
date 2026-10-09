@@ -40,22 +40,28 @@ char *escape_html(const char *input) {
 
       switch (input[i]) {
          case '<': {
-            p += snprintf(p, remain, "&lt;"); break;
+            p += snprintf(p, remain, "&lt;");
+            break;
          }
          case '>': {
-            p += snprintf(p, remain, "&gt;"); break;
+            p += snprintf(p, remain, "&gt;");
+            break;
          }
          case '&': {
-            p += snprintf(p, remain, "&amp;"); break;
+            p += snprintf(p, remain, "&amp;");
+            break;
          }
          case '"': {
-            p += snprintf(p, remain, "&quot;"); break;
+            p += snprintf(p, remain, "&quot;");
+            break;
          }
          case '\'': {
-            p += snprintf(p, remain, "&#39;"); break;
+            p += snprintf(p, remain, "&#39;");
+            break;
          }
          default: {
-            *p++ = input[i]; break;
+            *p++ = input[i];
+            break;
          }
       }
 
@@ -80,17 +86,23 @@ void unescape_html(char *s) {
    while (*r) {
       if (*r == '&') {
          if (!strncmp(r, "&lt;", 4) ) {
-            *w++ = '<'; r += 4;
+            *w++ = '<';
+            r += 4;
          } else if (!strncmp(r, "&gt;", 4) ) {
-            *w++ = '>'; r += 4;
+            *w++ = '>';
+            r += 4;
          } else if (!strncmp(r, "&amp;", 5) ) {
-            *w++ = '&'; r += 5;
+            *w++ = '&';
+            r += 5;
          } else if (!strncmp(r, "&quot;", 6) ) {
-            *w++ = '"'; r += 6;
+            *w++ = '"';
+            r += 6;
          } else if (!strncmp(r, "&#39;", 5) ) {
-            *w++ = '\''; r += 5;
+            *w++ = '\'';
+            r += 5;
          } else if (!strncmp(r, "&nbsp;", 6) ) {
-            *w++ = ' '; r += 6;
+            *w++ = ' ';
+            r += 6;
          } else {
             *w++ = *r++;  // unknown entity, copy literally
          }
@@ -124,9 +136,9 @@ bool parse_bool(const char *str) {
    }
 
    if (strcasecmp(str, "true") == 0 ||
-       strcasecmp(str, "yes") == 0 ||
-       strcasecmp(str, "on") == 0 ||
-       strcasecmp(str, "1") == 0) {
+      strcasecmp(str, "yes") == 0 ||
+      strcasecmp(str, "on") == 0 ||
+      strcasecmp(str, "1") == 0) {
       return true;
    }
 
@@ -136,11 +148,11 @@ bool parse_bool(const char *str) {
 int split_args(char *line, char ***argv_out) {
    int argc = 0;
    int cap = 8;
-   char **argv = malloc( cap * sizeof(char *) );
+   char **argv = malloc(cap * sizeof(char *) );
    char *p = line;
 
    while (*p) {
-      while (*p && isspace( (unsigned char)*p ) ) {
+      while (*p && isspace( (unsigned char)*p) ) {
          p++;
       }
 
@@ -154,7 +166,7 @@ int split_args(char *line, char ***argv_out) {
             abort();
          }
          cap *= 2;
-         char **tmp = realloc( argv, (size_t)cap * sizeof(char *) );
+         char **tmp = realloc(argv, (size_t)cap * sizeof(char *) );
 
          if (!tmp) {
             free(argv);
@@ -163,7 +175,7 @@ int split_args(char *line, char ***argv_out) {
          argv = tmp;
       }
       argv[argc++] = p;
-      while (*p && !isspace( (unsigned char)*p ) ) {
+      while (*p && !isspace( (unsigned char)*p) ) {
          p++;
       }
 
