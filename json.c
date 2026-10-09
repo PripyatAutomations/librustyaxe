@@ -68,16 +68,26 @@ static const char *skip_ws(const char *s) {
 
 // Validate the complete quoted token before decoding it. Never skip past NUL.
 static const char *json_parse_str(const char *s, char **out) {
-   if (*s != '"') { return NULL; }
+   if (*s != '"') {
+      return NULL;
+   }
    const char *start = s++;
    while (*s && *s != '"') {
-      if ((unsigned char)*s < 0x20) { return NULL; }
-      if (*s == '\\' && !*++s) { return NULL; }
+      if ((unsigned char)*s < 0x20) {
+         return NULL;
+      }
+      if (*s == '\\' && !*++s) {
+         return NULL;
+      }
       s++;
    }
-   if (*s != '"') { return NULL; }
+   if (*s != '"') {
+      return NULL;
+   }
    char *token = strndup(start, (size_t)(s + 1 - start));
-   if (!token) { return NULL; }
+   if (!token) {
+      return NULL;
+   }
    *out = json_unescape(token);
    free(token);
    return *out ? s + 1 : NULL;
@@ -85,37 +95,72 @@ static const char *json_parse_str(const char *s, char **out) {
 
 static const char *json_parse_primitive(const char *s, char **out) {
    const char *start = s;
-   while (*s && !strchr(",]} \t\r\n", *s)) { s++; }
-   if (s == start) { return NULL; }
+   while (*s && !strchr(",]} \t\r\n", *s)) {
+      s++;
+   }
+   if (s == start) {
+      return NULL;
+   }
    *out = strndup(start, (size_t)(s - start));
    return *out ? s : NULL;
 }
 
 static const char *json_parse_obj(const char *s, const char *path, dict *d, unsigned depth) {
    s = skip_ws(s + 1);
-   if (*s == '}') { return s + 1; }
+   if (*s == '}') {
+      return s + 1;
+   }
+
    dict *keys = dict_new();
-   if (!keys) { return NULL; }
+   if (!keys) {
+      return NULL;
+   }
+   
    while (*s) {
       char *key = NULL;
+
       s = json_parse_str(s, &key);
-      if (!s) { goto fail; }
+      if (!s) {
+         goto fail;
+      }
+
       if (dict_get_type(keys, key) != VAL_END || dict_add_bool(keys, key, true)) {
          free(key); goto fail;
       }
+
       s = skip_ws(s);
-      if (*s != ':') { free(key); goto fail; }
+      if (*s != ':') {
+         free(key);
+         goto fail;
+      }
+
       char *newpath = path_append(path, key);
       free(key);
-      if (!newpath) { goto fail; }
+
+      if (!newpath) {
+         goto fail;
+      }
+
       s = json_parse_value(s + 1, newpath, d, depth + 1);
       free(newpath);
-      if (!s) { goto fail; }
+      if (!s) {
+         goto fail;
+      }
+
       s = skip_ws(s);
-      if (*s == '}') { dict_free(keys); return s + 1; }
-      if (*s != ',') { goto fail; }
+      if (*s == '}') {
+         dict_free(keys);
+         return s + 1;
+      }
+
+      if (*s != ',') {
+         goto fail;
+      }
+
       s = skip_ws(s + 1);
-      if (*s == '}') { goto fail; }
+      if (*s == '}') {
+         goto fail;
+      }
    }
 fail:
    dict_free(keys);
@@ -124,21 +169,33 @@ fail:
 
 static const char *json_parse_array(const char *s, const char *path, dict *d, unsigned depth) {
    s = skip_ws(s + 1);
-   if (*s == ']') { return s + 1; }
+   if (*s == ']') {
+      return s + 1;
+   }
    unsigned idx = 0;
    while (*s) {
       char idxbuf[32];
       snprintf(idxbuf, sizeof(idxbuf), "[%u]", idx++);
       char *newpath = path_append(path, idxbuf);
-      if (!newpath) { return NULL; }
+      if (!newpath) {
+         return NULL;
+      }
       s = json_parse_value(s, newpath, d, depth + 1);
       free(newpath);
-      if (!s) { return NULL; }
+      if (!s) {
+         return NULL;
+      }
       s = skip_ws(s);
-      if (*s == ']') { return s + 1; }
-      if (*s != ',') { return NULL; }
+      if (*s == ']') {
+         return s + 1;
+      }
+      if (*s != ',') {
+         return NULL;
+      }
       s = skip_ws(s + 1);
-      if (*s == ']') { return NULL; }
+      if (*s == ']') {
+         return NULL;
+      }
    }
    return NULL;
 }
@@ -218,33 +275,58 @@ char *json_escape(const char *s) {
 // Decode a JSON string into the library's NUL-terminated UTF-8 representation.
 // Embedded NUL and lone UTF-16 surrogates cannot be represented safely.
 static bool json_hex4(const char *p, const char *end, unsigned *code) {
-   if (end - p < 4) { return false; }
+   if (end - p < 4) {
+      return false;
+   }
    *code = 0;
    for (unsigned i = 0; i < 4; i++) {
       unsigned char c = p[i];
       unsigned digit;
-      if (c >= '0' && c <= '9') { digit = c - '0'; }
-      else if (c >= 'a' && c <= 'f') { digit = c - 'a' + 10; }
-      else if (c >= 'A' && c <= 'F') { digit = c - 'A' + 10; }
-      else { return false; }
+      if (c >= '0' && c <= '9') {
+         digit = c - '0';
+      } else if (c >= 'a' && c <= 'f') {
+         digit = c - 'a' + 10;
+      } else if (c >= 'A' && c <= 'F') {
+         digit = c - 'A' + 10; 
+      } else {
+         return false;
+      }
       *code = (*code << 4) | digit;
    }
    return true;
 }
 
 char *json_unescape(const char *s) {
-   if (!s) { return NULL; }
+   if (!s) {
+      return NULL;
+   }
+
    size_t len = strlen(s);
-   if (len < 2 || s[0] != '"' || s[len - 1] != '"') { return NULL; }
+   if (len < 2 || s[0] != '"' || s[len - 1] != '"') {
+      return NULL;
+   }
+
    char *out = malloc(len);
-   if (!out) { return NULL; }
+   if (!out) {
+      return NULL;
+   }
    const char *p = s + 1, *end = s + len - 1;
    char *q = out;
    while (p < end) {
       unsigned char c = *p++;
-      if (c < 0x20 || c == '"') { goto fail; }
-      if (c != '\\') { *q++ = c; continue; }
-      if (p == end) { goto fail; }
+
+      if (c < 0x20 || c == '"') {
+         goto fail;
+      }
+
+      if (c != '\\') {
+         *q++ = c; continue;
+      }
+
+      if (p == end) {
+         goto fail;
+      }
+
       c = *p++;
       switch (c) {
          case '"': case '\\': case '/': *q++ = c; break;
@@ -255,17 +337,24 @@ char *json_unescape(const char *s) {
          case 't': *q++ = '\t'; break;
          case 'u': {
             unsigned code;
-            if (!json_hex4(p, end, &code) || !code) { goto fail; }
+            if (!json_hex4(p, end, &code) || !code) {
+               goto fail;
+            }
             p += 4;
             if (code >= 0xD800 && code <= 0xDBFF) {
                unsigned low;
-               if (end - p < 6 || p[0] != '\\' || p[1] != 'u' ||
-                   !json_hex4(p + 2, end, &low) || low < 0xDC00 || low > 0xDFFF) { goto fail; }
+               if (end - p < 6 || p[0] != '\\' || p[1] != 'u' || !json_hex4(p + 2, end, &low) || low < 0xDC00 || low > 0xDFFF) {
+                  goto fail;
+               }
                p += 6;
                code = 0x10000 + ((code - 0xD800) << 10) + low - 0xDC00;
-            } else if (code >= 0xDC00 && code <= 0xDFFF) { goto fail; }
-            if (code < 0x80) { *q++ = code; }
-            else if (code < 0x800) {
+            } else if (code >= 0xDC00 && code <= 0xDFFF) {
+               goto fail;
+            }
+
+            if (code < 0x80) {
+               *q++ = code;
+            } else if (code < 0x800) {
                *q++ = 0xC0 | (code >> 6); *q++ = 0x80 | (code & 0x3F);
             } else if (code < 0x10000) {
                *q++ = 0xE0 | (code >> 12); *q++ = 0x80 | ((code >> 6) & 0x3F); *q++ = 0x80 | (code & 0x3F);
@@ -307,12 +396,16 @@ static json_node *json_make_node(const char *key) {
 
 static json_node *find_child(json_node *parent, const char *key) {
    for (json_node *c = parent->child ; c ; c = c->next) {
-      if ( !strcmp(c->key, key) ) { return c; }
+      if ( !strcmp(c->key, key) ) {
+         return c;
+      }
    }
 
    json_node *n = json_make_node(key);
 
-   if (!n) { return NULL; }
+   if (!n) {
+      return NULL;
+   }
 
    n->next = parent->child;
    parent->child = n;
@@ -511,7 +604,9 @@ static bool sbuf_puts(sbuf *b, const char *s) {
 }
 
 static void dump_json(json_node *n, sbuf *out) {
-   if (!n || !out) { return; }
+   if (!n || !out) {
+      return;
+   }
 
    sbuf_putc(out, '{');
 
@@ -694,14 +789,21 @@ static bool json_number_is_integer(const char *s) {
 static const char *json_parse_value(const char *s, const char *path, dict *d, unsigned depth) {
    s = skip_ws(s);
 
-   if (!*s || depth > JSON_MAX_DEPTH) { return NULL; }
-   if (dict_get_type(d, path) != VAL_END) { return NULL; }
+   if (!*s || depth > JSON_MAX_DEPTH) {
+      return NULL;
+   }
+
+   if (dict_get_type(d, path) != VAL_END) {
+      return NULL;
+   }
 
    if (*s == '"') {
       char *val = NULL;
       s = json_parse_str(s, &val);
 
-      if (!s) { return NULL; }
+      if (!s) {
+         return NULL;
+      }
 
       if (dict_add(d, path, val) != 0) {
          free(val);
@@ -713,39 +815,79 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
       return s;
    }
 
-   if (*s == '{') { return json_parse_obj(s, path, d, depth); }
+   if (*s == '{') {
+      return json_parse_obj(s, path, d, depth);
+   }
 
-   if (*s == '[') { return json_parse_array(s, path, d, depth); }
+   if (*s == '[') {
+      return json_parse_array(s, path, d, depth);
+   }
 
    char *val = NULL;
    s = json_parse_primitive(s, &val);
 
-   if (!s) { return NULL; }
+   if (!s) {
+      return NULL;
+   }
 
    if ( !strcmp(val, "null") ) {
-      if (dict_add_null(d, path) != 0) { goto fail; }
+      if (dict_add_null(d, path) != 0) {
+         goto fail;
+      }
    } else if ( !strcmp(val, "true") ) {
-      if (dict_add_bool(d, path, true) != 0) { goto fail; }
+      if (dict_add_bool(d, path, true) != 0) {
+         goto fail;
+      }
    } else if ( !strcmp(val, "false") ) {
-      if (dict_add_bool(d, path, false) != 0) { goto fail; }
+      if (dict_add_bool(d, path, false) != 0) {
+         goto fail;
+      }
    } else {
       const char *number = val;
-      if (*number == '-') { number++; }
-      if (*number == '0') { number++; }
-      else if (*number >= '1' && *number <= '9') { while (isdigit((unsigned char)*number)) { number++; } }
-      else { goto fail; }
+      if (*number == '-') {
+         number++;
+      }
+      if (*number == '0') {
+         number++;
+      }
+      else if (*number >= '1' && *number <= '9') {
+         while (isdigit((unsigned char)*number)) {
+            number++;
+         }
+      } else {
+         goto fail;
+      }
+
       if (*number == '.') {
          number++;
-         if (!isdigit((unsigned char)*number)) { goto fail; }
-         while (isdigit((unsigned char)*number)) { number++; }
+         if (!isdigit((unsigned char)*number)) {
+            goto fail;
+         }
+
+         while (isdigit((unsigned char)*number)) {
+            number++;
+         }
       }
+
       if (*number == 'e' || *number == 'E') {
          number++;
-         if (*number == '+' || *number == '-') { number++; }
-         if (!isdigit((unsigned char)*number)) { goto fail; }
-         while (isdigit((unsigned char)*number)) { number++; }
+         if (*number == '+' || *number == '-') {
+            number++;
+         }
+
+         if (!isdigit((unsigned char)*number)) {
+            goto fail;
+         }
+
+         while (isdigit((unsigned char)*number)) {
+            number++;
+         }
       }
-      if (*number) { goto fail; }
+
+      if (*number) {
+         goto fail;
+      }
+
       if (json_number_is_integer(val)) {
          char *ep = NULL;
          errno = 0;
@@ -763,16 +905,26 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
             errno = 0;
             unsigned long long ull = strtoull(val, &ep, 10);
 
-            if (errno != 0 || ep == val || *ep != '\0') { goto fail; }
+            if (errno != 0 || ep == val || *ep != '\0') {
+               goto fail;
+            }
 
             if (ull <= UINT_MAX) {
-               if (dict_add_uint(d, path, (unsigned int)ull)) { goto fail; }
+               if (dict_add_uint(d, path, (unsigned int)ull)) {
+                  goto fail;
+               }
             } else if (ull <= ULONG_MAX) {
-               if (dict_add_ulong(d, path, (unsigned long)ull)) { goto fail; }
+               if (dict_add_ulong(d, path, (unsigned long)ull)) {
+                  goto fail;
+               }
             } else {
-               if (dict_add_ullong(d, path, ull)) { goto fail; }
+               if (dict_add_ullong(d, path, ull)) {
+                  goto fail;
+               }
             }
-         } else { goto fail; }
+         } else {
+            goto fail;
+         }
       } else {
          char *ep = NULL;
          errno = 0;
@@ -782,7 +934,9 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
             goto fail;
          }
 
-         if (dict_add_double(d, path, v)) { goto fail; }
+         if (dict_add_double(d, path, v)) {
+            goto fail;
+         }
       }
    }
    free(val);
@@ -796,11 +950,15 @@ fail:
 }
 
 dict *json2dict(const char *json) {
-   if (!json || *json == '\0') { return NULL; }
+   if (!json || *json == '\0') {
+      return NULL;
+   }
 
    dict *d = dict_new();
 
-   if (!d) { return NULL; }
+   if (!d) {
+      return NULL;
+   }
 
    const char *res = json_parse_value(json, "", d, 0);
 
@@ -809,7 +967,6 @@ dict *json2dict(const char *json) {
     * dictionaries and sent the failure much later through the event bus. */
    if (!res || *skip_ws(res) != '\0') {
       dict_free(d);
-
       return NULL;
    }
 
@@ -817,6 +974,8 @@ dict *json2dict(const char *json) {
 }
 
 void json_parse_and_flatten(const char *json, dict *dptr) {
-   if (!json || !dptr) { return; }
+   if (!json || !dptr) {
+      return;
+   }
    json_parse_value(json, "", dptr, 0);
 }

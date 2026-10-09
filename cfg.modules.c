@@ -53,9 +53,13 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
       *--key_end = '\0';
    }
    char *key = copy;
-   while ( *key && isspace( (unsigned char)*key ) ) { key++; }
+   while ( *key && isspace( (unsigned char)*key ) ) {
+      key++;
+   }
    // Trim value (may legitimately be empty: "name=")
-   while ( *value && isspace( (unsigned char)*value ) ) { value++; }
+   while ( *value && isspace( (unsigned char)*value ) ) {
+      value++;
+   }
    char *value_end = value + strlen(value);
    while ( value_end > value && isspace( (unsigned char)value_end[-1] ) ) {
       *--value_end = '\0';

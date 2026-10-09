@@ -367,12 +367,14 @@ static void cfg_expand_format_escapes(char *value) {
             *dst++ = (char)control;
             src += 2;
             if (control == 0x03) {
-               for (int digit = 0; digit < 2 && isdigit((unsigned char)*src); digit++)
+               for (int digit = 0; digit < 2 && isdigit((unsigned char)*src); digit++) {
                   *dst++ = *src++;
+               }
                if (*src == ',' && isdigit((unsigned char)src[1])) {
                   *dst++ = *src++;
-                  for (int digit = 0; digit < 2 && isdigit((unsigned char)*src); digit++)
+                  for (int digit = 0; digit < 2 && isdigit((unsigned char)*src); digit++) {
                      *dst++ = *src++;
+                  }
                }
             }
             continue;
@@ -1122,7 +1124,9 @@ bool cfg_save(dict *d, const char *path) {
             return false;
          }
 
-         if ( file_exists(backup) ) { continue; }
+         if ( file_exists(backup) ) {
+            continue;
+         }
 
          if (rename(path, backup) == 0) {
             Log(LOG_INFO, "cfg", "Saved previous config as '%s'", backup);
@@ -1163,7 +1167,9 @@ bool cfg_save(dict *d, const char *path) {
    const char *key;
    char *val;
    while ( (rank = dict_enumerate(merged, rank, &key, &val) ) >= 0) {
-      if ( cfg_save_entry_is_skipped(key) ) { continue; }
+      if ( cfg_save_entry_is_skipped(key) ) {
+         continue;
+      }
 
       if (entry_count == entry_capacity) {
          size_t next = entry_capacity ? entry_capacity * 2 : 64;
@@ -1190,7 +1196,9 @@ bool cfg_save(dict *d, const char *path) {
    size_t i = 0;
 
    for ( ; i < entry_count ; i++) {
-      if ( strchr(entries[i].key, ':') ) { break; }
+      if ( strchr(entries[i].key, ':') ) {
+         break;
+      }
       cfg_write_wrapped(fp, entries[i].key, entries[i].value);
    }
 

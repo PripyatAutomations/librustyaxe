@@ -48,7 +48,9 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
 }
 
 void rb_destroy(rb_buffer_t *buffer) {
-   if (!buffer) { return; }
+   if (!buffer) {
+      return;
+   }
    rb_node_t *current = buffer->head;
 
    while (current != NULL) {

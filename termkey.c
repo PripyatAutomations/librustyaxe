@@ -1,10 +1,3 @@
-//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
-//
-// Do not pay money for this, except donations to the project, if you wish to.
-// The software is not for sale. It is freely available, always.
-//
-// Licensed under MIT license, if built without mongoose or GPL if built with.
-
 #include <ctype.h>
 #include <errno.h>
 #ifndef _WIN32
@@ -380,7 +373,8 @@ static int snprint_cameltospaces(char *str, size_t size, const char *src)
          l++;
       }
       prev_lower = islower(*src);
-      src++; l++;
+      src++;
+      l++;
    }
    return l;
 }
@@ -629,8 +623,10 @@ abort:
 
 void termkey_free(TermKey *tk)
 {
-   free(tk->buffer); tk->buffer = NULL;
-   free(tk->keynames); tk->keynames = NULL;
+   free(tk->buffer);
+   tk->buffer = NULL;
+   free(tk->keynames);
+   tk->keynames = NULL;
 
    struct TermKeyDriverNode *p;
 

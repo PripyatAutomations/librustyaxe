@@ -475,17 +475,29 @@ bool rr_subproc_spawn(rr_subproc_t *process, const char *path, const char *const
    };
 
    if ( pipe(child_input) < 0 || pipe(child_output) < 0 || (!merge_stderr && pipe(child_error) < 0) ) {
-      if (child_input[0] >= 0) { close(child_input[0]); }
+      if (child_input[0] >= 0) {
+         close(child_input[0]);
+      }
 
-      if (child_input[1] >= 0) { close(child_input[1]); }
+      if (child_input[1] >= 0) {
+         close(child_input[1]);
+      }
 
-      if (child_output[0] >= 0) { close(child_output[0]); }
+      if (child_output[0] >= 0) {
+         close(child_output[0]);
+      }
 
-      if (child_output[1] >= 0) { close(child_output[1]); }
+      if (child_output[1] >= 0) {
+         close(child_output[1]);
+      }
 
-      if (child_error[0] >= 0) { close(child_error[0]); }
+      if (child_error[0] >= 0) {
+         close(child_error[0]);
+      }
 
-      if (child_error[1] >= 0) { close(child_error[1]); }
+      if (child_error[1] >= 0) {
+         close(child_error[1]);
+      }
 
       return false;
    }
@@ -493,11 +505,14 @@ bool rr_subproc_spawn(rr_subproc_t *process, const char *path, const char *const
    pid_t pid = fork();
 
    if (pid < 0) {
-      close(child_input[0]); close(child_input[1]);
-      close(child_output[0]); close(child_output[1]);
+      close(child_input[0]);
+      close(child_input[1]);
+      close(child_output[0]);
+      close(child_output[1]);
 
       if (!merge_stderr) {
-         close(child_error[0]); close(child_error[1]);
+         close(child_error[0]);
+         close(child_error[1]);
       }
 
       return false;
@@ -510,11 +525,14 @@ bool rr_subproc_spawn(rr_subproc_t *process, const char *path, const char *const
             dup2(child_error[1], STDERR_FILENO) < 0) ) {
          _exit(126);
       }
-      close(child_input[0]); close(child_input[1]);
-      close(child_output[0]); close(child_output[1]);
+      close(child_input[0]);
+      close(child_input[1]);
+      close(child_output[0]);
+      close(child_output[1]);
 
       if (!merge_stderr) {
-         close(child_error[0]); close(child_error[1]);
+         close(child_error[0]);
+         close(child_error[1]);
       }
       execv(path, (char *const *)argv);
       dprintf( STDERR_FILENO, "rr_subproc: exec %s failed: %s\n", path, strerror(errno) );
@@ -542,9 +560,13 @@ bool rr_subproc_spawn(rr_subproc_t *process, const char *path, const char *const
    }
 
    if (!process->running) {
-      if (child_input[1] >= 0 && !process->input) { close(child_input[1]); }
+      if (child_input[1] >= 0 && !process->input) {
+         close(child_input[1]);
+      }
 
-      if (child_output[0] >= 0 && !process->output) { close(child_output[0]); }
+      if (child_output[0] >= 0 && !process->output) {
+         close(child_output[0]);
+      }
       rr_subproc_stop(process, SIGTERM);
 
       return false;
@@ -649,7 +671,7 @@ bool rr_subproc_stop(rr_subproc_t *process, int signal_number) {
       return false;
    }
 
-   while (waitpid(process->pid, &status, 0) < 0 && errno == EINTR) { }
+   while (waitpid(process->pid, &status, 0) < 0 && errno == EINTR) { ; }
    rr_subproc_reset(process);
 
    return true;

@@ -800,12 +800,12 @@ void dict_dump(dict *d, FILE *out) {
 }
 
 static bool parse_bool_string(const char *s, bool *out) {
-   if (!s || !out) { return false; }
+   if (!s || !out) {
+      return false;
+   }
 
-   if ( !strcasecmp(s, "true") || !strcasecmp(s, "yes") ||
-        !strcasecmp(s, "on") || !strcmp(s, "1") ) {
+   if ( !strcasecmp(s, "true") || !strcasecmp(s, "yes") || !strcasecmp(s, "on") || !strcmp(s, "1") ) {
       *out = true;
-
       return true;
    }
 
@@ -823,13 +823,19 @@ static bool parse_ll(const char *s, long long *out) {
    char *ep;
    long long v;
 
-   if (!s || !out) { return false; }
+   if (!s || !out) {
+      return false;
+   }
 
    errno = 0;
    v = strtoll(s, &ep, 10);
-   while ( *ep && isspace( (unsigned char)*ep ) ) { ep++; }
+   while ( *ep && isspace( (unsigned char)*ep ) ) {
+      ep++;
+   }
 
-   if (errno == ERANGE || ep == s || *ep) { return false; }
+   if (errno == ERANGE || ep == s || *ep) {
+      return false;
+   }
 
    *out = v;
 
@@ -840,13 +846,19 @@ static bool parse_ull(const char *s, unsigned long long *out) {
    char *ep;
    unsigned long long v;
 
-   if (!s || !out) { return false; }
+   if (!s || !out) {
+      return false;
+   }
 
    errno = 0;
    v = strtoull(s, &ep, 10);
-   while ( *ep && isspace( (unsigned char)*ep ) ) { ep++; }
+   while ( *ep && isspace( (unsigned char)*ep ) ) {
+      ep++;
+   }
 
-   if (errno == ERANGE || ep == s || *ep) { return false; }
+   if (errno == ERANGE || ep == s || *ep) {
+      return false;
+   }
 
    *out = v;
 
@@ -857,13 +869,19 @@ static bool parse_double(const char *s, double *out) {
    char *ep;
    double v;
 
-   if (!s || !out) { return false; }
+   if (!s || !out) {
+      return false;
+   }
 
    errno = 0;
    v = strtod(s, &ep);
-   while ( *ep && isspace( (unsigned char)*ep ) ) { ep++; }
+   while ( *ep && isspace( (unsigned char)*ep ) ) {
+      ep++;
+   }
 
-   if ( errno == ERANGE || ep == s || *ep || !isfinite(v) ) { return false; }
+   if ( errno == ERANGE || ep == s || *ep || !isfinite(v) ) {
+      return false;
+   }
 
    *out = v;
 
@@ -874,12 +892,16 @@ static bool dict_get_kp(dict *d, const char *key, keypair **out) {
    unsigned hash;
    keypair *kp;
 
-   if (!d || !key || !out) { return false; }
+   if (!d || !key || !out) {
+      return false;
+   }
 
    hash = dict_hash(key);
    kp = dict_lookup(d, key, hash);
 
-   if (!kp || !kp->key || kp->key == DUMMY_PTR) { return false; }
+   if (!kp || !kp->key || kp->key == DUMMY_PTR) {
+      return false;
+   }
 
    *out = kp;
 
@@ -889,7 +911,9 @@ static bool dict_get_kp(dict *d, const char *key, keypair **out) {
 bool dict_get_bool(dict *d, const char *key, bool def) {
    keypair *kp;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_BOOL: {
@@ -942,42 +966,58 @@ int dict_get_int(dict *d, const char *key, int def) {
    unsigned long long uv;
    double dv;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_INT: {
          return kp->val.i;
       }
       case VAL_UINT: {
-         if (kp->val.ui <= INT_MAX) { return (int)kp->val.ui; }
+         if (kp->val.ui <= INT_MAX) {
+            return (int)kp->val.ui;
+         }
          break;
       }
       case VAL_LONG: {
-         if (kp->val.l >= INT_MIN && kp->val.l <= INT_MAX) { return (int)kp->val.l; }
+         if (kp->val.l >= INT_MIN && kp->val.l <= INT_MAX) {
+            return (int)kp->val.l;
+         }
          break;
       }
       case VAL_ULONG: {
-         if (kp->val.ul <= INT_MAX) { return (int)kp->val.ul; }
+         if (kp->val.ul <= INT_MAX) {
+            return (int)kp->val.ul;
+         }
          break;
       }
       case VAL_LLONG: {
-         if (kp->val.ll >= INT_MIN && kp->val.ll <= INT_MAX) { return (int)kp->val.ll; }
+         if (kp->val.ll >= INT_MIN && kp->val.ll <= INT_MAX) {
+            return (int)kp->val.ll;
+         }
          break;
       }
       case VAL_ULLONG: {
-         if (kp->val.ull <= INT_MAX) { return (int)kp->val.ull; }
+         if (kp->val.ull <= INT_MAX) {
+            return (int)kp->val.ull;
+         }
          break;
       }
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= INT_MIN && dv <= INT_MAX) { return (int)dv; }
+         if (isfinite(dv) && dv >= INT_MIN && dv <= INT_MAX) {
+            return (int)dv;
+         }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= INT_MIN && dv <= INT_MAX) { return (int)dv; }
+         if (isfinite(dv) && dv >= INT_MIN && dv <= INT_MAX) {
+            return (int)dv;
+         }
          break;
       }
       case VAL_CHAR: {
@@ -1010,14 +1050,18 @@ unsigned int dict_get_uint(dict *d, const char *key, unsigned int def) {
    unsigned long long uv;
    double dv;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_UINT: {
          return kp->val.ui;
       }
       case VAL_INT: {
-         if (kp->val.i >= 0) { return (unsigned int)kp->val.i; }
+         if (kp->val.i >= 0) {
+            return (unsigned int)kp->val.i;
+         }
          break;
       }
       case VAL_LONG: {
@@ -1027,7 +1071,9 @@ unsigned int dict_get_uint(dict *d, const char *key, unsigned int def) {
          break;
       }
       case VAL_ULONG: {
-         if (kp->val.ul <= UINT_MAX) { return (unsigned int)kp->val.ul; }
+         if (kp->val.ul <= UINT_MAX) {
+            return (unsigned int)kp->val.ul;
+         }
          break;
       }
       case VAL_LLONG: {
@@ -1037,19 +1083,25 @@ unsigned int dict_get_uint(dict *d, const char *key, unsigned int def) {
          break;
       }
       case VAL_ULLONG: {
-         if (kp->val.ull <= UINT_MAX) { return (unsigned int)kp->val.ull; }
+         if (kp->val.ull <= UINT_MAX) {
+            return (unsigned int)kp->val.ull;
+         }
          break;
       }
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= 0 && dv <= UINT_MAX) { return (unsigned int)dv; }
+         if (isfinite(dv) && dv >= 0 && dv <= UINT_MAX) {
+            return (unsigned int)dv;
+         }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= 0 && dv <= UINT_MAX) { return (unsigned int)dv; }
+         if (isfinite(dv) && dv >= 0 && dv <= UINT_MAX) {
+            return (unsigned int)dv;
+         }
          break;
       }
       case VAL_BOOL: {
@@ -1082,7 +1134,9 @@ unsigned long dict_get_ulong(dict *d, const char *key, unsigned long def) {
    unsigned long long uv;
    double dv;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_ULONG: {
@@ -1092,31 +1146,43 @@ unsigned long dict_get_ulong(dict *d, const char *key, unsigned long def) {
          return kp->val.ui;
       }
       case VAL_INT: {
-         if (kp->val.i >= 0) { return (unsigned long)kp->val.i; }
+         if (kp->val.i >= 0) {
+            return (unsigned long)kp->val.i;
+         }
          break;
       }
       case VAL_LONG: {
-         if (kp->val.l >= 0) { return (unsigned long)kp->val.l; }
+         if (kp->val.l >= 0) {
+            return (unsigned long)kp->val.l;
+         }
          break;
       }
       case VAL_LLONG: {
-         if (kp->val.ll >= 0) { return (unsigned long)kp->val.ll; }
+         if (kp->val.ll >= 0) {
+            return (unsigned long)kp->val.ll;
+         }
          break;
       }
       case VAL_ULLONG: {
-         if (kp->val.ull <= ULONG_MAX) { return (unsigned long)kp->val.ull; }
+         if (kp->val.ull <= ULONG_MAX) {
+            return (unsigned long)kp->val.ull;
+         }
          break;
       }
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= 0 && dv < (double)(ULONG_MAX / 2 + 1) * 2.0) { return (unsigned long)dv; }
+         if (isfinite(dv) && dv >= 0 && dv < (double)(ULONG_MAX / 2 + 1) * 2.0) {
+            return (unsigned long)dv;
+         }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= 0 && dv < (double)(ULONG_MAX / 2 + 1) * 2.0) { return (unsigned long)dv; }
+         if (isfinite(dv) && dv >= 0 && dv < (double)(ULONG_MAX / 2 + 1) * 2.0) {
+            return (unsigned long)dv;
+         }
          break;
       }
       case VAL_BOOL: {
@@ -1145,7 +1211,9 @@ long dict_get_long(dict *d, const char *key, long def) {
    long long v;
    double dv;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_LONG: {
@@ -1158,27 +1226,37 @@ long dict_get_long(dict *d, const char *key, long def) {
          return (long)kp->val.ui;
       }
       case VAL_ULONG: {
-         if (kp->val.ul <= LONG_MAX) { return (long)kp->val.ul; }
+         if (kp->val.ul <= LONG_MAX) {
+            return (long)kp->val.ul;
+         }
          break;
       }
       case VAL_LLONG: {
-         if (kp->val.ll >= LONG_MIN && kp->val.ll <= LONG_MAX) { return (long)kp->val.ll; }
+         if (kp->val.ll >= LONG_MIN && kp->val.ll <= LONG_MAX) {
+            return (long)kp->val.ll;
+         }
          break;
       }
       case VAL_ULLONG: {
-         if (kp->val.ull <= LONG_MAX) { return (long)kp->val.ull; }
+         if (kp->val.ull <= LONG_MAX) {
+            return (long)kp->val.ull;
+         }
          break;
       }
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= LONG_MIN && dv < -(double)LONG_MIN) { return (long)dv; }
+         if (isfinite(dv) && dv >= LONG_MIN && dv < -(double)LONG_MIN) {
+            return (long)dv;
+         }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= LONG_MIN && dv < -(double)LONG_MIN) { return (long)dv; }
+         if (isfinite(dv) && dv >= LONG_MIN && dv < -(double)LONG_MIN) {
+            return (long)dv;
+         }
          break;
       }
       case VAL_BOOL: {
@@ -1204,7 +1282,9 @@ long long dict_get_llong(dict *d, const char *key, long long def) {
    unsigned long long uv;
    double dv;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_LLONG: {
@@ -1220,32 +1300,44 @@ long long dict_get_llong(dict *d, const char *key, long long def) {
          return kp->val.l;
       }
       case VAL_ULONG: {
-         if (kp->val.ul <= LLONG_MAX) { return (long long)kp->val.ul; }
+         if (kp->val.ul <= LLONG_MAX) {
+            return (long long)kp->val.ul;
+         }
          break;
       }
       case VAL_ULLONG: {
-         if (kp->val.ull <= LLONG_MAX) { return (long long)kp->val.ull; }
+         if (kp->val.ull <= LLONG_MAX) {
+            return (long long)kp->val.ull;
+         }
          break;
       }
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= LLONG_MIN && dv < -(double)LLONG_MIN) { return (long long)dv; }
+         if (isfinite(dv) && dv >= LLONG_MIN && dv < -(double)LLONG_MIN) {
+            return (long long)dv;
+         }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= LLONG_MIN && dv < -(double)LLONG_MIN) { return (long long)dv; }
+         if (isfinite(dv) && dv >= LLONG_MIN && dv < -(double)LLONG_MIN) {
+            return (long long)dv;
+         }
          break;
       }
       case VAL_BOOL: {
          return kp->val.i != 0;
       }
       case VAL_STR: {
-         if ( parse_ll(kp->val.s, &v) ) { return v; }
+         if ( parse_ll(kp->val.s, &v) ) {
+            return v;
+         }
 
-         if (parse_ull(kp->val.s, &uv) && uv <= LLONG_MAX) { return (long long)uv; }
+         if (parse_ull(kp->val.s, &uv) && uv <= LLONG_MAX) {
+            return (long long)uv;
+         }
          break;
       }
       default: {
@@ -1265,25 +1357,33 @@ unsigned long long dict_get_ullong(dict *d, const char *key, unsigned long long 
    unsigned long long uv;
    double dv;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_ULLONG: {
          return kp->val.ull;
       }
       case VAL_LLONG: {
-         if (kp->val.ll >= 0) { return (unsigned long long)kp->val.ll; }
+         if (kp->val.ll >= 0) {
+            return (unsigned long long)kp->val.ll;
+         }
          break;
       }
       case VAL_INT: {
-         if (kp->val.i >= 0) { return (unsigned long long)kp->val.i; }
+         if (kp->val.i >= 0) {
+            return (unsigned long long)kp->val.i;
+         }
          break;
       }
       case VAL_UINT: {
          return kp->val.ui;
       }
       case VAL_LONG: {
-         if (kp->val.l >= 0) { return (unsigned long long)kp->val.l; }
+         if (kp->val.l >= 0) {
+            return (unsigned long long)kp->val.l;
+         }
          break;
       }
       case VAL_ULONG: {
@@ -1292,13 +1392,17 @@ unsigned long long dict_get_ullong(dict *d, const char *key, unsigned long long 
       case VAL_FLOAT: {
          dv = kp->val.f;
 
-         if (isfinite(dv) && dv >= 0 && dv < (double)(ULLONG_MAX / 2 + 1) * 2.0) { return (unsigned long long)dv; }
+         if (isfinite(dv) && dv >= 0 && dv < (double)(ULLONG_MAX / 2 + 1) * 2.0) {
+            return (unsigned long long)dv;
+         }
          break;
       }
       case VAL_DOUBLE: {
          dv = kp->val.d;
 
-         if (isfinite(dv) && dv >= 0 && dv < (double)(ULLONG_MAX / 2 + 1) * 2.0) { return (unsigned long long)dv; }
+         if (isfinite(dv) && dv >= 0 && dv < (double)(ULLONG_MAX / 2 + 1) * 2.0) {
+            return (unsigned long long)dv;
+         }
          break;
       }
       case VAL_BOOL: {
@@ -1325,7 +1429,9 @@ char dict_get_char(dict *d, const char *key, char def) {
    keypair *kp;
    long long v;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_CHAR: {
@@ -1359,9 +1465,13 @@ char dict_get_char(dict *d, const char *key, char def) {
          return (char)kp->val.d;
       }
       case VAL_STR: {
-         if ( parse_ll(kp->val.s, &v) ) { return (char)v; }
+         if ( parse_ll(kp->val.s, &v) ) {
+            return (char)v;
+         }
 
-         if (kp->val.s && kp->val.s[0] && !kp->val.s[1]) { return kp->val.s[0]; }
+         if (kp->val.s && kp->val.s[0] && !kp->val.s[1]) {
+            return kp->val.s[0];
+         }
          break;
       }
       default: {
@@ -1376,7 +1486,9 @@ double dict_get_double(dict *d, const char *key, double def) {
    keypair *kp;
    double v;
 
-   if ( !dict_get_kp(d, key, &kp) ) { return def; }
+   if ( !dict_get_kp(d, key, &kp) ) {
+      return def;
+   }
 
    switch (kp->val_type) {
       case VAL_DOUBLE: {
@@ -1410,7 +1522,9 @@ double dict_get_double(dict *d, const char *key, double def) {
          return kp->val.c;
       }
       case VAL_STR: {
-         if ( parse_double(kp->val.s, &v) ) { return v; }
+         if ( parse_double(kp->val.s, &v) ) {
+            return v;
+         }
          break;
       }
       default: {
@@ -1519,13 +1633,17 @@ const char *dict_get_exp(dict *d, const char *key) {
 
 ////////////
 static int dict_copy_entry(dict *dst, const keypair *src) {
-   if (!dst || !src || !src->key || src->key == DUMMY_PTR) { return -1; }
+   if (!dst || !src || !src->key || src->key == DUMMY_PTR) {
+      return -1;
+   }
 
    return dict_store(dst, src->key, src->val_type, &src->val);
 }
 
 static bool dict_values_equal(const keypair *a, const keypair *b) {
-   if (!a || !b || a->val_type != b->val_type) { return false; }
+   if (!a || !b || a->val_type != b->val_type) {
+      return false;
+   }
 
    switch (a->val_type) {
       case VAL_NULL: {
@@ -1586,7 +1704,9 @@ int dict_merge(dict *dst, dict *src) {
    val_type_t type;
    int rank = 0;
 
-   if (!dst || !src) { return -1; }
+   if (!dst || !src) {
+      return -1;
+   }
 
    while ( ( rank = dict_enumerate_typed(src, rank, &key, &val, &type) ) >= 0 ) {
       keypair tmp = {
@@ -1613,7 +1733,9 @@ dict *dict_merge_new(dict *a, dict *b) {
 
    merged = dict_new();
 
-   if (!merged) { return NULL; }
+   if (!merged) {
+      return NULL;
+   }
 
    if (dict_merge(merged, a) != 0 || dict_merge(merged, b) != 0) {
       dict_free(merged);
@@ -1638,11 +1760,15 @@ dict *dict_diff(dict *a, dict *b) {
    val_type_t type;
    int rank = 0;
 
-   if (!a || !b) { return NULL; }
+   if (!a || !b) {
+      return NULL;
+   }
 
    diff = dict_new();
 
-   if (!diff) { return NULL; }
+   if (!diff) {
+      return NULL;
+   }
 
    while ( ( rank = dict_enumerate_typed(b, rank, &key, &val, &type) ) >= 0 ) {
       keypair *old = dict_find_entry(a, key);

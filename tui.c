@@ -79,11 +79,17 @@ static void tui_print_topline(const char *text, int columns) {
    while (p && *p && columns > 0) {
       if (p[0] == '\033' && p[1] == '[') {
          const unsigned char *end = p + 2;
-         while ( *end && !(*end >= '@' && *end <= '~') ) { end++; }
+         while ( *end && !(*end >= '@' && *end <= '~') ) {
+            end++;
+         }
 
-         if (!*end) { break; }
+         if (!*end) {
+            break;
+         }
 
-         if (*end == 'm') { fwrite(p, 1, end - p + 1, stdout); }
+         if (*end == 'm') {
+            fwrite(p, 1, end - p + 1, stdout);
+         }
          p = end + 1;
          continue;
       }
@@ -98,12 +104,18 @@ static void tui_print_topline(const char *text, int columns) {
 
       if (*p >= 0xc2 && *p <= 0xf4) {
          size_t expected = *p < 0xe0 ? 2 : (*p < 0xf0 ? 3 : 4);
-         while (len < expected && p[len] && (p[len] & 0xc0) == 0x80) { len++; }
+         while (len < expected && p[len] && (p[len] & 0xc0) == 0x80) {
+            len++;
+         }
 
-         if (len != expected) { p += len; continue; }
+         if (len != expected) {
+            p += len; continue;
+         }
       }
 
-      if (len > (size_t)columns) { break; }
+      if (len > (size_t)columns) {
+         break;
+      }
       fwrite(p, 1, len, stdout);
       p += len;
       columns -= (int)len;
@@ -374,7 +386,9 @@ void tui_redraw_screen(void) {
 
    char *topline = topline_renderer ? topline_renderer(w) : NULL;
 
-   if (!topline) { topline = tui_colorize_string(w->status_line); }
+   if (!topline) {
+      topline = tui_colorize_string(w->status_line);
+   }
    putchar(' ');
    tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
    free(topline);
@@ -785,7 +799,9 @@ static size_t ansi_column_offset(const char *text, int column) {
    size_t offset = 0;
    int visible = 0;
 
-   if (!text || column <= 0) { return 0; }
+   if (!text || column <= 0) {
+      return 0;
+   }
    while (text[offset] && visible < column) {
       if ( (unsigned char)text[offset] == 0x1b ) {
          offset++;
@@ -796,7 +812,9 @@ static size_t ansi_column_offset(const char *text, int column) {
                offset++;
             }
 
-            if (text[offset]) { offset++; }
+            if (text[offset]) {
+               offset++;
+            }
          }
          continue;
       }
@@ -811,18 +829,26 @@ static void ansi_copy_columns(const char *text, int columns, char *out, size_t o
    size_t used = 0;
    int visible = 0;
 
-   if (!text || !out || out_size == 0) { return; }
+   if (!text || !out || out_size == 0) {
+      return;
+   }
    while (text[in] && used + 1 < out_size && visible < columns) {
       if ( (unsigned char)text[in] == 0x1b ) {
          size_t start = in++;
 
          if (text[in] == '[') {
             in++;
-            while ( text[in] && !( (text[in] >= '@') && (text[in] <= '~') ) ) { in++; }
+            while ( text[in] && !( (text[in] >= '@') && (text[in] <= '~') ) ) {
+               in++;
+            }
 
-            if (text[in]) { in++; }
+            if (text[in]) {
+               in++;
+            }
          }
-         while (start < in && used + 1 < out_size) { out[used++] = text[start++]; }
+         while (start < in && used + 1 < out_size) {
+            out[used++] = text[start++];
+         }
          continue;
       }
       out[used++] = text[in++];
@@ -847,13 +873,21 @@ void tui_update_input_line(void) {
       return;
    }
 
-   if (tui_input_len < 0) { tui_input_len = 0; }
+   if (tui_input_len < 0) {
+      tui_input_len = 0;
+   }
 
-   if (tui_input_len >= TUI_INPUTLEN) { tui_input_len = TUI_INPUTLEN - 1; }
+   if (tui_input_len >= TUI_INPUTLEN) {
+      tui_input_len = TUI_INPUTLEN - 1;
+   }
 
-   if (tui_cursor_pos < 0) { tui_cursor_pos = 0; }
+   if (tui_cursor_pos < 0) {
+      tui_cursor_pos = 0;
+   }
 
-   if (tui_cursor_pos > tui_input_len) { tui_cursor_pos = tui_input_len; }
+   if (tui_cursor_pos > tui_input_len) {
+      tui_cursor_pos = tui_input_len;
+   }
    int width = term_cols;
    int prompt_len = visible_length(win->title) + 2;  // title + '>' + space
 

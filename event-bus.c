@@ -58,9 +58,13 @@ static int event_profile_compare(const void *a, const void *b) {
    const event_profile_row_t *left = a;
    const event_profile_row_t *right = b;
 
-   if (left->count < right->count) { return 1; }
+   if (left->count < right->count) {
+      return 1;
+   }
 
-   if (left->count > right->count) { return -1; }
+   if (left->count > right->count) {
+      return -1;
+   }
 
    return strcmp(left->event, right->event);
 }
