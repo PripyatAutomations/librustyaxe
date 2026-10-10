@@ -169,6 +169,25 @@ struct http_user {
 };
 typedef struct http_user http_user_t;
 
+/* Application payload accounting, independent of TCP/TLS overhead. */
+struct rr_traffic {
+   uint64_t tx_text_bytes, tx_text_frames, tx_binary_bytes, tx_binary_frames;
+   uint64_t rx_text_bytes, rx_text_frames, rx_binary_bytes, rx_binary_frames;
+};
+
+/* Bounded per-connection media observations; protocol helpers own semantics. */
+#define RR_MEDIA_FLOW_SLOTS 8
+struct rr_media_flow {
+   uint8_t stream, direction;
+   char codec[4];
+   uint32_t sequence, gaps;
+   uint64_t used_at;
+   uint64_t source_origin, arrival_origin, last_source, last_arrival;
+   uint64_t report_at, rx_bad_since, last_bad, tx_bad_since, healthy_since, hint_at;
+   uint64_t remote_at;
+   unsigned quality, remote_quality;
+};
+
 struct rrconn {
    bool active;                  // Is this slot actually used or is it
                                  // free-listed?
@@ -234,6 +253,13 @@ struct rrconn {
    } connection_type;
    time_t media_quality_changed, queue_warned;
    unsigned media_quality; // 0 means initial/full quality, otherwise percent
+   uint64_t media_rtt_base_us, media_rtt_smoothed_us;
+   struct rr_traffic traffic, usage_checkpoint;
+   uint64_t traffic_started_us, usage_seconds_checkpoint, session_tx_seconds;
+   bool bandwidth_warned;
+   struct rr_media_flow media_flows[RR_MEDIA_FLOW_SLOTS];
+   /* Wire stream IDs are bytes. Sequence state must survive health-slot eviction. */
+   uint32_t media_tx_sequences[256];
    char latency_request[65];
    uint64_t latency_sent_us, response_rtt_us;
    long long ping_rtt_ms;  // per-peer RTT; never use another peer's latency
