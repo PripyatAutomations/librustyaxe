@@ -1,3 +1,4 @@
+// librustyaxe/io.serial.c: serial io
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
@@ -20,26 +21,19 @@
 
 static bool baud_speed(unsigned baud, speed_t *speed) {
 #define RATE(n) case n: *speed = B ## n; return true
-
    switch (baud) {
-   RATE(0);
-   RATE(1200);
-   RATE(2400);
-   RATE(4800);
-   RATE(9600);
-   RATE(19200);
-   RATE(38400);
-   RATE(57600);
-   RATE(115200);
-#ifdef B230400
-   RATE(230400);
-#endif
-#ifdef B460800
-   RATE(460800);
-#endif
-#ifdef B921600
-   RATE(921600);
-#endif
+      RATE(0);
+      RATE(1200);
+      RATE(2400);
+      RATE(4800);
+      RATE(9600);
+      RATE(19200);
+      RATE(38400);
+      RATE(57600);
+      RATE(115200);
+      RATE(230400);
+      RATE(460800);
+      RATE(921600);
       default: {
          errno = EINVAL;
 
@@ -84,7 +78,6 @@ bool rr_serial_settings_apply(int fd, const rr_serial_settings_t *s) {
 
    if (!rr_serial_mode_parse(mode, &validated) ) {
       errno = EINVAL;
-
       return false;
    }
    cfmakeraw(&settings);
@@ -422,6 +415,7 @@ static bool serial_config(const char *path, int line, const char *section, const
 
    return failed;
 }
+
 bool rr_serial_config_register(void) {
    return cfg_add_callback(NULL, "serial", serial_config) &&
           cfg_add_callback(NULL, "serial:*", serial_config);

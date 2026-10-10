@@ -47,7 +47,6 @@ cfg_cb_list_t *cfg_callbacks = NULL;
 bool cfg_set_default(dict *d, const char *key, const char *val) {
    if (!key || !d) {
       Log(LOG_CRIT, "cfg", "cfg_set_default: dict:<%p> key:<%p> is not valid", d, key);
-
       return false;
    }
 
@@ -55,7 +54,6 @@ bool cfg_set_default(dict *d, const char *key, const char *val) {
 
    if (dict_add(d, key, (char *)val) != 0) {
       Log(LOG_CRIT, "cfg", "defcfg dict:<%p> failed to set key |%s|", d, key);
-
       return false;
    }
 
@@ -65,13 +63,11 @@ bool cfg_set_default(dict *d, const char *key, const char *val) {
 bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
    if (!d) {
       Log(LOG_CRIT, "cfg", "cfg_set_defaults: NULL dict");
-
       return false;
    }
 
    if (!defaults) {
       Log(LOG_CRIT, "cfg", "cfg_set_defaults: NULL input");
-
       return false;
    }
    Log(LOG_DEBUG, "cfg", "cfg_set_defaults: Loading defaults from <%p>", defaults);
@@ -250,7 +246,6 @@ bool cfg_add_callback(const char *path, const char *section, bool (*cb) () ) {
    }
 
    cfg_cb_list_t *new_cb = malloc(sizeof(cfg_cb_list_t) );
-
    if (new_cb == NULL) {
       abort();
    }
@@ -259,7 +254,6 @@ bool cfg_add_callback(const char *path, const char *section, bool (*cb) () ) {
 
    if (!new_cb) {
       Log(LOG_CRIT, "cfg", "OOM in cfg_add_callback");
-
       return false;
    }
 
@@ -421,7 +415,6 @@ static bool cfg_merge_dict(dict *dst, dict *src) {
    while ( (rank = dict_enumerate(src, rank, &key, &val) ) >= 0) {
       if (dict_add(dst, key, val) != 0) {
          Log(LOG_WARN, "cfg", "Unable to merge included key |%s|", key);
-
          return true;
       }
    }
@@ -438,7 +431,6 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
 
    if (!file_exists(path) ) {
       Log(LOG_CRIT, "cfg", "Can't find config file %s", path);
-
       return NULL;
    }
 
@@ -458,14 +450,13 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    cfg = newcfg;
 
    FILE *fp = fopen(path, "r");
-
    if (!fp) {
       free(newcfg);
       cfg = saved_cfg;
       fprintf(stderr, "Failed to open config %s: %d:%s\n", path, errno, strerror(errno) );
-
       return NULL;
    }
+
    fseek(fp, 0, SEEK_SET);
 
    bool in_comment = false;
@@ -816,7 +807,6 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    // initial load takes ownership of it, cfg_reload() merges it into the
    // live cfg and frees it.
    cfg = saved_cfg;
-
    return newcfg;
 }
 
@@ -827,7 +817,6 @@ dict *cfg_load(const char *path) {
 const char *cfg_get(const char *key) {
    if (!key) {
       Log(LOG_CRIT, "cfg", "got cfg_get with NULL key!");
-
       return NULL;
    }
    const char *p = dict_get(cfg, key, NULL);
@@ -836,7 +825,6 @@ const char *cfg_get(const char *key) {
    if (!p) {
       if (!default_cfg) {
          Log(LOG_CRAZY, "cfg", "defcfg not found looking for key |%s|", key);
-
          return NULL;
       }
       p = dict_get(default_cfg, key, NULL);
@@ -873,7 +861,6 @@ char *cfg_get_path(const char *key) {
    }
    char *path = expand_path(expanded);
    free( (void *)expanded);
-
    return path;
 }
 
@@ -885,14 +872,12 @@ cfg_save_cb_entry_t *cfg_save_callbacks = NULL;
 bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
    if (!callback) {
       Log(LOG_WARN, "cfg", "Attempt to add NULL save callback");
-
       return false;
    }
 
    for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks ; cbp ; cbp = cbp->next) {
       if (cbp->callback == callback) {
          Log(LOG_WARN, "cfg", "Save callback |%s| already registered", name ? name : "unnamed");
-
          return false;
       }
    }
@@ -936,13 +921,11 @@ bool cfg_remove_save_callback(cfg_save_cb_t callback) {
             cfg_save_callbacks = cbp->next;
          }
          free(cbp);
-
          return true;
       }
    }
 
    Log(LOG_CRIT, "cfg", "Save callback at <%p> not found for removal", callback);
-
    return false;
 }
 
@@ -951,7 +934,6 @@ bool cfg_run_save_callbacks(FILE *fp, const char *path) {
    if (!fp || !path) {
       return false;
    }
-
    bool errors = false;
 
    for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks ; cbp ; cbp = cbp->next) {
@@ -962,7 +944,6 @@ bool cfg_run_save_callbacks(FILE *fp, const char *path) {
          errors = true;
       }
    }
-
    return !errors;
 }
 
@@ -972,6 +953,7 @@ static void cfg_print_servers(dict *d, FILE *fp) {
    if (!d || !fp) {
       return;
    }
+
    const char *key;
    char *val;
    int rank = 0;
@@ -1164,7 +1146,6 @@ bool cfg_save(dict *d, const char *path) {
 
       if (!backed_up) {
          Log(LOG_CRIT, "cfg", "Unable to create a backup before saving '%s'", path);
-
          return false;
       }
    }
@@ -1173,7 +1154,6 @@ bool cfg_save(dict *d, const char *path) {
 
    if (!fp) {
       Log(LOG_CRIT, "cfg", "Failed to open save file: '%s': %d:%s", path, errno, strerror(errno) );
-
       return false;
    }
    dict *merged = NULL;
@@ -1203,7 +1183,6 @@ bool cfg_save(dict *d, const char *path) {
             free(entries);
             dict_free(merged);
             fclose(fp);
-
             return false;
          }
          entries = grown;
@@ -1264,7 +1243,6 @@ bool cfg_save(dict *d, const char *path) {
 bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    if (!newcfg) {
       Log(LOG_CRIT, "cfg", "cfg_apply_new: newcfg is NULL, ignoring");
-
       return false;
    }
 
@@ -1356,7 +1334,6 @@ bool cfg_reload(const char *filename) {
 
    if (!path) {
       Log(LOG_CRIT, "cfg", "cfg_reload: No config file to reload");
-
       return false;
    }
 
@@ -1366,13 +1343,11 @@ bool cfg_reload(const char *filename) {
 
    if (!newcfg) {
       Log(LOG_CRIT, "cfg", "cfg_reload: Failed to load config from %s", path);
-
       return false;
    }
 
    cfg_apply_new(cfg, newcfg);
    Log(LOG_INFO, "cfg", "cfg_reload: Finished reloading config from %s", path);
-
    return true;
 }
 
@@ -1419,28 +1394,6 @@ void cfg_fini(void) {
    config_file = NULL;
 }
 
-// Config save stuff
-#if     0       // XX: Not yet
-char pathbuf[PATH_MAX + 1];
-memset(pathbuf, 0, sizeof(pathbuf) );
-
-// If we don't couldnt find a config file, save the defaults to
-// ~/.config/rrgtk.cfg
-if (homedir && empty_config) {
-#ifdef _WIN32
-   snprintf(pathbuf, sizeof(pathbuf), "%%APPDATA%%\\rrgtk\\rrgtk.cfg");
-#else
-   snprintf(pathbuf, sizeof(pathbuf), "%s/.config/rrgtk.cfg", homedir);
-#endif
-
-   if (!file_exists(pathbuf) ) {
-      Log(LOG_WARN, "main", "Saving default config to %s since it doesn't exist", pathbuf);
-      cfg_save(cfg, pathbuf);
-      config_file = pathbuf;
-   }
-}
-#endif
-
 ///////////////////
 // Reload Events //
 ///////////////////
@@ -1456,7 +1409,6 @@ reload_event_t *reload_event_add(const char *key, bool (*callback) (), const cha
 
    if (r == NULL) {
       fprintf(stderr, "OOM in reload_event_add!\n");
-
       return NULL;
    }
    memset(r, 0, sizeof(reload_event_t) );

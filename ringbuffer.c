@@ -1,16 +1,11 @@
+// librustyaxe/ringbuffer.c: A reusable implementation of a ring buffer with timestamps for FIFO usage
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
 // The software is not for sale. It is freely available, always.
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
-/*
- * A reusable implementation of a ring buffer with timestamps for FIFO usage
- *
- * This is mostly intended for servicing media buffers which need to be kept strictly bounded in maximum size.
- *
- * It would be beneficial to keep
- */
+// This is mostly intended for servicing media buffers which need to be kept strictly bounded in maximum size.
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,9 +17,7 @@
 rb_buffer_t *rb_create(int max_size, const char *name) {
    rb_buffer_t *buffer = malloc(sizeof(rb_buffer_t) );
    const char *safe_name = name ? name : "";
-   size_t name_len = strnlen(safe_name, sizeof(buffer->name) ) + 1;   // add one for
-   // null
-   // terminator
+   size_t name_len = strnlen(safe_name, sizeof(buffer->name) ) + 1;
    char *buffer_name = malloc(name_len);
 
    if (buffer == NULL || buffer_name == NULL) {
@@ -40,7 +33,6 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
    strlcpy(buffer_name, safe_name, name_len);
    buffer_name[name_len - 1] = '\0';  // make sure name is null-terminated
    buffer->name = buffer_name;
-
    Log(LOG_DEBUG, "ringbuffer", "rb_create created new RingBuffer %s at %p", buffer->name, buffer);
 
    return buffer;
@@ -87,7 +79,6 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
       buffer->head = node;
       buffer->tail = node;
       buffer->current_size++;
-
       return node;
    }
 
@@ -116,13 +107,11 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
 rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
    if (buffer == NULL) {
       Log(LOG_CRIT, "ringbuffer", "rb_get_most_recent: buffer == NUL!? ignoring request");
-
       return NULL;
    }
 
    if (buffer->current_size == 0) {
       Log(LOG_CRIT, "ringbuffer", "rb_get_most_recent: Ring buffer <%p> is empty.", buffer);
-
       return NULL;
    }
    rb_node_t *current = buffer->head;
@@ -142,23 +131,20 @@ rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
 void **rb_get_range(rb_buffer_t *buffer, int start, int count) {
    if (buffer->current_size == 0) {
       printf("Ring buffer is empty.\n");
-
       return NULL;
    }
 
    if (start < 0 || start >= buffer->current_size) {
       printf("Invalid start index.\n");
-
       return NULL;
    }
 
    if (count < 1 || start + count > buffer->current_size) {
       printf("Invalid count.\n");
-
       return NULL;
    }
-   void **array = malloc(count * sizeof(void*) );
 
+   void **array = malloc(count * sizeof(void*) );
    if ( (void *)array == NULL) {
       Log(LOG_CRIT, "librustyaxe", "rb_get_range: out of memory!");
       exit(ENOMEM);
@@ -166,7 +152,6 @@ void **rb_get_range(rb_buffer_t *buffer, int start, int count) {
    rb_node_t *current = buffer->head;
 
    int i = 0;
-
    while (i < start) {
       current = current->next;
       i++;

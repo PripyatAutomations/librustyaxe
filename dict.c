@@ -1,3 +1,4 @@
+// librustyaxe/dict.c: A heavily modified version of N. Devillard's excellent dict.c
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
 // Do not pay money for this, except donations to the project, if you wish to.
@@ -220,7 +221,6 @@ static int dict_store(dict *d, const char *key, val_type_t type, const dict_valu
 
       if (!newstr) {
          free(newkey);
-
          return -1;
       }
    }
@@ -233,7 +233,6 @@ static int dict_store(dict *d, const char *key, val_type_t type, const dict_valu
          if (dict_resize(d) != 0) {
             free( (void *)newstr);
             free( (void *)newkey);
-
             return -1;
          }
 
@@ -245,7 +244,6 @@ static int dict_store(dict *d, const char *key, val_type_t type, const dict_valu
          if (!slot) {
             free( (void *)newstr);
             free(newkey);
-
             return -1;
          }
       }
@@ -306,98 +304,62 @@ static int dict_add_p(dict *d, const keypair *src) {
 
 /** Add an item to a dictionary by copying key/val into the dict. */
 int dict_add(dict *d, const char *key, const char *val) {
-   dict_value_t v = {
-      .s = val
-   };
-
+   dict_value_t v = { .s = val };
    return dict_store(d, key, VAL_STR, &v);
 }
 
 int dict_add_null(dict *d, const char *key) {
-   dict_value_t v = {
-      0
-   };
-
+   dict_value_t v = { 0 };
    return dict_store(d, key, VAL_NULL, &v);
 }
 
 int dict_add_char(dict *d, const char *key, char val) {
-   dict_value_t v = {
-      .c = val
-   };
-
+   dict_value_t v = { .c = val };
    return dict_store(d, key, VAL_CHAR, &v);
 }
 
 int dict_add_bool(dict *d, const char *key, bool val) {
-   dict_value_t v = {
-      .i = val ? 1 : 0
-   };
-
+   dict_value_t v = { .i = val ? 1 : 0 };
    return dict_store(d, key, VAL_BOOL, &v);
 }
 
 int dict_add_int(dict *d, const char *key, int val) {
-   dict_value_t v = {
-      .i = val
-   };
-
+   dict_value_t v = { .i = val };
    return dict_store(d, key, VAL_INT, &v);
 }
 
 int dict_add_uint(dict *d, const char *key, unsigned int val) {
-   dict_value_t v = {
-      .ui = val
-   };
-
+   dict_value_t v = { .ui = val };
    return dict_store(d, key, VAL_UINT, &v);
 }
 
 int dict_add_long(dict *d, const char *key, long val) {
-   dict_value_t v = {
-      .l = val
-   };
-
+   dict_value_t v = { .l = val };
    return dict_store(d, key, VAL_LONG, &v);
 }
 
 int dict_add_ulong(dict *d, const char *key, unsigned long val) {
-   dict_value_t v = {
-      .ul = val
-   };
-
+   dict_value_t v = { .ul = val };
    return dict_store(d, key, VAL_ULONG, &v);
 }
 
 int dict_add_llong(dict *d, const char *key, long long val) {
-   dict_value_t v = {
-      .ll = val
-   };
-
+   dict_value_t v = { .ll = val };
    return dict_store(d, key, VAL_LLONG, &v);
 }
 
 int dict_add_ullong(dict *d, const char *key, unsigned long long val) {
-   dict_value_t v = {
-      .ull = val
-   };
-
+   dict_value_t v = { .ull = val };
    return dict_store(d, key, VAL_ULLONG, &v);
 }
 
 int dict_add_float(dict *d, const char *key, float val) {
-   dict_value_t v = {
-      .f = val
-   };
-
+   dict_value_t v = { .f = val };
    return dict_store(d, key, VAL_FLOAT, &v);
 }
 
 int dict_add_double(dict *d, const char *key, double val) {
-   dict_value_t v = {
-      .d = val
-   };
-
+   dict_value_t v = { .d = val };
    return dict_store(d, key, VAL_DOUBLE, &v);
 }
 
@@ -455,14 +417,12 @@ static int dict_resize(dict *d) {
             }
 
             free(newtable);
-
             return -1;
          }
       }
    }
 
    free(oldtable);
-
    return 0;
 }
 
@@ -479,7 +439,6 @@ dict *dict_new(void) {
 
    if (!d->table) {
       free(d);
-
       return NULL;
    }
 
@@ -608,7 +567,6 @@ int dict_enumerate(dict *d, int rank, const char **key, char **val) {
    if (rank >= (int)d->size) {
       *key = NULL;
       *val = NULL;
-
       return -1;
    }
 
@@ -801,14 +759,12 @@ static bool parse_bool_string(const char *s, bool *out) {
 
    if (!strcasecmp(s, "true") || !strcasecmp(s, "yes") || !strcasecmp(s, "on") || !strcmp(s, "1") ) {
       *out = true;
-
       return true;
    }
 
    if (!strcasecmp(s, "false") || !strcasecmp(s, "no") ||
       !strcasecmp(s, "off") || !strcmp(s, "0") ) {
       *out = false;
-
       return true;
    }
 
@@ -1549,7 +1505,6 @@ const char *dict_get_exp(dict *d, const char *key) {
 
    if (!key) {
       Log(LOG_WARN, "config", "dict_get_exp: NULL key!");
-
       return NULL;
    }
    const char *p = dict_get(d, key, NULL);
@@ -1561,7 +1516,6 @@ const char *dict_get_exp(dict *d, const char *key) {
 
    if (!buf) {
       Log(LOG_DEBUG, "librustyaxe", "OOM in dict_get_exp!");
-
       return NULL;
    }
    strlcpy(buf, p, MAX_CFG_EXP_STRLEN);
@@ -1621,9 +1575,6 @@ const char *dict_get_exp(dict *d, const char *key) {
    if (shrunk) {
       buf = shrunk;
    }
-
-//   Log(LOG_DEBUG, "librustyaxe", "dict_get_exp: returning %lu bytes for key %s => %s",
-// (unsigned long)final_len, key, buf);
    return buf;
 }
 
@@ -1690,7 +1641,6 @@ static bool dict_values_equal(const keypair *a, const keypair *b) {
 
 static keypair *dict_find_entry(dict *d, const char *key) {
    keypair *kp;
-
    return dict_get_kp(d, key, &kp) ? kp : NULL;
 }
 
@@ -1723,7 +1673,6 @@ dict *dict_merge_new(dict *a, dict *b) {
 
    if (!a || !b) {
       Log(LOG_WARN, "dict", "dict_merge_new called with NULL a <%p> or NULL b <%p>", a, b);
-
       return NULL;
    }
 
@@ -1775,7 +1724,6 @@ dict *dict_diff(dict *a, dict *b) {
       if (!old || !dict_values_equal(old, &cur) ) {
          if (dict_copy_entry(diff, &cur) != 0) {
             dict_free(diff);
-
             return NULL;
          }
       }
@@ -1788,7 +1736,6 @@ dict *dict_diff(dict *a, dict *b) {
       if (!dict_find_entry(b, key) ) {
          if (dict_add_null(diff, key) != 0) {
             dict_free(diff);
-
             return NULL;
          }
       }

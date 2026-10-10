@@ -42,7 +42,6 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
    if (!value) {
       Log(LOG_CRIT, "cfg.modules", "Missing '=' in [%s] at %s:%d", section, path, line);
       free(copy);
-
       return true;
    }
    *value++ = '\0';
@@ -52,6 +51,7 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
    while (key_end > copy && isspace( (unsigned char)key_end[-1]) ) {
       *--key_end = '\0';
    }
+
    char *key = copy;
    while (*key && isspace( (unsigned char)*key) ) {
       key++;
@@ -68,7 +68,6 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
    if (!*key) {
       Log(LOG_CRIT, "cfg.modules", "Empty module name in [%s] at %s:%d", section, path, line);
       free(copy);
-
       return true;
    }
 
@@ -87,11 +86,9 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
       dict_add(cfg, fullkey, value) != 0) {
       Log(LOG_CRIT, "cfg.modules", "Unable to store options for %s at %s:%d", name, path, line);
       free(copy);
-
       return true;
    }
    free(copy);
-
    return false;
 }
 
@@ -131,7 +128,6 @@ const char *cfg_modules_get(int index, const char **options_out) {
       if (options_out) {
          *options_out = val ? val : "";
       }
-
       return namebuf;
    }
    return NULL;
@@ -146,7 +142,7 @@ const char *cfg_modules_options(const char *name) {
    if (snprintf(fullkey, sizeof(fullkey), "module:%s.options", name) <= 0) {
       return NULL;
    }
-   const char *val = dict_get(cfg, fullkey, NULL);
 
+   const char *val = dict_get(cfg, fullkey, NULL);
    return val ? val : "";
 }

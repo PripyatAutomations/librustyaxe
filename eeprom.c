@@ -1,5 +1,5 @@
 //
-// eeprom.c
+// librustyaxe/eeprom.c
 //    This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
@@ -74,16 +74,13 @@ uint32_t eeprom_offset_index(const char *key) {
    for (idx = 0 ; idx < max_entries ; idx++) {
       if (strncasecmp(key, eeprom_layout[idx].key, strlen(key) ) == 0) {
 #if     defined(NOISY_EEPROM)
-         Log(LOG_DEBUG, "eeprom", "offset: %s is <%d> type %d, %lu bytes @ %lu", key, idx, eeprom_layout[idx].type, eeprom_layout[idx].size, eeprom_layout[idx].
-            offset);
+         Log(LOG_DEBUG, "eeprom", "offset: %s is <%d> type %d, %lu bytes @ %lu", key, idx, eeprom_layout[idx].type, eeprom_layout[idx].size, eeprom_layout[idx].offset);
 #endif
-
          return idx;
       }
    }
 
    Log(LOG_DEBUG, "eeprom", "No match found for key %s in eeprom_layout", key);
-
    return -1;
 }
 
@@ -115,7 +112,6 @@ uint32_t eeprom_init(void) {
 
    if (fd == -1) {
       Log(LOG_CRIT, "eeprom", "EEPROM Initialization failed: %s: %d: %s", HOST_EEPROM_FILE, errno, strerror(errno) );
-
       return -1;
    }
 // we do not have fstat (or a file system at all) on the radio...
@@ -123,7 +119,6 @@ uint32_t eeprom_init(void) {
 
    if (fstat(fd, &sb) == -1) {
       Log(LOG_CRIT, "eeprom", "EEPROM image %s does not exist, run 'make eeprom' and try again", HOST_EEPROM_FILE);
-
       return -1;
    }
 #endif
@@ -164,13 +159,12 @@ uint32_t eeprom_read_block(uint8_t *buf, size_t offset, size_t len) {
       if (!buf || offset <= 0 || len <= 0) {
          return -1;
       }
+
       while (myoff <= len) {
          buf[myoff] = *eeprom_mmap + offset + myoff;
-
          myoff++;
       }
    }
-
    return res;
 }
 
@@ -202,7 +196,6 @@ void *eeprom_read(size_t offset) {
 
    if (offset <= 0) {
       errno = EADDRNOTAVAIL;
-
       return res;
    }
 
@@ -292,8 +285,8 @@ uint32_t eeprom_load_config(void) {
       // settings...
       return -1;
    }
-   // walk over the eeprom_layout and apply each setting to our state object
-   // (rig)
+
+   // walk over the eeprom_layout and apply each setting to our state object (rig)
    uint32_t cfg_rows = sizeof(eeprom_layout) / sizeof(eeprom_layout[0]);
    int chan_slots_loaded = 0;
 
@@ -394,13 +387,12 @@ uint32_t eeprom_write_config(uint32_t force) {
    // We are running defaults if we got here, so prompt the user first
    if (eeprom_corrupted && !force) {
       Log(LOG_WARN, "eeprom", "Not saving EEPROM since corrupt flag set");
-
       return -1;
    }
+
    sum = eeprom_checksum_generate();
 
    Log(LOG_INFO, "eeprom", "Saving to EEPROM not yet supported");
-
    return 0;
 }
 
@@ -409,7 +401,6 @@ uint32_t get_serial_number(void) {
       return -1;
    }
    uint32_t val = eeprom_get_int("dev/serial");
-
    return val;
 }
 
@@ -539,14 +530,11 @@ struct in_addr *eeprom_get_ip4(const char *key, struct in_addr *sin) {
       return NULL;
    }
    // this is stored as 4 packed bytes by buildconf
-   unsigned char packed_ip[4] = {
-      0, 0, 0, 0
-   };
+   unsigned char packed_ip[4] = { 0, 0, 0, 0 };
    int idx = eeprom_offset_index(key);
 
    if (idx == -1) {
       Log(LOG_WARN, "eeprom", "error in eeprom_get_ipv4: invalid key %s", key);
-
       return NULL;
    }
    unsigned char *myaddr = eeprom_mmap + eeprom_layout[idx].offset;
@@ -629,7 +617,6 @@ uint32_t crc32(uint32_t crc, const void *data, size_t len) {
 
          table[i] = c;
       }
-
       init = 1;
    }
    crc ^= 0xFFFFFFFFU;
