@@ -232,6 +232,11 @@ struct rrconn {
       CONN_AUDIO_RX,            // RX audio
       CONN_AUDIO_TX             // TX audio
    } connection_type;
+   time_t media_quality_changed, queue_warned;
+   unsigned media_quality; // 0 means initial/full quality, otherwise percent
+   char latency_request[65];
+   uint64_t latency_sent_us, response_rtt_us;
+   long long ping_rtt_ms;  // per-peer RTT; never use another peer's latency
    char codec_rx[5], codec_tx[5];                // 4 byte ID of the codec for
                                                  // each audio direction
    // Codecs advertised by this connection in media.cmd=capab.  The server
