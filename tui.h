@@ -59,6 +59,7 @@ extern void tui_redraw_flush(void);
 extern char **tui_completion_cb(const char*text, int start, int end);
 extern bool tui_register_completion_provider(char **(*fn) (const char *line, const char *word) );
 extern bool tui_unregister_completion_provider(char **(*fn) (const char *line, const char *word) );
+extern void tui_set_completion_handler(bool (*fn) (tui_window_t *));
 extern bool tui_do_completion(tui_window_t *win);
 extern int tui_rows(void);
 extern int tui_cols(void);

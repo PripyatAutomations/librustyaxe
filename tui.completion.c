@@ -54,6 +54,10 @@ extern int tui_cursor_pos;
 static tui_completion_provider_t completion_providers[TUI_MAX_COMPLETION_PROVIDERS];
 static int completion_provider_count = 0;
 static tui_completion_describer_t completion_describer;
+static bool (*completion_handler)(tui_window_t *);
+void tui_set_completion_handler(bool (*fn) (tui_window_t *)) {
+   completion_handler = fn;
+}
 void tui_set_completion_describer(tui_completion_describer_t fn) {
    completion_describer = fn;
 }
@@ -152,6 +156,10 @@ void completion_free(char **matches) {
 // Called from tui.keys.c on TAB.  Operates on input_buf/tui_cursor_pos/tui_input_len.
 // Returns true if the input line changed.
 bool tui_do_completion(tui_window_t *win) {
+   if (completion_handler && completion_handler(win)) {
+      return true;
+   }
+
    if (tui_cursor_pos == 0) {
       return false;
    }
