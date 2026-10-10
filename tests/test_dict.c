@@ -116,7 +116,24 @@ static void test_merge_and_diff(void) {
    dict_free(b);
 }
 
+static void test_key_alignment(void) {
+   dict *d = dict_new();
+   CHECK(d != NULL);
+   char storage[64];
+
+   for (unsigned offset = 0 ; offset < 8 ; offset++) {
+      char *key = storage + offset;
+      snprintf(key, sizeof(storage) - offset, "property.frequency");
+      CHECK(dict_add_int(d, key, 145000000) == 0);
+      CHECK(dict_get_int(d, "property.frequency", 0) == 145000000);
+      CHECK(dict_get_int(d, key, 0) == 145000000);
+      CHECK(dict_del(d, key) == 0);
+   }
+   dict_free(d);
+}
+
 int main(void) {
+   test_key_alignment();
    test_str_basic();
    test_typed();
    test_many_and_remove();

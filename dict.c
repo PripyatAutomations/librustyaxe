@@ -93,7 +93,9 @@ static unsigned dict_hash_murmur(const char *key) {
    h = seed ^ len;
    data = (unsigned char *)key;
    while (len >= 4) {
-      k = *(unsigned int *)data;
+      /* Keys need not be aligned; memcpy preserves the native hash bytes
+       * without an unaligned load or type-aliasing violation. */
+      memcpy(&k, data, sizeof(k));
 
       k *= m;
       k ^= k >> r;
