@@ -109,6 +109,8 @@ extern void cfg_fini(void);
 
 // Save the dict into a file
 extern bool cfg_save(dict *d, const char *path);
+// Save only supplied values, without defaults or module save callbacks.
+extern bool cfg_save_overrides(dict *d, const char *path);
 
 // Register a callback to emit module-owned config sections during cfg_save.
 // These registration/removal functions and cfg_run_save_callbacks return true on success.

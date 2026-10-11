@@ -964,13 +964,27 @@ static void cfg_print_servers(dict *d, FILE *fp) {
          continue;
       }
       const char *name_start = key + 7;
-      const char *dot = strchr(name_start, '.');
+      const char *dot = strstr(name_start, ".server.");
+      if (!dot) {
+         size_t length = strlen(name_start);
+         const char *suffixes[] = { ".autojoin.rig", ".autojoin" };
+         for (unsigned i = 0 ; i < sizeof(suffixes) / sizeof(suffixes[0]) ; i++) {
+            size_t suffix_length = strlen(suffixes[i]);
+            if (length > suffix_length && !strcmp(name_start + length - suffix_length, suffixes[i])) {
+               dot = name_start + length - suffix_length;
+               break;
+            }
+         }
+      }
+      if (!dot) {
+         dot = strchr(name_start, '.');
+      }
 
       if (!dot) {
          continue;
       }
       size_t name_len = dot - name_start;
-      char name[64];
+      char name[512];
 
       if (name_len >= sizeof(name) ) {
          continue;
@@ -1111,7 +1125,7 @@ static void cfg_write_wrapped(FILE *fp, const char *key, const char *value) {
    }
 }
 
-bool cfg_save(dict *d, const char *path) {
+static bool cfg_save_values(dict *d, const char *path, bool complete) {
    // Back up the existing config before overwriting it. Keep two-digit
    // sequence numbers so multiple saves on the same day remain distinct.
    if (file_exists(path) ) {
@@ -1159,7 +1173,7 @@ bool cfg_save(dict *d, const char *path) {
    dict *merged = NULL;
 
    // Right-side argument overrides defaults
-   merged = dict_merge_new(default_cfg, d);
+   merged = dict_merge_new(complete ? default_cfg : d, d);
 
    /* Collect entries once so the output is deterministic and section-qualified keys can be written back in the INI section form accepted by the loader. For
     * example, fwdsp:path becomes [fwdsp] path=... . */
@@ -1231,12 +1245,22 @@ bool cfg_save(dict *d, const char *path) {
    cfg_print_servers(d, fp);
 
    // Let registered modules emit their own sections (network:autojoin, etc)
-   cfg_run_save_callbacks(fp, path);
+   if (complete) {
+      cfg_run_save_callbacks(fp, path);
+   }
 
    fflush(fp);
    fclose(fp);
 
    return true;
+}
+
+bool cfg_save(dict *d, const char *path) {
+   return cfg_save_values(d, path, true);
+}
+
+bool cfg_save_overrides(dict *d, const char *path) {
+   return cfg_save_values(d, path, false);
 }
 
 /* PARITY: rustyrig-www/js/webui.config.js */
