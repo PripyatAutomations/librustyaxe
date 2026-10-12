@@ -125,11 +125,11 @@ enum {
 typedef struct {
    TermKeyType type;
    union {
-      long codepoint;      /* TERMKEY_TYPE_UNICODE */
-      int number;          /* TERMKEY_TYPE_FUNCTION */
-      TermKeySym sym;      /* TERMKEY_TYPE_KEYSYM */
-      char mouse[4];       /* TERMKEY_TYPE_MOUSE */
-                           /* opaque. see termkey_interpret_mouse */
+      long codepoint;           /* TERMKEY_TYPE_UNICODE */
+      int number;               /* TERMKEY_TYPE_FUNCTION */
+      TermKeySym sym;           /* TERMKEY_TYPE_KEYSYM */
+      char mouse[4];            /* TERMKEY_TYPE_MOUSE */
+      /* opaque. see termkey_interpret_mouse */
    } code;
 
    int modifiers;
@@ -141,24 +141,24 @@ typedef struct {
 typedef struct TermKey TermKey;
 
 enum {
-   TERMKEY_FLAG_NOINTERPRET = 1 << 0, /* Do not interpret C0//DEL codes if possible */
-   TERMKEY_FLAG_CONVERTKP = 1 << 1,  /* Convert KP codes to regular keypresses
-                                      */
-   TERMKEY_FLAG_RAW = 1 << 2,        /* Input is raw bytes, not UTF-8 */
-   TERMKEY_FLAG_UTF8 = 1 << 3,       /* Input is definitely UTF-8 */
-   TERMKEY_FLAG_NOTERMIOS = 1 << 4,  /* Do not make initial termios calls on construction
-                                      */
-   TERMKEY_FLAG_SPACESYMBOL = 1 << 5, /* Sets TERMKEY_CANON_SPACESYMBOL */
-   TERMKEY_FLAG_CTRLC = 1 << 6,      /* Allow Ctrl-C to be read as normal, disabling SIGINT */
-   TERMKEY_FLAG_EINTR = 1 << 7,      /* Return ERROR on signal (EINTR) rather than retry
-                                      */
-   TERMKEY_FLAG_NOSTART = 1 << 8     /* Do not call termkey_start() in constructor */
+   TERMKEY_FLAG_NOINTERPRET = 1 << 0,  /* Do not interpret C0//DEL codes if possible */
+   TERMKEY_FLAG_CONVERTKP = 1 << 1, /* Convert KP codes to regular keypresses
+                                     */
+   TERMKEY_FLAG_RAW = 1 << 2,   /* Input is raw bytes, not UTF-8 */
+   TERMKEY_FLAG_UTF8 = 1 << 3,  /* Input is definitely UTF-8 */
+   TERMKEY_FLAG_NOTERMIOS = 1 << 4, /* Do not make initial termios calls on construction
+                                     */
+   TERMKEY_FLAG_SPACESYMBOL = 1 << 5,  /* Sets TERMKEY_CANON_SPACESYMBOL */
+   TERMKEY_FLAG_CTRLC = 1 << 6, /* Allow Ctrl-C to be read as normal, disabling SIGINT */
+   TERMKEY_FLAG_EINTR = 1 << 7, /* Return ERROR on signal (EINTR) rather than retry
+                                 */
+   TERMKEY_FLAG_NOSTART = 1 << 8 /* Do not call termkey_start() in constructor */
 };
 
 enum {
    TERMKEY_CANON_SPACESYMBOL = 1 << 0, /* Space is symbolic rather than Unicode
                                         */
-   TERMKEY_CANON_DELBS = 1 << 1       /* Del is converted to Backspace */
+   TERMKEY_CANON_DELBS = 1 << 1 /* Del is converted to Backspace */
 };
 
 void termkey_check_version(int major, int minor);
@@ -219,11 +219,11 @@ TermKeyResult termkey_interpret_csi(TermKey *tk, const TermKeyKey *key, long arg
 TermKeyResult termkey_interpret_string(TermKey *tk, const TermKeyKey *key, const char **strp);
 
 typedef enum {
-   TERMKEY_FORMAT_LONGMOD = 1 << 0,    /* Shift-... instead of S-... */
+   TERMKEY_FORMAT_LONGMOD = 1 << 0, /* Shift-... instead of S-... */
    TERMKEY_FORMAT_CARETCTRL = 1 << 1,  /* ^X instead of C-X */
    TERMKEY_FORMAT_ALTISMETA = 1 << 2,  /* Meta- or M- instead of Alt- or A- */
-   TERMKEY_FORMAT_WRAPBRACKET = 1 << 3, /* Wrap special keys in brackets like
-                                         * <Escape> */
+   TERMKEY_FORMAT_WRAPBRACKET = 1 << 3,   /* Wrap special keys in brackets like
+                                           * <Escape> */
    TERMKEY_FORMAT_SPACEMOD = 1 << 4,   /* M Foo instead of M-Foo */
    TERMKEY_FORMAT_LOWERMOD = 1 << 5,   /* meta or m instead of Meta or M */
    TERMKEY_FORMAT_LOWERSPACE = 1 << 6, /* page down instead of PageDown */

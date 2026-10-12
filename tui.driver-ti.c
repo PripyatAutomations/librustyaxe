@@ -35,8 +35,7 @@ static struct {
    TermKeyType type;
    TermKeySym sym;
    int mods;
-} funcs[] =
-{
+} funcs[] = {
    /* THIS LIST MUST REMAIN SORTED! */
    {
       "backspace", TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_BACKSPACE, 0
@@ -106,10 +105,10 @@ static struct {
    },
    {
       "next", TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_PAGEDOWN, 0
-   },                                                             // Not quite,
-                                                                  // but it's
-                                                                  // the best we
-                                                                  // can do
+   },                                                          // Not quite,
+   // but it's
+   // the best we
+   // can do
    {
       "npage", TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_PAGEDOWN, 0
    },
@@ -125,9 +124,9 @@ static struct {
    {
       "previous", TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_PAGEUP, 0
    },                                                             // Not quite,
-                                                                  // but it's
-                                                                  // the best we
-                                                                  // can do
+   // but it's
+   // the best we
+   // can do
    {
       "print", TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_PRINT, 0
    },
@@ -175,7 +174,7 @@ static struct {
 #ifdef HAVE_UNIBILIUM
 static enum unibi_string unibi_lookup_str(const char *name) {
    for (enum unibi_string ret = unibi_string_begin_ + 1 ; ret < unibi_string_end_ ; ret++) {
-      if (streq(unibi_name_str(ret), name) ) {
+      if (streq(unibi_name_str(ret), name)) {
          return ret;
       }
    }
@@ -183,8 +182,7 @@ static enum unibi_string unibi_lookup_str(const char *name) {
    return -1;
 }
 
-static const char *unibi_get_str_by_name(const unibi_term *ut, const char *name)
-{
+static const char *unibi_get_str_by_name(const unibi_term *ut, const char *name) {
    enum unibi_string idx = unibi_lookup_str(name);
 
    if (idx == (enum unibi_string)-1) {
@@ -215,17 +213,17 @@ struct trie_node_key {
 
 struct trie_node_arr {
    trie_nodetype type;
-   unsigned char min, max;  /* INCLUSIVE endpoints of the extent range */
-   struct trie_node *arr[];  /* dynamic size at allocation time */
+   unsigned char min, max;      /* INCLUSIVE endpoints of the extent range */
+   struct trie_node *arr[];     /* dynamic size at allocation time */
 };
 
 typedef struct {
    TermKey *tk;
 
 #ifdef HAVE_UNIBILIUM
-   unibi_term *unibi;  /* only valid until first 'start' call */
+   unibi_term *unibi;           /* only valid until first 'start' call */
 #else
-   char *term;  /* only valid until first 'start' call */
+   char *term;                  /* only valid until first 'start' call */
 #endif
 
    struct trie_node *root;
@@ -237,7 +235,7 @@ typedef struct {
 static int insert_seq(TermKeyTI *ti, const char *seq, struct trie_node *node);
 
 static struct trie_node *new_node_key(TermKeyType type, TermKeySym sym, int modmask, int modset) {
-   struct trie_node_key *n = malloc(sizeof(*n) );
+   struct trie_node_key *n = malloc(sizeof(*n));
 
    if (!n) {
       return NULL;
@@ -249,11 +247,11 @@ static struct trie_node *new_node_key(TermKeyType type, TermKeySym sym, int modm
    n->key.modifier_mask = modmask;
    n->key.modifier_set = modset;
 
-   return (struct trie_node*)n;
+   return (struct trie_node *)n;
 }
 
 static struct trie_node *new_node_arr(unsigned char min, unsigned char max) {
-   struct trie_node_arr *n = malloc(sizeof(*n) + ( (int)max - min + 1) * sizeof(n->arr[0]) );
+   struct trie_node_arr *n = malloc(sizeof(*n) + ((int)max - min + 1) * sizeof(n->arr[0]));
 
    if (!n) {
       return NULL;
@@ -268,7 +266,7 @@ static struct trie_node *new_node_arr(unsigned char min, unsigned char max) {
       n->arr[i - min] = NULL;
    }
 
-   return (struct trie_node*)n;
+   return (struct trie_node *)n;
 }
 
 static struct trie_node *lookup_next(struct trie_node *n, unsigned char b) {
@@ -279,7 +277,7 @@ static struct trie_node *lookup_next(struct trie_node *n, unsigned char b) {
       }
       case TYPE_ARR:
       {
-         struct trie_node_arr *nar = (struct trie_node_arr*)n;
+         struct trie_node_arr *nar = (struct trie_node_arr *)n;
 
          if (b < nar->min || b > nar->max) {
             return NULL;
@@ -289,18 +287,17 @@ static struct trie_node *lookup_next(struct trie_node *n, unsigned char b) {
       }
    }
 
-   return NULL;  // Never reached but keeps compiler happy
+   return NULL;                 // Never reached but keeps compiler happy
 }
 
-static void free_trie(struct trie_node *n)
-{
+static void free_trie(struct trie_node *n) {
    switch (n->type) {
       case TYPE_KEY: {
          break;
       }
       case TYPE_ARR:
       {
-         struct trie_node_arr *nar = (struct trie_node_arr*)n;
+         struct trie_node_arr *nar = (struct trie_node_arr *)n;
          int i;
 
          for (i = nar->min ; i <= nar->max ; i++) {
@@ -327,7 +324,7 @@ static struct trie_node *compress_trie(struct trie_node *n) {
       }
       case TYPE_ARR:
       {
-         struct trie_node_arr *nar = (struct trie_node_arr*)n;
+         struct trie_node_arr *nar = (struct trie_node_arr *)n;
          unsigned char min, max;
 
          // Find the real bounds
@@ -342,7 +339,7 @@ static struct trie_node *compress_trie(struct trie_node *n) {
          for (max = 0xff ; !nar->arr[max] ; max--) {
          }
 
-         struct trie_node_arr *new = (struct trie_node_arr*)new_node_arr(min, max);
+         struct trie_node_arr *new = (struct trie_node_arr *)new_node_arr(min, max);
          int i;
 
          for (i = min ; i <= max ; i++) {
@@ -351,15 +348,14 @@ static struct trie_node *compress_trie(struct trie_node *n) {
 
          free(nar);
 
-         return (struct trie_node*)new;
+         return (struct trie_node *)new;
       }
    }
 
    return n;
 }
 
-static bool try_load_terminfo_key(TermKeyTI *ti, const char *name, struct keyinfo *info)
-{
+static bool try_load_terminfo_key(TermKeyTI *ti, const char *name, struct keyinfo *info) {
    const char *value = NULL;
 
 #ifdef HAVE_UNIBILIUM
@@ -378,12 +374,12 @@ static bool try_load_terminfo_key(TermKeyTI *ti, const char *name, struct keyinf
       value = (ti->tk->ti_getstr_hook) (name, value, ti->tk->ti_getstr_hook_data);
    }
 
-   if (!value || value == (char*)-1 || !value[0]) {
+   if (!value || value == (char *)-1 || !value[0]) {
       return false;
    }
    struct trie_node *node = new_node_key(info->type, info->sym, info->modifier_mask, info->modifier_set);
 
-   if (!insert_seq(ti, value, node) ) {
+   if (!insert_seq(ti, value, node)) {
       free(node);
 
       return false;
@@ -392,8 +388,7 @@ static bool try_load_terminfo_key(TermKeyTI *ti, const char *name, struct keyinf
    return true;
 }
 
-static int load_terminfo(TermKeyTI *ti)
-{
+static int load_terminfo(TermKeyTI *ti) {
    int i;
 
 #ifdef HAVE_UNIBILIUM
@@ -403,7 +398,7 @@ static int load_terminfo(TermKeyTI *ti)
       int err;
 
       /* Have to cast away the const. But it's OK - we know terminfo won't really modify term */
-      if (setupterm( (char*)ti->term, 1, &err) != OK) {
+      if (setupterm((char *)ti->term, 1, &err) != OK) {
          return 0;
       }
    }
@@ -427,7 +422,7 @@ static int load_terminfo(TermKeyTI *ti)
          .sym = funcs[i].sym,
          .modifier_mask = funcs[i].mods,
          .modifier_set = funcs[i].mods,
-      }) ) {
+      })) {
          continue;
       }
       /* Maybe it has a shifted version */
@@ -451,7 +446,7 @@ static int load_terminfo(TermKeyTI *ti)
          .sym = i,
          .modifier_mask = 0,
          .modifier_set = 0,
-      }) ) {
+      })) {
          break;
       }
    }
@@ -465,9 +460,7 @@ static int load_terminfo(TermKeyTI *ti)
     * want to use it
     */
 #ifdef HAVE_UNIBILIUM
-   const char *keypad_xmit = unibi ?
-      unibi_get_str(unibi, unibi_keypad_xmit) :
-      NULL;
+   const char *keypad_xmit = unibi ? unibi_get_str(unibi, unibi_keypad_xmit) : NULL;
 #endif
 
    if (keypad_xmit) {
@@ -476,9 +469,7 @@ static int load_terminfo(TermKeyTI *ti)
       ti->start_string = NULL;
    }
 #ifdef HAVE_UNIBILIUM
-   const char *keypad_local = unibi ?
-      unibi_get_str(unibi, unibi_keypad_local) :
-      NULL;
+   const char *keypad_local = unibi ? unibi_get_str(unibi, unibi_keypad_local) : NULL;
 #endif
 
    if (keypad_local) {
@@ -505,8 +496,7 @@ static int load_terminfo(TermKeyTI *ti)
    return 1;
 }
 
-static void *new_driver(TermKey *tk, const char *term)
-{
+static void *new_driver(TermKey *tk, const char *term) {
    TermKeyTI *ti = malloc(sizeof *ti);
 
    if (!ti) {
@@ -536,7 +526,7 @@ static void *new_driver(TermKey *tk, const char *term)
       ti->term = NULL;
 
       /* Have to cast away the const. But it's OK - we know terminfo won't really modify term */
-      if (setupterm( (char*)term, 1, &err) == OK) {
+      if (setupterm((char *)term, 1, &err) == OK) {
          ti->term = strdup(term);
       }
    }
@@ -545,8 +535,7 @@ static void *new_driver(TermKey *tk, const char *term)
    return ti;
 }
 
-static int start_driver(TermKey *tk, void *info)
-{
+static int start_driver(TermKey *tk, void *info) {
    TermKeyTI *ti = info;
    struct stat statbuf;
    char *start_string;
@@ -569,7 +558,7 @@ static int start_driver(TermKey *tk, void *info)
    }
 #ifndef _WIN32
 
-   if (S_ISFIFO(statbuf.st_mode) ) {
+   if (S_ISFIFO(statbuf.st_mode)) {
       return 1;
    }
 #endif
@@ -588,8 +577,7 @@ static int start_driver(TermKey *tk, void *info)
    return 1;
 }
 
-static int stop_driver(TermKey *tk, void *info)
-{
+static int stop_driver(TermKey *tk, void *info) {
    TermKeyTI *ti = info;
    struct stat statbuf;
    char *stop_string = ti->stop_string;
@@ -605,7 +593,7 @@ static int stop_driver(TermKey *tk, void *info)
    }
 #ifndef _WIN32
 
-   if (S_ISFIFO(statbuf.st_mode) ) {
+   if (S_ISFIFO(statbuf.st_mode)) {
       return 1;
    }
 #endif
@@ -627,8 +615,7 @@ static int stop_driver(TermKey *tk, void *info)
    return 1;
 }
 
-static void free_driver(void *info)
-{
+static void free_driver(void *info) {
    TermKeyTI *ti = info;
 
    free_trie(ti->root);
@@ -657,8 +644,7 @@ static void free_driver(void *info)
 
 #define CHARAT(i) (tk->buffer[tk->buffstart + (i)])
 
-static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force, size_t *nbytep)
-{
+static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force, size_t *nbytep) {
    TermKeyTI *ti = info;
 
    if (tk->buffcount == 0) {
@@ -668,7 +654,7 @@ static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force
 
    unsigned int pos = 0;
    while (pos < tk->buffcount) {
-      p = lookup_next(p, CHARAT(pos) );
+      p = lookup_next(p, CHARAT(pos));
 
       if (!p) {
          break;
@@ -678,7 +664,7 @@ static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force
       if (p->type != TYPE_KEY) {
          continue;
       }
-      struct trie_node_key *nk = (struct trie_node_key*)p;
+      struct trie_node_key *nk = (struct trie_node_key *)p;
 
       if (nk->key.type == TERMKEY_TYPE_MOUSE) {
          tk->buffstart += pos;
@@ -712,15 +698,14 @@ static TermKeyResult peekkey(TermKey *tk, void *info, TermKeyKey *key, int force
    return TERMKEY_RES_NONE;
 }
 
-static int insert_seq(TermKeyTI *ti, const char *seq, struct trie_node *node)
-{
+static int insert_seq(TermKeyTI *ti, const char *seq, struct trie_node *node) {
    int pos = 0;
    struct trie_node *p = ti->root;
 
    // Unsigned because we'll be using it as an array subscript
    unsigned char b;
 
-   while ( (b = seq[pos]) ) {
+   while ((b = seq[pos])) {
       struct trie_node *next = lookup_next(p, b);
 
       if (!next) {
@@ -729,7 +714,7 @@ static int insert_seq(TermKeyTI *ti, const char *seq, struct trie_node *node)
       p = next;
       pos++;
    }
-   while ( (b = seq[pos]) ) {
+   while ((b = seq[pos])) {
       struct trie_node *next;
 
       if (seq[pos + 1]) {
@@ -747,7 +732,7 @@ static int insert_seq(TermKeyTI *ti, const char *seq, struct trie_node *node)
       switch (p->type) {
          case TYPE_ARR:
          {
-            struct trie_node_arr *nar = (struct trie_node_arr*)p;
+            struct trie_node_arr *nar = (struct trie_node_arr *)p;
 
             if (b < nar->min || b > nar->max) {
                fprintf(stderr, "ASSERT FAIL: Trie insert at 0x%02x is outside of extent bounds (0x%02x..0x%02x)\n", b, nar->min, nar->max);

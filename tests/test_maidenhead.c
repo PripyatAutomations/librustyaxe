@@ -17,8 +17,7 @@ static int failures = 0;
            }                                                                  \
         } while (0)
 
-static void test_locator_to_latlon(void)
-{
+static void test_locator_to_latlon(void) {
    // Well-known locator: IO91WM is around London
    Coordinates c = maidenhead2latlon("IO91WM");
    CHECK(c.error == 0);
@@ -31,8 +30,7 @@ static void test_locator_to_latlon(void)
    CHECK(maidenhead2latlon(NULL).error != 0);
 }
 
-static void test_latlon_to_locator(void)
-{
+static void test_latlon_to_locator(void) {
    Coordinates c = {
       .latitude = 51.5, .longitude = -1.0
    };
@@ -42,11 +40,10 @@ static void test_latlon_to_locator(void)
    CHECK(loc[0] == 'I' && loc[1] == 'O'); // falls in IO square
 }
 
-static void test_roundtrip(void)
-{
+static void test_roundtrip(void) {
    Coordinates c = {
       .latitude = 37.7749, .longitude = -122.4194
-   };                                                             // San Francisco
+   };                           // San Francisco
    const char *loc = latlon2maidenhead(&c);
    CHECK(loc != NULL);
    Coordinates back = maidenhead2latlon(loc);
@@ -55,8 +52,7 @@ static void test_roundtrip(void)
    CHECK(fabs(back.longitude - c.longitude) < 1.0);
 }
 
-static void test_bearing_distance(void)
-{
+static void test_bearing_distance(void) {
    // London (51.5074, -0.1278) -> Paris (48.8566, 2.3522) is ~344 km, bearing ~156 deg
    double d = calculateDistance(51.5074, -0.1278, 48.8566, 2.3522);
    CHECK(fabs(d - 344.0) < 10.0);
@@ -66,8 +62,7 @@ static void test_bearing_distance(void)
    CHECK(calculateDistance(10.0, 20.0, 10.0, 20.0) < 0.001);
 }
 
-int main(void)
-{
+int main(void) {
    test_locator_to_latlon();
    test_latlon_to_locator();
    test_roundtrip();

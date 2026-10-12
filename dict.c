@@ -93,8 +93,7 @@ static unsigned dict_hash_murmur(const char *key) {
    h = seed ^ len;
    data = (unsigned char *)key;
    while (len >= 4) {
-      /* Keys need not be aligned; memcpy preserves the native hash bytes
-       * without an unaligned load or type-aliasing violation. */
+      /* Keys need not be aligned; memcpy preserves the native hash bytes without an unaligned load or type-aliasing violation. */
       memcpy(&k, data, sizeof(k));
 
       k *= m;
@@ -150,13 +149,13 @@ static keypair *dict_lookup(dict *d, const char *key, unsigned hash) {
    if (ep->key == DUMMY_PTR) {
       freeslot = ep;
    } else {
-      if (ep->hash == hash && !strcmp(key, ep->key) ) {
+      if (ep->hash == hash && !strcmp(key, ep->key)) {
          return ep;
       }
       freeslot = NULL;
    }
 
-   for (perturb = hash ; ; perturb >>= PERTURB_SHIFT) {
+   for (perturb = hash ;; perturb >>= PERTURB_SHIFT) {
       i = (i << 2) + i + perturb + 1;
       i &= (d->size - 1);
       ep = d->table + i;
@@ -165,7 +164,7 @@ static keypair *dict_lookup(dict *d, const char *key, unsigned hash) {
          return freeslot == NULL ? ep : freeslot;
       }
 
-      if ( (ep->key == key) || (ep->hash == hash && ep->key != DUMMY_PTR && !strcmp(ep->key, key) ) ) {
+      if ((ep->key == key) || (ep->hash == hash && ep->key != DUMMY_PTR && !strcmp(ep->key, key))) {
          return ep;
       }
 
@@ -184,7 +183,7 @@ static void dict_free_value(keypair *kp) {
    }
 
    if (kp->val_type == VAL_STR && kp->val.s) {
-      free( (char *)kp->val.s);
+      free((char *)kp->val.s);
    }
 
    kp->val.p = NULL;
@@ -223,6 +222,7 @@ static int dict_store(dict *d, const char *key, val_type_t type, const dict_valu
 
       if (!newstr) {
          free(newkey);
+
          return -1;
       }
    }
@@ -231,10 +231,11 @@ static int dict_store(dict *d, const char *key, val_type_t type, const dict_valu
     * If this is a new entry, make sure there is room before committing it. Replacements don't increase the number of used slots.
     */
    if (!slot->key || slot->key == DUMMY_PTR) {
-      if ( (3 * (d->fill + 1) ) >= (d->size * 2) ) {
+      if ((3 * (d->fill + 1)) >= (d->size * 2)) {
          if (dict_resize(d) != 0) {
-            free( (void *)newstr);
-            free( (void *)newkey);
+            free((void *)newstr);
+            free((void *)newkey);
+
             return -1;
          }
 
@@ -244,8 +245,9 @@ static int dict_store(dict *d, const char *key, val_type_t type, const dict_valu
          slot = dict_lookup(d, key, hash);
 
          if (!slot) {
-            free( (void *)newstr);
+            free((void *)newstr);
             free(newkey);
+
             return -1;
          }
       }
@@ -255,7 +257,7 @@ static int dict_store(dict *d, const char *key, val_type_t type, const dict_valu
     * Replace an existing entry.
     */
    if (slot->key && slot->key != DUMMY_PTR) {
-      free( (char *)slot->key);
+      free((char *)slot->key);
       dict_free_value(slot);
       d->used--;
    } else if (slot->key == DUMMY_PTR) {
@@ -306,62 +308,98 @@ static int dict_add_p(dict *d, const keypair *src) {
 
 /** Add an item to a dictionary by copying key/val into the dict. */
 int dict_add(dict *d, const char *key, const char *val) {
-   dict_value_t v = { .s = val };
+   dict_value_t v = {
+      .s = val
+   };
+
    return dict_store(d, key, VAL_STR, &v);
 }
 
 int dict_add_null(dict *d, const char *key) {
-   dict_value_t v = { 0 };
+   dict_value_t v = {
+      0
+   };
+
    return dict_store(d, key, VAL_NULL, &v);
 }
 
 int dict_add_char(dict *d, const char *key, char val) {
-   dict_value_t v = { .c = val };
+   dict_value_t v = {
+      .c = val
+   };
+
    return dict_store(d, key, VAL_CHAR, &v);
 }
 
 int dict_add_bool(dict *d, const char *key, bool val) {
-   dict_value_t v = { .i = val ? 1 : 0 };
+   dict_value_t v = {
+      .i = val ? 1 : 0
+   };
+
    return dict_store(d, key, VAL_BOOL, &v);
 }
 
 int dict_add_int(dict *d, const char *key, int val) {
-   dict_value_t v = { .i = val };
+   dict_value_t v = {
+      .i = val
+   };
+
    return dict_store(d, key, VAL_INT, &v);
 }
 
 int dict_add_uint(dict *d, const char *key, unsigned int val) {
-   dict_value_t v = { .ui = val };
+   dict_value_t v = {
+      .ui = val
+   };
+
    return dict_store(d, key, VAL_UINT, &v);
 }
 
 int dict_add_long(dict *d, const char *key, long val) {
-   dict_value_t v = { .l = val };
+   dict_value_t v = {
+      .l = val
+   };
+
    return dict_store(d, key, VAL_LONG, &v);
 }
 
 int dict_add_ulong(dict *d, const char *key, unsigned long val) {
-   dict_value_t v = { .ul = val };
+   dict_value_t v = {
+      .ul = val
+   };
+
    return dict_store(d, key, VAL_ULONG, &v);
 }
 
 int dict_add_llong(dict *d, const char *key, long long val) {
-   dict_value_t v = { .ll = val };
+   dict_value_t v = {
+      .ll = val
+   };
+
    return dict_store(d, key, VAL_LLONG, &v);
 }
 
 int dict_add_ullong(dict *d, const char *key, unsigned long long val) {
-   dict_value_t v = { .ull = val };
+   dict_value_t v = {
+      .ull = val
+   };
+
    return dict_store(d, key, VAL_ULLONG, &v);
 }
 
 int dict_add_float(dict *d, const char *key, float val) {
-   dict_value_t v = { .f = val };
+   dict_value_t v = {
+      .f = val
+   };
+
    return dict_store(d, key, VAL_FLOAT, &v);
 }
 
 int dict_add_double(dict *d, const char *key, double val) {
-   dict_value_t v = { .d = val };
+   dict_value_t v = {
+      .d = val
+   };
+
    return dict_store(d, key, VAL_DOUBLE, &v);
 }
 
@@ -381,7 +419,7 @@ static int dict_resize(dict *d) {
    keypair *oldtable = d->table;
    unsigned oldsize = d->size;
 
-   keypair *newtable = calloc(newsize, sizeof(*newtable) );
+   keypair *newtable = calloc(newsize, sizeof(*newtable));
 
    if (!newtable) {
       return -1;
@@ -419,28 +457,31 @@ static int dict_resize(dict *d) {
             }
 
             free(newtable);
+
             return -1;
          }
       }
    }
 
    free(oldtable);
+
    return 0;
 }
 
 /** Public: allocate a new dict */
 dict *dict_new(void) {
-   dict *d = calloc(1, sizeof(*d) );
+   dict *d = calloc(1, sizeof(*d));
 
    if (!d) {
       return NULL;
    }
 
    d->size = DICT_MIN_SZ;
-   d->table = calloc(DICT_MIN_SZ, sizeof(*d->table) );
+   d->table = calloc(DICT_MIN_SZ, sizeof(*d->table));
 
    if (!d->table) {
       free(d);
+
       return NULL;
    }
 
@@ -457,7 +498,7 @@ void dict_free(dict *d) {
 
    for (i = 0 ; i < d->size ; i++) {
       if (d->table[i].key && d->table[i].key != DUMMY_PTR) {
-         free( (char *)d->table[i].key);
+         free((char *)d->table[i].key);
 
          dict_free_value(&d->table[i]);
       }
@@ -511,14 +552,13 @@ int dict_enumerate_typed(dict *d, int rank, const char **key, dict_value_t *val,
       return -1;
    }
 
-   while (rank < (int)d->size &&
-      (d->table[rank].key == NULL || d->table[rank].key == DUMMY_PTR) ) {
+   while (rank < (int)d->size && (d->table[rank].key == NULL || d->table[rank].key == DUMMY_PTR)) {
       rank++;
    }
 
    if (rank >= (int)d->size) {
       *key = NULL;
-      memset(val, 0, sizeof(*val) );
+      memset(val, 0, sizeof(*val));
       *type = VAL_END;
 
       return -1;
@@ -547,7 +587,7 @@ int dict_del(dict *d, const char *key) {
       return -1;
    }
 
-   free( (char *)kp->key);
+   free((char *)kp->key);
    kp->key = DUMMY_PTR;
    dict_free_value(kp);
    d->used--;
@@ -561,14 +601,14 @@ int dict_enumerate(dict *d, int rank, const char **key, char **val) {
       return -1;
    }
 
-   while (rank < (int)d->size &&
-      (d->table[rank].key == NULL || d->table[rank].key == DUMMY_PTR) ) {
+   while (rank < (int)d->size && (d->table[rank].key == NULL || d->table[rank].key == DUMMY_PTR)) {
       rank++;
    }
 
    if (rank >= (int)d->size) {
       *key = NULL;
       *val = NULL;
+
       return -1;
    }
 
@@ -706,7 +746,7 @@ static void dict_dump_value(const keypair *kp, char *buf, size_t len) {
       }
 
       case VAL_CHAR: {
-         if (isprint( (unsigned char)kp->val.c) ) {
+         if (isprint((unsigned char)kp->val.c)) {
             snprintf(buf, len, "'%c'", kp->val.c);
          } else {
             snprintf(buf, len, "0x%02x", (unsigned char)kp->val.c);
@@ -737,19 +777,19 @@ void dict_dump(dict *d, FILE *out) {
       return;
    }
 
-   while ( (rank = dict_enumerate_typed(d, rank, &key, &val, &type) ) >= 0) {
+   while ((rank = dict_enumerate_typed(d, rank, &key, &val, &type)) >= 0) {
       keypair kp = {
          .key = key,
          .val = val,
          .val_type = type
       };
 
-      dict_dump_value(&kp, value, sizeof(value) );
+      dict_dump_value(&kp, value, sizeof(value));
 
       if (out) {
-         fprintf(out, "%20s=%s (%s)\n", key, value, dict_type_name(type) );
+         fprintf(out, "%20s=%s (%s)\n", key, value, dict_type_name(type));
       } else {
-         Log(LOG_DEBUG, "librustyaxe", "%20s=%s (%s)", key, value, dict_type_name(type) );
+         Log(LOG_DEBUG, "librustyaxe", "%20s=%s (%s)", key, value, dict_type_name(type));
       }
    }
 }
@@ -759,14 +799,15 @@ static bool parse_bool_string(const char *s, bool *out) {
       return false;
    }
 
-   if (!strcasecmp(s, "true") || !strcasecmp(s, "yes") || !strcasecmp(s, "on") || !strcmp(s, "1") ) {
+   if (!strcasecmp(s, "true") || !strcasecmp(s, "yes") || !strcasecmp(s, "on") || !strcmp(s, "1")) {
       *out = true;
+
       return true;
    }
 
-   if (!strcasecmp(s, "false") || !strcasecmp(s, "no") ||
-      !strcasecmp(s, "off") || !strcmp(s, "0") ) {
+   if (!strcasecmp(s, "false") || !strcasecmp(s, "no") || !strcasecmp(s, "off") || !strcmp(s, "0")) {
       *out = false;
+
       return true;
    }
 
@@ -783,7 +824,7 @@ static bool parse_ll(const char *s, long long *out) {
 
    errno = 0;
    v = strtoll(s, &ep, 10);
-   while (*ep && isspace( (unsigned char)*ep) ) {
+   while (*ep && isspace((unsigned char)*ep)) {
       ep++;
    }
 
@@ -806,7 +847,7 @@ static bool parse_ull(const char *s, unsigned long long *out) {
 
    errno = 0;
    v = strtoull(s, &ep, 10);
-   while (*ep && isspace( (unsigned char)*ep) ) {
+   while (*ep && isspace((unsigned char)*ep)) {
       ep++;
    }
 
@@ -829,11 +870,11 @@ static bool parse_double(const char *s, double *out) {
 
    errno = 0;
    v = strtod(s, &ep);
-   while (*ep && isspace( (unsigned char)*ep) ) {
+   while (*ep && isspace((unsigned char)*ep)) {
       ep++;
    }
 
-   if (errno == ERANGE || ep == s || *ep || !isfinite(v) ) {
+   if (errno == ERANGE || ep == s || *ep || !isfinite(v)) {
       return false;
    }
 
@@ -865,7 +906,7 @@ static bool dict_get_kp(dict *d, const char *key, keypair **out) {
 bool dict_get_bool(dict *d, const char *key, bool def) {
    keypair *kp;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -901,7 +942,7 @@ bool dict_get_bool(dict *d, const char *key, bool def) {
          return kp->val.c != 0;
       }
       case VAL_STR: {
-         if (parse_bool_string(kp->val.s, &def) ) {
+         if (parse_bool_string(kp->val.s, &def)) {
             return def;
          }
          break;
@@ -920,7 +961,7 @@ int dict_get_int(dict *d, const char *key, int def) {
    unsigned long long uv;
    double dv;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -1004,7 +1045,7 @@ unsigned int dict_get_uint(dict *d, const char *key, unsigned int def) {
    unsigned long long uv;
    double dv;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -1088,7 +1129,7 @@ unsigned long dict_get_ulong(dict *d, const char *key, unsigned long def) {
    unsigned long long uv;
    double dv;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -1165,7 +1206,7 @@ long dict_get_long(dict *d, const char *key, long def) {
    long long v;
    double dv;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -1236,7 +1277,7 @@ long long dict_get_llong(dict *d, const char *key, long long def) {
    unsigned long long uv;
    double dv;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -1285,7 +1326,7 @@ long long dict_get_llong(dict *d, const char *key, long long def) {
          return kp->val.i != 0;
       }
       case VAL_STR: {
-         if (parse_ll(kp->val.s, &v) ) {
+         if (parse_ll(kp->val.s, &v)) {
             return v;
          }
 
@@ -1303,7 +1344,7 @@ long long dict_get_llong(dict *d, const char *key, long long def) {
 }
 
 time_t dict_get_time_t(dict *d, const char *key, time_t def) {
-   return (time_t)dict_get_llong(d, key, (long long)def);
+   return (time_t) dict_get_llong(d, key, (long long)def);
 }
 
 unsigned long long dict_get_ullong(dict *d, const char *key, unsigned long long def) {
@@ -1311,7 +1352,7 @@ unsigned long long dict_get_ullong(dict *d, const char *key, unsigned long long 
    unsigned long long uv;
    double dv;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -1366,7 +1407,7 @@ unsigned long long dict_get_ullong(dict *d, const char *key, unsigned long long 
          return (unsigned long long)(unsigned char)kp->val.c;
       }
       case VAL_STR: {
-         if (parse_ull(kp->val.s, &uv) ) {
+         if (parse_ull(kp->val.s, &uv)) {
             return uv;
          }
          break;
@@ -1383,7 +1424,7 @@ char dict_get_char(dict *d, const char *key, char def) {
    keypair *kp;
    long long v;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -1419,7 +1460,7 @@ char dict_get_char(dict *d, const char *key, char def) {
          return (char)kp->val.d;
       }
       case VAL_STR: {
-         if (parse_ll(kp->val.s, &v) ) {
+         if (parse_ll(kp->val.s, &v)) {
             return (char)v;
          }
 
@@ -1440,7 +1481,7 @@ double dict_get_double(dict *d, const char *key, double def) {
    keypair *kp;
    double v;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 
@@ -1476,7 +1517,7 @@ double dict_get_double(dict *d, const char *key, double def) {
          return kp->val.c;
       }
       case VAL_STR: {
-         if (parse_double(kp->val.s, &v) ) {
+         if (parse_double(kp->val.s, &v)) {
             return v;
          }
          break;
@@ -1507,6 +1548,7 @@ const char *dict_get_exp(dict *d, const char *key) {
 
    if (!key) {
       Log(LOG_WARN, "config", "dict_get_exp: NULL key!");
+
       return NULL;
    }
    const char *p = dict_get(d, key, NULL);
@@ -1518,6 +1560,7 @@ const char *dict_get_exp(dict *d, const char *key) {
 
    if (!buf) {
       Log(LOG_DEBUG, "librustyaxe", "OOM in dict_get_exp!");
+
       return NULL;
    }
    strlcpy(buf, p, MAX_CFG_EXP_STRLEN);
@@ -1537,7 +1580,7 @@ const char *dict_get_exp(dict *d, const char *key) {
                size_t klen = end - (src + 2);
                char keybuf[256];
 
-               if (klen >= sizeof(keybuf) ) {
+               if (klen >= sizeof(keybuf)) {
                   klen = sizeof(keybuf) - 1;
                }
                memcpy(keybuf, src + 2, klen);
@@ -1548,7 +1591,7 @@ const char *dict_get_exp(dict *d, const char *key) {
                if (val) {
                   size_t vlen = strlen(val);
 
-                  if ( (dst - tmp) + vlen >= MAX_CFG_EXP_STRLEN - 1) {
+                  if ((dst - tmp) + vlen >= MAX_CFG_EXP_STRLEN - 1) {
                      vlen = MAX_CFG_EXP_STRLEN - 1 - (dst - tmp);
                   }
                   memcpy(dst, val, vlen);
@@ -1564,7 +1607,7 @@ const char *dict_get_exp(dict *d, const char *key) {
       *dst = '\0';
 
       if (!changed) {
-         break;  // No more expansions
+         break;                 // No more expansions
       }
       strlcpy(buf, tmp, MAX_CFG_EXP_STRLEN);
       buf[MAX_CFG_EXP_STRLEN - 1] = '\0';
@@ -1577,6 +1620,7 @@ const char *dict_get_exp(dict *d, const char *key) {
    if (shrunk) {
       buf = shrunk;
    }
+
    return buf;
 }
 
@@ -1599,8 +1643,7 @@ static bool dict_values_equal(const keypair *a, const keypair *b) {
          return true;
       }
       case VAL_STR: {
-         return a->val.s == b->val.s ||
-                (a->val.s && b->val.s && !strcmp(a->val.s, b->val.s) );
+         return a->val.s == b->val.s || (a->val.s && b->val.s && !strcmp(a->val.s, b->val.s));
       }
       case VAL_INT: {
          return a->val.i == b->val.i;
@@ -1643,6 +1686,7 @@ static bool dict_values_equal(const keypair *a, const keypair *b) {
 
 static keypair *dict_find_entry(dict *d, const char *key) {
    keypair *kp;
+
    return dict_get_kp(d, key, &kp) ? kp : NULL;
 }
 
@@ -1656,7 +1700,7 @@ int dict_merge(dict *dst, dict *src) {
       return -1;
    }
 
-   while ( (rank = dict_enumerate_typed(src, rank, &key, &val, &type) ) >= 0) {
+   while ((rank = dict_enumerate_typed(src, rank, &key, &val, &type)) >= 0) {
       keypair tmp = {
          .key = key,
          .val_type = type,
@@ -1675,6 +1719,7 @@ dict *dict_merge_new(dict *a, dict *b) {
 
    if (!a || !b) {
       Log(LOG_WARN, "dict", "dict_merge_new called with NULL a <%p> or NULL b <%p>", a, b);
+
       return NULL;
    }
 
@@ -1715,7 +1760,7 @@ dict *dict_diff(dict *a, dict *b) {
       return NULL;
    }
 
-   while ( (rank = dict_enumerate_typed(b, rank, &key, &val, &type) ) >= 0) {
+   while ((rank = dict_enumerate_typed(b, rank, &key, &val, &type)) >= 0) {
       keypair *old = dict_find_entry(a, key);
       keypair cur = {
          .key = key,
@@ -1723,9 +1768,10 @@ dict *dict_diff(dict *a, dict *b) {
          .val = val
       };
 
-      if (!old || !dict_values_equal(old, &cur) ) {
+      if (!old || !dict_values_equal(old, &cur)) {
          if (dict_copy_entry(diff, &cur) != 0) {
             dict_free(diff);
+
             return NULL;
          }
       }
@@ -1734,10 +1780,11 @@ dict *dict_diff(dict *a, dict *b) {
     * Keys removed from B are represented by JSON/dict null. This gives the diff a usable deletion marker without adding another public value type.
     */
    rank = 0;
-   while ( (rank = dict_enumerate_typed(a, rank, &key, &val, &type) ) >= 0) {
-      if (!dict_find_entry(b, key) ) {
+   while ((rank = dict_enumerate_typed(a, rank, &key, &val, &type)) >= 0) {
+      if (!dict_find_entry(b, key)) {
          if (dict_add_null(diff, key) != 0) {
             dict_free(diff);
+
             return NULL;
          }
       }
@@ -1756,7 +1803,7 @@ int dict_add_ptr(dict *d, const char *key, void *val) {
 void *dict_get_ptr(dict *d, const char *key, void *def) {
    keypair *kp;
 
-   if (!dict_get_kp(d, key, &kp) ) {
+   if (!dict_get_kp(d, key, &kp)) {
       return def;
    }
 

@@ -62,8 +62,7 @@ static char **active_history(int **count, int **index) {
    return window->input_history;
 }
 
-const char *history_prev(void)
-{
+const char *history_prev(void) {
    int *count = NULL, *index = NULL;
    char **history = active_history(&count, &index);
 
@@ -80,8 +79,7 @@ const char *history_prev(void)
    return history[*index];
 }
 
-const char *history_next(void)
-{
+const char *history_next(void) {
    int *count = NULL, *index = NULL;
    char **history = active_history(&count, &index);
 
@@ -99,8 +97,7 @@ const char *history_next(void)
    return history[*index];
 }
 
-void history_add(const char *line)
-{
+void history_add(const char *line) {
    if (!line || !*line) {
       return;
    }
@@ -110,7 +107,7 @@ void history_add(const char *line)
 
    if (*count >= HISTORY_LINES) {
       free(history[0]);
-      memmove(history, history + 1, sizeof(history[0]) * (HISTORY_LINES - 1) );
+      memmove(history, history + 1, sizeof(history[0]) * (HISTORY_LINES - 1));
       (*count)--;
    }
    history[*count] = strndup(line, TUI_INPUTLEN - 1);
@@ -123,14 +120,13 @@ void history_add(const char *line)
 }
 
 // --- PgUp / PgDn handlers with partial last page support ---
-int handle_pgup(int count, int key)
-{
+int handle_pgup(int count, int key) {
    tui_window_t *w = tui_active_window();
 
    if (!w) {
       return 0;
    }
-   int page = tui_rows() - 3; // screen minus status+input
+   int page = tui_rows() - 3;   // screen minus status+input
 
    if (page < 1) {
       page = 1;
@@ -138,7 +134,7 @@ int handle_pgup(int count, int key)
    int max_scroll = (w->log_count > page) ? (w->log_count - page) : 0;
 
    if (w->scroll_offset + page > max_scroll) {
-      w->scroll_offset = max_scroll; // stop at top of buffer
+      w->scroll_offset = max_scroll;   // stop at top of buffer
    } else {
       w->scroll_offset += page;
    }
@@ -147,8 +143,7 @@ int handle_pgup(int count, int key)
    return 0;
 }
 
-int handle_pgdn(int count, int key)
-{
+int handle_pgdn(int count, int key) {
    tui_window_t *w = tui_active_window();
 
    if (!w) {
@@ -161,7 +156,7 @@ int handle_pgdn(int count, int key)
    }
 
    if (w->scroll_offset - page < 0) {
-      w->scroll_offset = 0; // stop at bottom of buffer
+      w->scroll_offset = 0;     // stop at bottom of buffer
    } else {
       w->scroll_offset -= page;
    }
@@ -170,8 +165,7 @@ int handle_pgdn(int count, int key)
    return 0;
 }
 
-int handle_ptt_button(int count, int key)
-{
+int handle_ptt_button(int count, int key) {
    tui_window_t *w = tui_active_window();
 
    if (!w) {
@@ -182,8 +176,7 @@ int handle_ptt_button(int count, int key)
    return 0;
 }
 
-void tui_raw_mode(bool enabled)
-{
+void tui_raw_mode(bool enabled) {
    if (enabled) {
       if (raw_mode_enabled) {
          return;
@@ -214,8 +207,7 @@ void tui_raw_mode(bool enabled)
 }
 
 extern bool irc_input_cb(const char *input);
-void handle_enter_key(tui_window_t *win, int cursor)
-{
+void handle_enter_key(tui_window_t *win, int cursor) {
    //   Log(LOG_CRIT, "tui.keys", "ENTER: %s", input_buf);
    if (!win) {
       return;
@@ -282,8 +274,7 @@ bool tui_hotkey_register(unsigned key, unsigned modifiers, tui_hotkey_cb_t callb
 
 bool tui_hotkey_unregister(unsigned key, unsigned modifiers, tui_hotkey_cb_t callback, void *user_data) {
    for (unsigned i = 0 ; i < TUI_HOTKEY_MAX ; i++) {
-      if (hotkeys[i].callback == callback && hotkeys[i].user_data == user_data &&
-         hotkeys[i].key == key && hotkeys[i].modifiers == modifiers) {
+      if (hotkeys[i].callback == callback && hotkeys[i].user_data == user_data && hotkeys[i].key == key && hotkeys[i].modifiers == modifiers) {
          hotkeys[i].callback = NULL;
 
          return true;
@@ -295,8 +286,7 @@ bool tui_hotkey_unregister(unsigned key, unsigned modifiers, tui_hotkey_cb_t cal
 
 bool tui_hotkey_dispatch(tui_window_t *win, unsigned key, unsigned modifiers) {
    for (unsigned i = 0 ; i < TUI_HOTKEY_MAX ; i++) {
-      if (hotkeys[i].callback && hotkeys[i].key == key &&
-         (modifiers & hotkeys[i].modifiers) == hotkeys[i].modifiers) {
+      if (hotkeys[i].callback && hotkeys[i].key == key && (modifiers & hotkeys[i].modifiers) == hotkeys[i].modifiers) {
          return hotkeys[i].callback(win, key, modifiers, hotkeys[i].user_data);
       }
    }
@@ -307,8 +297,7 @@ bool tui_hotkey_dispatch(tui_window_t *win, unsigned key, unsigned modifiers) {
 // GLib fd source: called when stdin is readable
 static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data);
 
-void tui_keys_init(void)
-{
+void tui_keys_init(void) {
    tk = termkey_new(STDIN_FILENO, TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW);
 
    if (!tk) {
@@ -329,8 +318,7 @@ void tui_keys_init(void)
    stdin_watch_id = g_unix_fd_add(STDIN_FILENO, G_IO_IN, stdin_ev_cb, NULL);
 }
 
-void tui_keys_fini(void)
-{
+void tui_keys_fini(void) {
    if (stdin_watch_id) {
       g_source_remove(stdin_watch_id);
       stdin_watch_id = 0;
@@ -353,17 +341,16 @@ void tui_keys_fini(void)
 
    history_count = 0;
    history_index = -1;
-   memset(hotkeys, 0, sizeof(hotkeys) );
+   memset(hotkeys, 0, sizeof(hotkeys));
 }
 
-static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
-{
+static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
    TermKeyResult res;
    TermKeyKey key;
 
    termkey_advisereadable(tk);
 
-   while ( (res = termkey_getkey(tk, &key) ) != TERMKEY_RES_NONE) {
+   while ((res = termkey_getkey(tk, &key)) != TERMKEY_RES_NONE) {
       if (res == TERMKEY_RES_EOF) {
          break;
       }
@@ -414,8 +401,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
       // --- Hotkeys / special keys ---
       // Ctrl-Space is reported as a control character by some terminals and
       // as a literal space with the CTRL modifier by others.
-      if (key.type == TERMKEY_TYPE_UNICODE && (key.modifiers & TERMKEY_KEYMOD_CTRL) &&
-         (key.code.codepoint == 0 || key.code.codepoint == ' ') ) {
+      if (key.type == TERMKEY_TYPE_UNICODE && (key.modifiers & TERMKEY_KEYMOD_CTRL) && (key.code.codepoint == 0 || key.code.codepoint == ' ')) {
          handled = tui_hotkey_dispatch(win, key.code.codepoint, key.modifiers);
       }
 
@@ -429,7 +415,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
                   handle_enter_key(win, 0);
                   tui_input_len = 0;
                   tui_cursor_pos = 0;
-                  memset(input_buf, 0, sizeof(input_buf) );
+                  memset(input_buf, 0, sizeof(input_buf));
                   handled = 1;
                }
                break;
@@ -437,7 +423,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
 
             case TERMKEY_SYM_TAB:
             {
-               if (!(key.modifiers & (TERMKEY_KEYMOD_CTRL | TERMKEY_KEYMOD_ALT | TERMKEY_KEYMOD_SHIFT) ) ) {
+               if (!(key.modifiers & (TERMKEY_KEYMOD_CTRL | TERMKEY_KEYMOD_ALT | TERMKEY_KEYMOD_SHIFT))) {
                   handled = tui_do_completion(win);
                }
                break;
@@ -542,8 +528,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             }
             default:
             {
-               if ( (key.modifiers & TERMKEY_KEYMOD_ALT) &&
-                  key.code.sym >= '0' && key.code.sym <= '9') {
+               if ((key.modifiers & TERMKEY_KEYMOD_ALT) && key.code.sym >= '0' && key.code.sym <= '9') {
                   handled = tui_window_swap(1, key.code.sym - '0');
                }
                break;
@@ -553,8 +538,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
 
       /* Escape-prefixed letters are reported as Alt+Unicode by termkey. Continue the Alt-1..Alt-0 window sequence with the QWERTY home row:
        * Esc-Q selects window 11 through Esc-P selecting window 20. */
-      if (!handled && key.type == TERMKEY_TYPE_UNICODE &&
-         (key.modifiers & TERMKEY_KEYMOD_ALT) ) {
+      if (!handled && key.type == TERMKEY_TYPE_UNICODE && (key.modifiers & TERMKEY_KEYMOD_ALT)) {
          const char *window_keys = "qwertyuiop";
          const char *match = strchr(window_keys, (int)key.code.codepoint);
 
@@ -567,18 +551,18 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
       }
 
       // --- Ctrl line editing ---
-      if (!handled && (key.modifiers & TERMKEY_KEYMOD_CTRL) ) {
+      if (!handled && (key.modifiers & TERMKEY_KEYMOD_CTRL)) {
          char insert = 0;
 
          switch (c) {
             case '_':
             {
-               insert = 0x1F; // Underline (alternate)
+               insert = 0x1F;    // Underline (alternate)
                break;
             }
             case 'A':
             case 'a':
-            case 0x01:              // Ctrl-A
+            case 0x01:         // Ctrl-A
             {
                tui_cursor_pos = 0;
                handled = 1;
@@ -587,18 +571,18 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             case 'B':
             case 'b':
             {
-               insert = 0x02; // Bold
+               insert = 0x02;    // Bold
                break;
             }
             case 'C':
             case 'c':
             {
-               insert = 0x03; // Color code
+               insert = 0x03;    // Color code
                break;
             }
             case 'E':
             case 'e':
-            case 0x05:              // Ctrl-E
+            case 0x05:         // Ctrl-E
             {
                tui_cursor_pos = tui_input_len;
                handled = 1;
@@ -607,19 +591,19 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             case 'I':
             case 'i':
             {
-               insert = 0x1D; // Italic
+               insert = 0x1D;    // Italic
                break;
             }
             case 'O':
             case 'o':
             {
-               insert = 0x0F; // Reset
+               insert = 0x0F;    // Reset
                break;
             }
             case 'R':
             case 'r':
             {
-               insert = 0x16; // Reverse (not well supported)
+               insert = 0x16;    // Reverse (not well supported)
                break;
             }
             case 'U':
@@ -633,7 +617,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             }
             case 'W':
             case 'w':
-            case 0x17:              // Ctrl-W
+            case 0x17:         // Ctrl-W
             {
                if (tui_cursor_pos > 0) {
                   int i = tui_cursor_pos - 1;
@@ -653,7 +637,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             }
             case 'D':
             case 'd':
-            case 0x04:              // Ctrl-D: delete forward
+            case 0x04:         // Ctrl-D: delete forward
             {
                if (tui_cursor_pos < tui_input_len) {
                   memmove(&input_buf[tui_cursor_pos], &input_buf[tui_cursor_pos + 1], tui_input_len - tui_cursor_pos);
@@ -664,7 +648,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data)
             }
             case 'K':
             case 'k':
-            case 0x0b:              // Ctrl-K: kill to end of line
+            case 0x0b:         // Ctrl-K: kill to end of line
             {
                input_buf[tui_cursor_pos] = '\0';
                tui_input_len = tui_cursor_pos;

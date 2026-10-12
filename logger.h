@@ -22,23 +22,23 @@ enum LogPriority {
    LOG_WARN,                    // Warnings
    LOG_INFO,                    // Useful information of a non-important nature
    LOG_DEBUG,                   // Most commonly useful for debugging problems,
-                                // a balance of verbosity and speed
+   // a balance of verbosity and speed
    LOG_CRAZY,                   // Many usually useless messages, which can aid
-                                // with debugging but too noisy for typical
-                                // debugging use
+   // with debugging but too noisy for typical
+   // debugging use
    LOG_BLITZKREIG               // unmanagably noisy and will slow the program
-                                // greatly - for debugging only!
+   // greatly - for debugging only!
 };
 
 struct log_priority {
    enum LogPriority prio;
-   const char           *msg;
+   const char *msg;
 };
 typedef enum LogPriority logpriority_t;
 
 struct log_callback {
    enum LogPriority prio;
-   const char           *msg;
+   const char *msg;
    bool (*callback)(logpriority_t priority, const char *subsys, const char *fmt, va_list ap);
    struct log_callback *next;
 };
@@ -66,7 +66,7 @@ extern void logger_end(void);
 extern struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap));
 
 // Add a callback to the Log() call
-extern bool log_add_callback(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap) );
+extern bool log_add_callback(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap));
 extern bool log_remove_callback(struct log_callback *log_callback);
 
 // Filters

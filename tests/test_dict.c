@@ -87,7 +87,7 @@ static void test_many_and_remove(void) {
       }
    }
 
-   CHECK(dict_del(d, "missing") != 0);   // deleting missing key fails
+   CHECK(dict_del(d, "missing") != 0); // deleting missing key fails
    dict_free(d);
 }
 
@@ -106,7 +106,7 @@ static void test_merge_and_diff(void) {
 
    dict *df = dict_diff(a, b);
    CHECK(df != NULL);
-   CHECK(dict_get(df, "common", NULL) != NULL);   // differs
+   CHECK(dict_get(df, "common", NULL) != NULL); // differs
    CHECK(dict_get_type(df, "only-a") == VAL_NULL);
    CHECK(dict_get(df, "only-b", NULL) != NULL);
 
@@ -129,6 +129,7 @@ static void test_key_alignment(void) {
       CHECK(dict_get_int(d, key, 0) == 145000000);
       CHECK(dict_del(d, key) == 0);
    }
+
    dict_free(d);
 }
 

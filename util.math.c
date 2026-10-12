@@ -32,14 +32,14 @@ float safe_atof(const char *s) {
    float val = strtof(s, &end);
 
    if (errno != 0) {
-      return NAN;              // overflow/underflow
+      return NAN;               // overflow/underflow
    }
-   while (*end && isspace( (unsigned char)*end) ) {
+   while (*end && isspace((unsigned char)*end)) {
       end++;
    }
 
    if (*end != '\0') {
-      return NAN;            // junk at end
+      return NAN;               // junk at end
    }
 
    return val;
@@ -56,7 +56,7 @@ double safe_atod(const char *s) {
    if (errno != 0) {
       return NAN;
    }
-   while (*end && isspace( (unsigned char)*end) ) {
+   while (*end && isspace((unsigned char)*end)) {
       end++;
    }
 

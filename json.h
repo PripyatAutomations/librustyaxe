@@ -18,9 +18,9 @@
 // minimal JSON tree
 typedef struct json_node {
    char *key;
-   char *value;                   // leaf string, if set
-   struct json_node *child;       // first child
-   struct json_node *next;        // next sibling
+   char *value;                 // leaf string, if set
+   struct json_node *child;     // first child
+   struct json_node *next;      // next sibling
 } json_node;
 
 /*

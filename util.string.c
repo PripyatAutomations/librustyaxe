@@ -26,8 +26,8 @@ char *escape_html(const char *input) {
       return NULL;
    }
    size_t len = strlen(input);
-   size_t buf_size = len * 6 + 1;                // Worst case: every char
-                                                 // becomes `&quot;` (6 bytes)
+   size_t buf_size = len * 6 + 1;   // Worst case: every char
+   // becomes `&quot;` (6 bytes)
    char *output = malloc(buf_size);
 
    if (!output) {
@@ -80,31 +80,31 @@ char *escape_html(const char *input) {
 
 // the opposite, no free needed
 void unescape_html(char *s) {
-   char *r = s;    // read pointer
-   char *w = s;    // write pointer
+   char *r = s;                 // read pointer
+   char *w = s;                 // write pointer
 
    while (*r) {
       if (*r == '&') {
-         if (!strncmp(r, "&lt;", 4) ) {
+         if (!strncmp(r, "&lt;", 4)) {
             *w++ = '<';
             r += 4;
-         } else if (!strncmp(r, "&gt;", 4) ) {
+         } else if (!strncmp(r, "&gt;", 4)) {
             *w++ = '>';
             r += 4;
-         } else if (!strncmp(r, "&amp;", 5) ) {
+         } else if (!strncmp(r, "&amp;", 5)) {
             *w++ = '&';
             r += 5;
-         } else if (!strncmp(r, "&quot;", 6) ) {
+         } else if (!strncmp(r, "&quot;", 6)) {
             *w++ = '"';
             r += 6;
-         } else if (!strncmp(r, "&#39;", 5) ) {
+         } else if (!strncmp(r, "&#39;", 5)) {
             *w++ = '\'';
             r += 5;
-         } else if (!strncmp(r, "&nbsp;", 6) ) {
+         } else if (!strncmp(r, "&nbsp;", 6)) {
             *w++ = ' ';
             r += 6;
          } else {
-            *w++ = *r++;  // unknown entity, copy literally
+            *w++ = *r++;        // unknown entity, copy literally
          }
       } else {
          *w++ = *r++;
@@ -135,10 +135,7 @@ bool parse_bool(const char *str) {
       return false;
    }
 
-   if (strcasecmp(str, "true") == 0 ||
-      strcasecmp(str, "yes") == 0 ||
-      strcasecmp(str, "on") == 0 ||
-      strcasecmp(str, "1") == 0) {
+   if (strcasecmp(str, "true") == 0 || strcasecmp(str, "yes") == 0 || strcasecmp(str, "on") == 0 || strcasecmp(str, "1") == 0) {
       return true;
    }
 
@@ -148,11 +145,11 @@ bool parse_bool(const char *str) {
 int split_args(char *line, char ***argv_out) {
    int argc = 0;
    int cap = 8;
-   char **argv = malloc(cap * sizeof(char *) );
+   char **argv = malloc(cap * sizeof(char *));
    char *p = line;
 
    while (*p) {
-      while (*p && isspace( (unsigned char)*p) ) {
+      while (*p && isspace((unsigned char)*p)) {
          p++;
       }
 
@@ -166,7 +163,7 @@ int split_args(char *line, char ***argv_out) {
             abort();
          }
          cap *= 2;
-         char **tmp = realloc(argv, (size_t)cap * sizeof(char *) );
+         char **tmp = realloc(argv, (size_t)cap * sizeof(char *));
 
          if (!tmp) {
             free(argv);
@@ -175,7 +172,7 @@ int split_args(char *line, char ***argv_out) {
          argv = tmp;
       }
       argv[argc++] = p;
-      while (*p && !isspace( (unsigned char)*p) ) {
+      while (*p && !isspace((unsigned char)*p)) {
          p++;
       }
 
@@ -194,7 +191,7 @@ int ansi_strlen(const char *s) {
       if (*s == '\033') {
          // start of escape
          while (*s && *s != 'm') {
-            s++;  // skip until 'm'
+            s++;                // skip until 'm'
          }
 
          if (*s) {
@@ -216,7 +213,7 @@ int visible_length(const char *s) {
    while (*p) {
       if (*p == '\033' && *(p + 1) == '[') {
          // ANSI sequence
-         p += 2;  // skip \033[
+         p += 2;                // skip \033[
          while (*p && *p != 'm') {
             p++;
          }
@@ -226,7 +223,7 @@ int visible_length(const char *s) {
          }
       } else if (*p == '{') {
          while (*p && *p != '}') {
-            p++;   // skip color markup
+            p++;                // skip color markup
          }
       } else {
          len++;

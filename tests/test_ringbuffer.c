@@ -16,8 +16,7 @@ static int failures = 0;
            }                                                                  \
         } while (0)
 
-static void test_create_destroy(void)
-{
+static void test_create_destroy(void) {
    rb_buffer_t *b = rb_create(10, "test");
    CHECK(b != NULL);
    CHECK(b->max_size == 10);
@@ -25,8 +24,7 @@ static void test_create_destroy(void)
    rb_destroy(b);
 }
 
-static void test_add_and_recent(void)
-{
+static void test_add_and_recent(void) {
    rb_buffer_t *b = rb_create(8, "test");
    static int vals[8];
 
@@ -41,8 +39,7 @@ static void test_add_and_recent(void)
    rb_destroy(b);
 }
 
-static void test_overflow_drops_oldest(void)
-{
+static void test_overflow_drops_oldest(void) {
    rb_buffer_t *b = rb_create(4, "test");
    static int vals[8];
 
@@ -58,8 +55,7 @@ static void test_overflow_drops_oldest(void)
    rb_destroy(b);
 }
 
-static void test_get_range(void)
-{
+static void test_get_range(void) {
    rb_buffer_t *b = rb_create(8, "test");
    static int vals[8];
 
@@ -72,14 +68,13 @@ static void test_get_range(void)
    CHECK(range != NULL);
 
    if (range) {
-      CHECK(range[0] == &vals[3] || range[0] == &vals[0]); // ordering depends on impl
+      CHECK(range[0] == &vals[3] || range[0] == &vals[0]);  // ordering depends on impl
       free(range);
    }
    rb_destroy(b);
 }
 
-int main(void)
-{
+int main(void) {
    test_create_destroy();
    test_add_and_recent();
    test_overflow_drops_oldest();

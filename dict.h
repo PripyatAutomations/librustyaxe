@@ -62,14 +62,14 @@ typedef enum {
    VAL_FLOAT,
    VAL_BOOL,
    VAL_DOUBLE,
-   VAL_FLOATP,   // float with precision specified
-   VAL_DOUBLEP,  // double with precision specified
-   VAL_CHAR,     // a single character/byte (%c)
-   VAL_PTR       // Void * pointer
+   VAL_FLOATP,                  // float with precision specified
+   VAL_DOUBLEP,                 // double with precision specified
+   VAL_CHAR,                    // a single character/byte (%c)
+   VAL_PTR                      // Void * pointer
 } val_type_t;
 
 typedef union {
-   const char      *s;     // string
+   const char *s;               // string
    int i;
    unsigned int ui;
    long l;
@@ -78,13 +78,13 @@ typedef union {
    unsigned long long ull;
    float f;
    double d;
-   char c;           // single char/byte
-   void      *p;     // generic pointer
+   char c;                      // single char/byte
+   void *p;                     // generic pointer
 } dict_value_t;
 
 /** Keypair: holds a key/value pair. Key must be a hashable C string */
 typedef struct _keypair_ {
-   const char  *key;
+   const char *key;
    struct {
       time_t create;
       time_t updated;

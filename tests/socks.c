@@ -11,7 +11,7 @@ static void handler(struct mg_connection *c, int ev, void *data) {
    if (ev == MG_EV_ERROR) {
       assert(strstr(data, "SOCKS5:"));
       errors++;
-      c->is_closing = 0; /* Failure must stay closed even if a callback clears it. */
+      c->is_closing = 0;        /* Failure must stay closed even if a callback clears it. */
    }
 }
 static void clear(struct mg_connection *c) {

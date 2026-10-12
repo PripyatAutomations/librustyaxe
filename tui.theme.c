@@ -54,30 +54,30 @@ static const ansi_entry_t ansi_table[] = {
    },
    {
       "bold-off", "\033[22m"
-   },                                                         // turns off bold/dim
+   },                           // turns off bold/dim
    {
       "dim-off", "\033[22m"
-   },                                                        // same as bold-off
+   },                           // same as bold-off
    {
       "italic-off", "\033[23m"
-   },                                                           // turns off italic
+   },                               // turns off italic
    {
       "underline-off", "\033[24m"
-   },                                                              // turns off underline
+   },                                  // turns off underline
    {
       "blink-off", "\033[25m"
-   },                                                          // turns off blink
+   },                            // turns off blink
    {
       "reverse-off", "\033[27m"
-   },                                                            // turns off
-                                                                 // reverse/inverse
+   },                               // turns off
+   // reverse/inverse
    {
       "hidden-off", "\033[28m"
-   },                                                           // turns off hidden
+   },                               // turns off hidden
    {
       "strike-off", "\033[29m"
-   },                                                           // turns off
-                                                                // strike-through
+   },                               // turns off
+   // strike-through
    {
       NULL, NULL
    }
@@ -119,7 +119,7 @@ char *tui_colorize_string(const char *in) {
       in = irc;
    }
    size_t len = strlen(in);
-   char *out = malloc(len * 8 + 64);  // enough for ANSI codes
+   char *out = malloc(len * 8 + 64);   // enough for ANSI codes
 
    if (!out) {
       free(irc);
@@ -130,7 +130,7 @@ char *tui_colorize_string(const char *in) {
    char *o = out;
 
    while (*p) {
-      if ( (unsigned char)*p == 0x1b) {
+      if ((unsigned char)*p == 0x1b) {
          /* fwdsp/GStreamer may emit ANSI CSI styling. The TUI owns the terminal stream, so consume those sequences instead of allowing them to corrupt the line
           * renderer. */
          p++;
@@ -162,7 +162,7 @@ char *tui_colorize_string(const char *in) {
          size_t key_len = end - (p + 1);
          char key[64];
 
-         if (key_len >= sizeof(key) ) {
+         if (key_len >= sizeof(key)) {
             key_len = sizeof(key) - 1;
          }
          memcpy(key, p + 1, key_len);
@@ -285,7 +285,7 @@ char *irc_to_tui_colors(const char *in) {
                break;
             }
             case 0x11: {
-               break;         // Terminal text is already monospace.
+               break;           // Terminal text is already monospace.
             }
             default: {
                *output_cursor++ = (char)control;
@@ -345,7 +345,7 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
 
    /* Only active-window output changes the visible scrollback.  In particular, logging performed by a top/status-line renderer must not start a nested
     * full-screen redraw while the current frame is being painted.  Inactive windows will be rendered when they are focused. */
-   if (win == tui_active_window() ) {
+   if (win == tui_active_window()) {
       tui_redraw_request();
 
       if (tui_redraw_defer_count == 0) {
@@ -382,23 +382,23 @@ char *strip_mirc_formatting(const char *input) {
    while (*p) {
       unsigned char c = *p;
 
-      if (c == 0x02  // Bold
-         || c == 0x1D  // Italic
-         || c == 0x1F  // Underline
-         || c == 0x0F  // Reset
-         || c == 0x11  // Reverse (mIRC specific)
+      if (c == 0x02             // Bold
+         || c == 0x1D           // Italic
+         || c == 0x1F           // Underline
+         || c == 0x0F           // Reset
+         || c == 0x11           // Reverse (mIRC specific)
          ) {
-         p++;  // skip formatting
+         p++;                   // skip formatting
       } else if (c == 0x03) {
          // Color
          p++;
 
          // skip up to two digits for foreground
-         if (isdigit( (unsigned char)*p) ) {
+         if (isdigit((unsigned char)*p)) {
             p++;
          }
 
-         if (isdigit( (unsigned char)*p) ) {
+         if (isdigit((unsigned char)*p)) {
             p++;
          }
 
@@ -406,11 +406,11 @@ char *strip_mirc_formatting(const char *input) {
          if (*p == ',') {
             p++;
 
-            if (isdigit( (unsigned char)*p) ) {
+            if (isdigit((unsigned char)*p)) {
                p++;
             }
 
-            if (isdigit( (unsigned char)*p) ) {
+            if (isdigit((unsigned char)*p)) {
                p++;
             }
          }

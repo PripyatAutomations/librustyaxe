@@ -22,8 +22,7 @@ static int failures = 0;
            }                                                                  \
         } while (0)
 
-static void test_dhms2time_t(void)
-{
+static void test_dhms2time_t(void) {
    CHECK(dhms2time_t(NULL) == 0);
    CHECK(dhms2time_t("") == 0);
    CHECK(dhms2time_t("90s") == 90);
@@ -39,8 +38,7 @@ static void test_dhms2time_t(void)
    CHECK(dhms2time_t("5sx") == 5);
 }
 
-static void test_time_t2dhms(void)
-{
+static void test_time_t2dhms(void) {
    char *s;
 
    s = time_t2dhms(0);
@@ -71,10 +69,9 @@ static void test_time_t2dhms(void)
    free(s);
 }
 
-static void test_format_timestamp(void)
-{
+static void test_format_timestamp(void) {
    char buf[64];
-   time_t t = 875000000; // 1997-09-24 (UTC); localtime may shift, so just check shape
+   time_t t = 875000000;        // 1997-09-24 (UTC); localtime may shift, so just check shape
    format_timestamp(t, buf, sizeof(buf));
    CHECK(strlen(buf) == 21);
    CHECK(buf[0] == '[' && buf[20] == ']');
@@ -86,8 +83,7 @@ static void test_format_timestamp(void)
    CHECK(tiny[0] == '\0');
 }
 
-static void test_timespec_diff_ms(void)
-{
+static void test_timespec_diff_ms(void) {
    struct timespec a = {
       .tv_sec = 10, .tv_nsec = 500000000
    };
@@ -112,8 +108,7 @@ static void test_timespec_diff_ms(void)
    CHECK(timespec_diff_ms(&d, &z) == 0);
 }
 
-int main(void)
-{
+int main(void) {
    test_dhms2time_t();
    test_time_t2dhms();
    test_format_timestamp();

@@ -15,9 +15,9 @@
 #include <librrprotocol/rrprotocol.h>
 
 rb_buffer_t *rb_create(int max_size, const char *name) {
-   rb_buffer_t *buffer = malloc(sizeof(rb_buffer_t) );
+   rb_buffer_t *buffer = malloc(sizeof(rb_buffer_t));
    const char *safe_name = name ? name : "";
-   size_t name_len = strnlen(safe_name, sizeof(buffer->name) ) + 1;
+   size_t name_len = strnlen(safe_name, sizeof(buffer->name)) + 1;
    char *buffer_name = malloc(name_len);
 
    if (buffer == NULL || buffer_name == NULL) {
@@ -31,7 +31,7 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
    buffer->max_size = max_size;
    buffer->current_size = 0;
    strlcpy(buffer_name, safe_name, name_len);
-   buffer_name[name_len - 1] = '\0';  // make sure name is null-terminated
+   buffer_name[name_len - 1] = '\0';   // make sure name is null-terminated
    buffer->name = buffer_name;
    Log(LOG_DEBUG, "ringbuffer", "rb_create created new RingBuffer %s at %p", buffer->name, buffer);
 
@@ -62,7 +62,7 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    struct timespec timestamp;
    clock_gettime(CLOCK_MONOTONIC, &timestamp);
 
-   rb_node_t *node = malloc(sizeof(rb_node_t) );
+   rb_node_t *node = malloc(sizeof(rb_node_t));
 
    if (node == NULL) {
       Log(LOG_CRIT, "librustyaxe", "rb_add: out of memory!");
@@ -79,6 +79,7 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
       buffer->head = node;
       buffer->tail = node;
       buffer->current_size++;
+
       return node;
    }
 
@@ -107,11 +108,13 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
 rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
    if (buffer == NULL) {
       Log(LOG_CRIT, "ringbuffer", "rb_get_most_recent: buffer == NUL!? ignoring request");
+
       return NULL;
    }
 
    if (buffer->current_size == 0) {
       Log(LOG_CRIT, "ringbuffer", "rb_get_most_recent: Ring buffer <%p> is empty.", buffer);
+
       return NULL;
    }
    rb_node_t *current = buffer->head;
@@ -119,8 +122,7 @@ rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
 
    while (current != NULL) {
       if (current->timestamp.tv_sec > latest_node->timestamp.tv_sec ||
-         (current->timestamp.tv_sec == latest_node->timestamp.tv_sec &&
-         current->timestamp.tv_nsec > latest_node->timestamp.tv_nsec) ) {
+         (current->timestamp.tv_sec == latest_node->timestamp.tv_sec && current->timestamp.tv_nsec > latest_node->timestamp.tv_nsec)) {
          latest_node = current;
       }
       current = current->next;
@@ -131,21 +133,25 @@ rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {
 void **rb_get_range(rb_buffer_t *buffer, int start, int count) {
    if (buffer->current_size == 0) {
       printf("Ring buffer is empty.\n");
+
       return NULL;
    }
 
    if (start < 0 || start >= buffer->current_size) {
       printf("Invalid start index.\n");
+
       return NULL;
    }
 
    if (count < 1 || start + count > buffer->current_size) {
       printf("Invalid count.\n");
+
       return NULL;
    }
 
-   void **array = malloc(count * sizeof(void*) );
-   if ( (void *)array == NULL) {
+   void **array = malloc(count * sizeof(void *));
+
+   if ((void *)array == NULL) {
       Log(LOG_CRIT, "librustyaxe", "rb_get_range: out of memory!");
       exit(ENOMEM);
    }

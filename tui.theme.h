@@ -14,7 +14,7 @@ typedef struct {
 } ansi_entry_t;
 
 typedef struct tui_theme_data {
-   char         *name;
+   char *name;
    ansi_entry_t *ansi_entry;
 } tui_theme_data_t;
 

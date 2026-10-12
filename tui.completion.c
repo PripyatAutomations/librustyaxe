@@ -96,7 +96,7 @@ bool tui_unregister_completion_provider(tui_completion_provider_t fn) {
 
    for (int i = 0 ; i < completion_provider_count ; i++) {
       if (completion_providers[i] == fn) {
-         memmove(&completion_providers[i], &completion_providers[i + 1], (completion_provider_count - i - 1) * sizeof(completion_providers[0]) );
+         memmove(&completion_providers[i], &completion_providers[i + 1], (completion_provider_count - i - 1) * sizeof(completion_providers[0]));
          completion_provider_count--;
 
          return true;
@@ -117,14 +117,14 @@ char **completion_collect(const char *line, const char *word) {
    size_t count = 0;
 
    for (int i = 0 ; i < completion_provider_count ; i++) {
-      char **sub = completion_providers[i](line, word);
+      char **sub = completion_providers[i] (line, word);
 
       if (!sub) {
          continue;
       }
 
       for (int j = 0 ; sub[j] ; j++) {
-         char **tmp = realloc(matches, (count + 2) * sizeof(char *) );
+         char **tmp = realloc(matches, (count + 2) * sizeof(char *));
 
          if (!tmp) {
             free(sub[j]);
@@ -163,7 +163,6 @@ bool tui_do_completion(tui_window_t *win) {
    if (tui_cursor_pos == 0) {
       return false;
    }
-
    // Find the start of the word before the cursor
    int start = tui_cursor_pos;
 
@@ -175,7 +174,7 @@ bool tui_do_completion(tui_window_t *win) {
 
    /* An empty word is allowed when the cursor sits directly after a space, so providers can complete a full argument list (i.e. /server<space>TAB)
     */
-   if (word_len < 0 || (word_len == 0 && !(tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] == ' ') ) ) {
+   if (word_len < 0 || (word_len == 0 && !(tui_cursor_pos > 0 && input_buf[tui_cursor_pos - 1] == ' '))) {
       return false;
    }
 
@@ -194,7 +193,6 @@ bool tui_do_completion(tui_window_t *win) {
 
       return false;
    }
-
    // Compute the longest common prefix of all matches
    size_t plen = strlen(matches[0]);
    int nmatch = 0;
@@ -218,7 +216,7 @@ bool tui_do_completion(tui_window_t *win) {
       size_t pl = plen;
 
       if (nmatch == 1 && pl < sizeof(word) - 1) {
-         word[pl++] = ' ';    // Add a space after a completed word
+         word[pl++] = ' ';      // Add a space after a completed word
       }
 
       if (start + pl < TUI_INPUTLEN) {
@@ -238,7 +236,6 @@ bool tui_do_completion(tui_window_t *win) {
 
       return false;
    }
-
    // Ambiguous: complete the common prefix and list the candidates in a
    // multi-column layout across a few lines instead of one per line.
    {
@@ -247,7 +244,7 @@ bool tui_do_completion(tui_window_t *win) {
       int nshown = nmatch > TUI_MAX_COMPLETIONS_SHOWN ? TUI_MAX_COMPLETIONS_SHOWN : nmatch;
 
       for (int i = 0 ; i < nshown ; i++) {
-         completion_describe(input_buf, matches[i], labels[i], sizeof(labels[i]) );
+         completion_describe(input_buf, matches[i], labels[i], sizeof(labels[i]));
          int l = (int)strlen(labels[i]);
 
          if (l > maxlen) {
@@ -271,7 +268,7 @@ bool tui_do_completion(tui_window_t *win) {
          pos += snprintf(line + pos, sizeof(line) - pos, "  ");
 
          for (int c = 0 ; c < cols ; c++) {
-            int idx = c * rows + r;   // column-major so matches read down each column
+            int idx = c * rows + r; // column-major so matches read down each column
 
             if (idx >= nshown) {
                break;

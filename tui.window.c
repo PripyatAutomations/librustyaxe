@@ -90,15 +90,15 @@ tui_window_t *tui_window_create(const char *title) {
       return NULL;
    }
    // Nope, lets create it
-   w = calloc(1, sizeof(*w) );
+   w = calloc(1, sizeof(*w));
 
    if (!w) {
       fprintf(stderr, "OOM in tui_window_create!\n");
 
       return NULL;
    }
-   strlcpy(w->title, title, sizeof(w->title) );
-   memset(w->status_line, 0, sizeof(w->status_line) );
+   strlcpy(w->title, title, sizeof(w->title));
+   memset(w->status_line, 0, sizeof(w->status_line));
    snprintf(w->status_line, sizeof(w->status_line), "%s", title);
    w->title[sizeof(w->title) - 1] = '\0';
 
@@ -144,7 +144,7 @@ bool tui_window_destroy(tui_window_t *w) {
 
    // Pick a new active window if needed
    if (tui_num_windows < 0) {
-      tui_active_win = 0;   // no windows left
+      tui_active_win = 0;       // no windows left
    } else {
       // if the destroyed window was active, or active index is now invalid,
       // pick previous or first
@@ -155,7 +155,7 @@ bool tui_window_destroy(tui_window_t *w) {
             tui_active_win = 0;
          }
       } else if (tui_active_win > destroyed_index) {
-         tui_active_win--;   // shift left because of removed slot
+         tui_active_win--;      // shift left because of removed slot
       }
    }
    tui_window_free_history(w);
@@ -240,7 +240,7 @@ void tui_window_init(void) {
       char *sl = tui_windows[0]->status_line;
 
       if (sl) {
-         memset(sl, 0, sizeof(tui_windows[0]->status_line) );
+         memset(sl, 0, sizeof(tui_windows[0]->status_line));
          snprintf(sl, sizeof(tui_windows[0]->status_line), "%s", "status");
       }
       tui_num_windows = 1;
@@ -270,10 +270,10 @@ void tui_window_fini(void) {
 }
 
 int tui_window_swap(int c, int key) {
-   int num = key - '1';          // Alt-1 = window 0
+   int num = key - '1';         // Alt-1 = window 0
 
    if (key == '0') {
-      num = 9;                   // Alt-0 -> window 9
+      num = 9;                  // Alt-0 -> window 9
    }
 
    if (num >= 0 && num < tui_num_windows) {

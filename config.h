@@ -39,11 +39,11 @@ typedef enum defconfig_type {
 struct defconfig {
    const char *key;
    const char *val;
-   const char *help;           // Description of the config item for when we
-                               // someday
-                               // have a config editor
+   const char *help;            // Description of the config item for when we
+   // someday
+   // have a config editor
    defconfig_type_t type;
-   const char *choices;        // Optional pipe-separated values for ENUM
+   const char *choices;         // Optional pipe-separated values for ENUM
 };
 typedef struct defconfig defconfig_t;
 
@@ -71,7 +71,7 @@ typedef struct reload_event reload_event_t;
 typedef bool (*cfg_save_cb_t)(FILE *fp, const char *path);
 
 struct cfg_save_cb_entry {
-   const char *name;           // Module name for logging
+   const char *name;            // Module name for logging
    cfg_save_cb_t callback;
    struct cfg_save_cb_entry *next;
 };
@@ -80,10 +80,10 @@ typedef struct cfg_save_cb_entry cfg_save_cb_entry_t;
 extern cfg_save_cb_entry_t *cfg_save_callbacks;
 
 // Data storage dicts
-extern dict *cfg;                        // Main configuration
-extern const char *config_file;          // Path of the currently loaded config file
-extern dict *default_cfg;                // Default configuration
-extern dict *pipelines;                  // fwdsp/rrgtk pipelines
+extern dict *cfg;               // Main configuration
+extern const char *config_file; // Path of the currently loaded config file
+extern dict *default_cfg;       // Default configuration
+extern dict *pipelines;         // fwdsp/rrgtk pipelines
 
 // Events to run on config reload
 extern reload_event_t *reload_events;
@@ -135,7 +135,7 @@ extern unsigned int cfg_get_uint(const char *key, unsigned int def);
 
 ///////////
 // Register a section parser; true means registered, false means invalid input.
-extern bool cfg_add_callback(const char *path, const char *section, bool (*cb) () );
+extern bool cfg_add_callback(const char *path, const char *section, bool (*cb) ());
 
 /////////////
 extern reload_event_t *reload_events;
@@ -143,7 +143,7 @@ extern reload_event_t *reload_events;
 extern bool run_reload_events(const char *key);
 
 // Find an event in the linked list
-extern reload_event_t *reload_event_find(const char *key, bool (*callback) () );
+extern reload_event_t *reload_event_find(const char *key, bool (*callback) ());
 
 // Add a reload event to the list.  A NULL key is invoked once after a
 // complete cfg_apply_new() reload, after all individual key events.

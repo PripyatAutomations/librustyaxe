@@ -17,10 +17,10 @@
 typedef struct Coordinates {
    float latitude;
    float longitude;
-   uint8_t precision;                            // how many digits of precision
-                                                 // were given for the longest
-                                                 // of
-                                                 // lat/lon
+   uint8_t precision;           // how many digits of precision
+   // were given for the longest
+   // of
+   // lat/lon
    int error;
 } Coordinates;
 

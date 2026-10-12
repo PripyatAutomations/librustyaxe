@@ -23,8 +23,8 @@
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
-extern void tui_keys_init(void);         // tui.keys.c
-extern void tui_keys_fini(void);         // tui.keys.c
+extern void tui_keys_init(void); // tui.keys.c
+extern void tui_keys_fini(void); // tui.keys.c
 
 extern char input_buf[TUI_INPUTLEN];
 extern int tui_input_len;
@@ -36,8 +36,8 @@ static bool cfg_tui_use_mouse;
 
 // These get updated by update_term_size() on SIGWINCH (terminal resize) and in
 // tui_init()
-static int term_rows = 24;   // default lines
-static int term_cols = 80;   // default width
+static int term_rows = 24;      // default lines
+static int term_cols = 80;      // default width
 static char status_line[STATUS_LEN];
 static char *(*topline_renderer)(tui_window_t *win);
 static volatile sig_atomic_t tui_redraw_pending = 0;
@@ -65,7 +65,7 @@ void tui_render_unlock(void) {
    pthread_mutex_unlock(&tui_render_mutex);
 }
 
-void tui_set_topline_renderer(char *(*renderer) (tui_window_t *win) ) {
+void tui_set_topline_renderer(char *(*renderer) (tui_window_t *win)) {
    tui_render_lock();
    topline_renderer = renderer;
    tui_render_unlock();
@@ -79,7 +79,7 @@ static void tui_print_topline(const char *text, int columns) {
    while (p && *p && columns > 0) {
       if (p[0] == '\033' && p[1] == '[') {
          const unsigned char *end = p + 2;
-         while (*end && !(*end >= '@' && *end <= '~') ) {
+         while (*end && !(*end >= '@' && *end <= '~')) {
             end++;
          }
 
@@ -145,7 +145,7 @@ static int tui_line_rows(const char *s, int width) {
       if (*s == '\033' && *(s + 1) == '[') {
          s += 2;
 
-         while (*s && !(*s >= '@' && *s <= '~') ) {
+         while (*s && !(*s >= '@' && *s <= '~')) {
             s++;
          }
 
@@ -179,7 +179,7 @@ static void update_term_size(void) {
    struct winsize ws;
 
    // Test runners and redirected output have no terminal window to query.
-   if (!isatty(STDOUT_FILENO) ) {
+   if (!isatty(STDOUT_FILENO)) {
       return;
    }
 
@@ -187,7 +187,7 @@ static void update_term_size(void) {
       term_rows = ws.ws_row;
       term_cols = ws.ws_col;
    } else {
-      fprintf(stderr, "failed TIOCGWINSZ %d: %s\n", errno, strerror(errno) );
+      fprintf(stderr, "failed TIOCGWINSZ %d: %s\n", errno, strerror(errno));
    }
 }
 
@@ -246,7 +246,6 @@ bool tui_init(void) {
       // Detect an SSH session: HH:MM clock & fewer repaints (see tui_over_ssh)
       tui_over_ssh = (getenv("SSH_TTY") != NULL);
    }
-
    // set SIGnal WINdow CHange handler
    previous_sigwinch_handler = signal(SIGWINCH, sigwinch_handler);
    tui_sigwinch_installed = (previous_sigwinch_handler != SIG_ERR);
@@ -270,9 +269,9 @@ bool tui_init(void) {
 
    // Enable mouse support
    if (cfg_tui_use_mouse) {
-      printf("\033[?1000h");   /* mouse button reporting */
-      printf("\033[?1002h");   /* button + drag reporting */
-      printf("\033[?1006h");   /* SGR extended mouse encoding */
+      printf("\033[?1000h");    /* mouse button reporting */
+      printf("\033[?1002h");    /* button + drag reporting */
+      printf("\033[?1006h");    /* SGR extended mouse encoding */
       fflush(stdout);
    }
    printf("\033[%d;1H", term_rows);
@@ -303,21 +302,21 @@ bool tui_fini(void) {
 
    /* Restore modes which can make the caller's shell appear broken.  Disable mouse/focus/paste/application modes even when configuration says they were off:
     * these reset sequences are harmless and make partial init safe. */
-   fputs("\033[0m"        /* reset colors and attributes */
-      "\033[?25h"        /* show cursor */
-      "\033[0 q"         /* default cursor style */
-      "\033[?1l"         /* normal cursor keys */
-      "\033>"            /* normal keypad */
-      "\033[?1000l"      /* mouse click reporting */
-      "\033[?1002l"      /* mouse drag reporting */
-      "\033[?1003l"      /* all-motion mouse reporting */
-      "\033[?1004l"      /* focus reporting */
-      "\033[?1006l"      /* SGR mouse reporting */
-      "\033[?2004l"      /* bracketed paste */
-      "\033[?6l"         /* absolute cursor origin */
-      "\033[?7h"         /* automatic margins */
-      "\033[r"           /* full-screen scrolling region */
-      "\033[999;1H"      /* place output below the TUI */
+   fputs("\033[0m"              /* reset colors and attributes */
+      "\033[?25h"               /* show cursor */
+      "\033[0 q"                /* default cursor style */
+      "\033[?1l"                /* normal cursor keys */
+      "\033>"                   /* normal keypad */
+      "\033[?1000l"             /* mouse click reporting */
+      "\033[?1002l"             /* mouse drag reporting */
+      "\033[?1003l"             /* all-motion mouse reporting */
+      "\033[?1004l"             /* focus reporting */
+      "\033[?1006l"             /* SGR mouse reporting */
+      "\033[?2004l"             /* bracketed paste */
+      "\033[?6l"                /* absolute cursor origin */
+      "\033[?7h"                /* automatic margins */
+      "\033[r"                  /* full-screen scrolling region */
+      "\033[999;1H"             /* place output below the TUI */
       "\033[2K\r\n", stdout);
    fflush(stdout);
 
@@ -371,7 +370,7 @@ void tui_redraw_screen(void) {
    tui_redraw_pending = 0;
    update_term_size();
 
-   printf("\033[H\033[2J");  // clear screen
+   printf("\033[H\033[2J");     // clear screen
 
    tui_window_t *w = tui_active_window();
 
@@ -409,16 +408,13 @@ void tui_redraw_screen(void) {
    }
 
    // scroll_offset is now measured in physical terminal rows.
-   int max_scroll = total_rows > log_area_rows
-                  ? total_rows - log_area_rows
-                  : 0;
+   int max_scroll = total_rows > log_area_rows ? total_rows - log_area_rows : 0;
 
    if (w->scroll_offset < 0) {
       w->scroll_offset = 0;
    } else if (w->scroll_offset > max_scroll) {
       w->scroll_offset = max_scroll;
    }
-
    // This is the physical row, counting from the oldest message, that
    // should appear at the top of the log area.
    int target_row = total_rows - log_area_rows - w->scroll_offset;
@@ -426,7 +422,6 @@ void tui_redraw_screen(void) {
    if (target_row < 0) {
       target_row = 0;
    }
-
    // Find the message containing target_row.
    int start = oldest;
    int skip_rows = target_row;
@@ -462,7 +457,7 @@ void tui_redraw_screen(void) {
       }
 
       const char *p = w->buffer[idx];
-      char active_sgr[64] = "";   // last SGR seen, so wrapped rows re-apply it
+      char active_sgr[64] = ""; // last SGR seen, so wrapped rows re-apply it
       int rows_done = 0;
 
       while (*p && row < term_rows - 1) {
@@ -476,7 +471,7 @@ void tui_redraw_screen(void) {
 
                p += 2;
 
-               while (*p && !(*p >= '@' && *p <= '~') ) {
+               while (*p && !(*p >= '@' && *p <= '~')) {
                   p++;
                }
 
@@ -486,7 +481,7 @@ void tui_redraw_screen(void) {
 
                // Remember the last complete SGR sequence; a wrapped row must
                // re-apply the color in effect where the previous row ended
-               if (p[-1] == 'm' && (size_t)(p - estart) < sizeof(active_sgr) ) {
+               if (p[-1] == 'm' && (size_t)(p - estart) < sizeof(active_sgr)) {
                   size_t elen = p - estart;
 
                   memcpy(active_sgr, estart, elen);
@@ -615,7 +610,7 @@ void tui_redraw_clock(void) {
    localtime_r(&t, &tm);
 
    // Move cursor to second-to-last row, far-right minus visible width + 1
-   int clock_visible_len = (tui_over_ssh ? 7 : 10);  // [HH:MM] vs [HH:MM:SS]
+   int clock_visible_len = (tui_over_ssh ? 7 : 10);   // [HH:MM] vs [HH:MM:SS]
    int col = width - clock_visible_len;   // 0-based index for the first char
 
    if (col > 0) {
@@ -629,9 +624,9 @@ void tui_redraw_clock(void) {
       }
       char *clock_colored = tui_colorize_string(clock_tagged);
 
-      printf("\033[s");  // save cursor
+      printf("\033[s");         // save cursor
       printf("\033[%d;%dH%s\033[0m", term_rows - 1, col + 1, clock_colored);
-      printf("\033[u");  // restore cursor
+      printf("\033[u");         // restore cursor
       free(clock_colored);
    }
    fflush(stdout);
@@ -651,14 +646,14 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       char tmpbuf[513];
       va_list ap;
       va_start(ap, fmt);
-      memset(tmpbuf, 0, sizeof(tmpbuf) );
+      memset(tmpbuf, 0, sizeof(tmpbuf));
       vsnprintf(tmpbuf, sizeof(tmpbuf) - 1, fmt, ap);
       va_end(ap);
 
       dict *vars = dict_new();
 
       if (win) {
-         dict_add(vars, "win.title", (char *)(win->title ? win->title : "status") );
+         dict_add(vars, "win.title", (char *)(win->title ? win->title : "status"));
          char scroll_val[16];
          snprintf(scroll_val, sizeof(scroll_val), "%d", win->scroll_offset);
          dict_add(vars, "win.scroll", scroll_val);
@@ -668,7 +663,7 @@ bool tui_update_status(tui_window_t *win, const char *fmt, ...) {
       dict_free(vars);
 
       // update the status line
-      strlcpy(status_line, colored, sizeof(status_line) );
+      strlcpy(status_line, colored, sizeof(status_line));
       free(colored);
       status_line[sizeof(status_line) - 1] = '\0';
    }
@@ -713,7 +708,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
    const char *src = processed;
    char *dst = expanded;
 
-   while (*src && (dst - expanded) < (TUI_STRING_LEN - 1) ) {
+   while (*src && (dst - expanded) < (TUI_STRING_LEN - 1)) {
       if (src[0] == '$' && src[1] == '{') {
          const char *end = strchr(src + 2, '}');
 
@@ -721,7 +716,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             size_t varlen = end - (src + 2);
             char varspec[256];
 
-            if (varlen >= sizeof(varspec) ) {
+            if (varlen >= sizeof(varspec)) {
                varlen = sizeof(varspec) - 1;
             }
             memcpy(varspec, src + 2, varlen);
@@ -745,7 +740,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
             if (val) {
                size_t vlen = strlen(val);
 
-               if ( (dst - expanded) + vlen < TUI_STRING_LEN - 1) {
+               if ((dst - expanded) + vlen < TUI_STRING_LEN - 1) {
                   memcpy(dst, val, vlen);
                   dst += vlen;
                }
@@ -763,7 +758,7 @@ char *tui_render_string(dict *data, const char *title, const char *fmt, ...) {
    free(processed);
    free(expanded);
 
-   return colorized;    // caller must free
+   return colorized;            // caller must free
 }
 
 void tui_window_update_topline(const char *line) {
@@ -798,12 +793,12 @@ static size_t ansi_column_offset(const char *text, int column) {
       return 0;
    }
    while (text[offset] && visible < column) {
-      if ( (unsigned char)text[offset] == 0x1b) {
+      if ((unsigned char)text[offset] == 0x1b) {
          offset++;
 
          if (text[offset] == '[') {
             offset++;
-            while (text[offset] && !( (text[offset] >= '@') && (text[offset] <= '~') ) ) {
+            while (text[offset] && !((text[offset] >= '@') && (text[offset] <= '~'))) {
                offset++;
             }
 
@@ -828,12 +823,12 @@ static void ansi_copy_columns(const char *text, int columns, char *out, size_t o
       return;
    }
    while (text[in] && used + 1 < out_size && visible < columns) {
-      if ( (unsigned char)text[in] == 0x1b) {
+      if ((unsigned char)text[in] == 0x1b) {
          size_t start = in++;
 
          if (text[in] == '[') {
             in++;
-            while (text[in] && !( (text[in] >= '@') && (text[in] <= '~') ) ) {
+            while (text[in] && !((text[in] >= '@') && (text[in] <= '~'))) {
                in++;
             }
 
@@ -884,12 +879,12 @@ void tui_update_input_line(void) {
       tui_cursor_pos = tui_input_len;
    }
    int width = term_cols;
-   int prompt_len = visible_length(win->title) + 2;  // title + '>' + space
+   int prompt_len = visible_length(win->title) + 2;   // title + '>' + space
 
    // --- build visible input buffer with placeholders ---
    char buf[2048];
    int buf_pos = 0;
-   int screen_cols[tui_input_len + 1];  // map input char -> screen column
+   int screen_cols[tui_input_len + 1]; // map input char -> screen column
    int cols = 0;
 
    for (int i = 0 ; i < tui_input_len ; i++) {
@@ -938,7 +933,7 @@ void tui_update_input_line(void) {
          }
       }
 
-      cols++;              // each input char counts as 1 column
+      cols++;                   // each input char counts as 1 column
       screen_cols[i] = cols;
    }
 
@@ -963,7 +958,7 @@ void tui_update_input_line(void) {
 
    if (max_input_width < 1) {
       max_input_width = 1;
-   } else if ( (size_t)max_input_width >= sizeof(slice) ) {
+   } else if ((size_t)max_input_width >= sizeof(slice)) {
       max_input_width = (int)sizeof(slice) - 1;
    }
    int start_col = 0;
@@ -971,7 +966,7 @@ void tui_update_input_line(void) {
    if (cursor_screen_pos > max_input_width) {
       start_col = cursor_screen_pos - max_input_width;
    }
-   ansi_copy_columns(colorized_line + ansi_column_offset(colorized_line, start_col), max_input_width, slice, sizeof(slice) );
+   ansi_copy_columns(colorized_line + ansi_column_offset(colorized_line, start_col), max_input_width, slice, sizeof(slice));
 
    // --- prepare colored prompt ---
    char prompt[512];
@@ -980,7 +975,7 @@ void tui_update_input_line(void) {
 
    // --- redraw line ---
    printf("\033[%d;1H\033[2K", term_rows);
-   printf("%s%s", color_prompt, slice);  // prompt includes space now
+   printf("%s%s", color_prompt, slice);   // prompt includes space now
 
    // if there's nothing typed by the user, skip forward one character, to leave
    // a space

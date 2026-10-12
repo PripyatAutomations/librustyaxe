@@ -34,7 +34,7 @@ bool file_exists(const char *path) {
 
    // Skip file not found and only show other errors
    if (rv != 0) {
-      Log(LOG_CRAZY, "core", "file_exists: %s returned %d (%s)", path, errno, strerror(errno) );
+      Log(LOG_CRAZY, "core", "file_exists: %s returned %d (%s)", path, errno, strerror(errno));
 
       return false;
    } else {
@@ -49,11 +49,11 @@ bool is_dir(const char *path) {
 
    // Skip file not found and only show other errors
    if (rv != 0) {
-      Log(LOG_CRAZY, "core", "is_dir: %s returned %d (%s)", path, errno, strerror(errno) );
+      Log(LOG_CRAZY, "core", "is_dir: %s returned %d (%s)", path, errno, strerror(errno));
 
       return false;
    } else {
-      if ( (sb.st_mode & S_IFMT) == S_IFDIR) {
+      if ((sb.st_mode & S_IFMT) == S_IFDIR) {
          return true;
       }
    }
@@ -68,7 +68,7 @@ bool is_link(const char *path) {
       return false;
    }
 
-   if (S_ISLNK(sb.st_mode) ) {
+   if (S_ISLNK(sb.st_mode)) {
       return true;
    }
 
@@ -82,7 +82,7 @@ bool is_fifo(const char *path) {
       return false;
    }
 
-   if (S_ISFIFO(sb.st_mode) ) {
+   if (S_ISFIFO(sb.st_mode)) {
       return true;
    }
 
@@ -96,7 +96,7 @@ bool is_file(const char *path) {
       return false;
    }
 
-   if (S_ISREG(sb.st_mode) ) {
+   if (S_ISREG(sb.st_mode)) {
       return true;
    }
 
@@ -118,7 +118,7 @@ bool mkdir_p(const char *path) {
       return false;
    }
 
-   for (char *p = work ; ; p++) {
+   for (char *p = work ;; p++) {
       bool separator = (*p == '/' || *p == '\\');
 
       if (*p != '\0' && !separator) {
@@ -135,7 +135,7 @@ bool mkdir_p(const char *path) {
          int rv = mkdir(work, 0755);
 #endif
 
-         if (rv != 0 && (errno != EEXIST || !is_dir(work) ) ) {
+         if (rv != 0 && (errno != EEXIST || !is_dir(work))) {
             *p = saved;
             free(work);
 
@@ -204,7 +204,7 @@ char *expand_path(const char *path) {
 
       if (!expanded) {
          if (home_allocated) {
-            free( (void *)home);
+            free((void *)home);
          }
 
          return NULL;
@@ -212,7 +212,7 @@ char *expand_path(const char *path) {
       snprintf(expanded, len, "%s\\%s", home, suffix);
 
       if (home_allocated) {
-         free( (void *)home);
+         free((void *)home);
       }
 
       return expanded;
@@ -237,13 +237,11 @@ char *expand_path(const char *path) {
    }
    const char *suffix = NULL;
 
-   if (path[0] == '~' && (path[1] == '\0' || path[1] == '/') ) {
+   if (path[0] == '~' && (path[1] == '\0' || path[1] == '/')) {
       suffix = path + (path[1] == '/' ? 2 : 1);
-   } else if (strncmp(path, "$HOME", 5) == 0 &&
-      (path[5] == '\0' || path[5] == '/') ) {
+   } else if (strncmp(path, "$HOME", 5) == 0 && (path[5] == '\0' || path[5] == '/')) {
       suffix = path + (path[5] == '/' ? 6 : 5);
-   } else if (strncmp(path, "${HOME}", 7) == 0 &&
-      (path[7] == '\0' || path[7] == '/') ) {
+   } else if (strncmp(path, "${HOME}", 7) == 0 && (path[7] == '\0' || path[7] == '/')) {
       suffix = path + (path[7] == '/' ? 8 : 7);
    }
 
@@ -281,7 +279,7 @@ char *find_file_by_list(const char *files[], int file_count) {
          }
          Log(LOG_CRAZY, "core", "%s: Trying %s", __FUNCTION__, fullpath);
 
-         if (file_exists(fullpath) ) {
+         if (file_exists(fullpath)) {
             Log(LOG_CRAZY, "core", "%s: Returning \"%s\"", __FUNCTION__, fullpath);
 
             return fullpath;

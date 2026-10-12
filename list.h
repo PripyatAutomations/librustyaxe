@@ -16,9 +16,8 @@ enum rrlist_direction {
 };
 
 typedef struct rrlist {
-   void          *ptr;
-   struct rrlist *prev,
-      *next;
+   void *ptr;
+   struct rrlist *prev, *next;
 } rrlist_t;
 
 extern rrlist_t *rrlist_find_by_ptr(rrlist_t *list, void *ptr);

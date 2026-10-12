@@ -33,9 +33,9 @@ static char *path_append(const char *base, const char *suffix) {
       return NULL;
    }
 
-   size_t len = strlen(base) + strlen(suffix) + 2;  // +1 for dot or brackets,
-                                                    // +1
-                                                    // for \0
+   size_t len = strlen(base) + strlen(suffix) + 2; // +1 for dot or brackets,
+   // +1
+   // for \0
    char *newpath = malloc(len);
 
    if (!newpath) {
@@ -358,7 +358,9 @@ char *json_unescape(const char *s) {
       c = *p++;
 
       switch (c) {
-         case '"': case '\\': case '/': {
+         case '"':
+         case '\\':
+         case '/': {
             *q++ = c;
             break;
          }
@@ -434,7 +436,7 @@ fail:
 }
 
 static json_node *json_make_node(const char *key) {
-   json_node *n = calloc(1, sizeof(*n) );
+   json_node *n = calloc(1, sizeof(*n));
 
    if (!n) {
       Log(LOG_CRIT, "librustyaxe", "OOM in json_make_node");
@@ -455,7 +457,7 @@ static json_node *json_make_node(const char *key) {
 
 static json_node *find_child(json_node *parent, const char *key) {
    for (json_node *c = parent->child ; c ; c = c->next) {
-      if (!strcmp(c->key, key) ) {
+      if (!strcmp(c->key, key)) {
          return c;
       }
    }
@@ -722,7 +724,7 @@ char *dict2json(dict *d) {
       return NULL;
    }
 
-   while ( (rank = dict_enumerate_typed(d, rank, &key, &val, &type) ) >= 0) {
+   while ((rank = dict_enumerate_typed(d, rank, &key, &val, &type)) >= 0) {
       if (json_insert(&root, key, &val, type) != 0) {
          free_json(root.child);
 
@@ -756,43 +758,43 @@ void dict_import_va(dict *d, int first_type, va_list ap) {
             break;
          }
          case VAL_STR: {
-            dict_add(d, key, va_arg(ap, const char *) );
+            dict_add(d, key, va_arg(ap, const char *));
             break;
          }
          case VAL_CHAR: {
-            dict_add_char(d, key, (char)va_arg(ap, int) );
+            dict_add_char(d, key, (char)va_arg(ap, int));
             break;
          }
          case VAL_INT: {
-            dict_add_int(d, key, va_arg(ap, int) );
+            dict_add_int(d, key, va_arg(ap, int));
             break;
          }
          case VAL_UINT: {
-            dict_add_uint(d, key, va_arg(ap, unsigned int) );
+            dict_add_uint(d, key, va_arg(ap, unsigned int));
             break;
          }
          case VAL_LONG: {
-            dict_add_long(d, key, va_arg(ap, long) );
+            dict_add_long(d, key, va_arg(ap, long));
             break;
          }
          case VAL_ULONG: {
-            dict_add_ulong(d, key, va_arg(ap, unsigned long) );
+            dict_add_ulong(d, key, va_arg(ap, unsigned long));
             break;
          }
          case VAL_LLONG: {
-            dict_add_llong(d, key, va_arg(ap, long long) );
+            dict_add_llong(d, key, va_arg(ap, long long));
             break;
          }
          case VAL_ULLONG: {
-            dict_add_ullong(d, key, va_arg(ap, unsigned long long) );
+            dict_add_ullong(d, key, va_arg(ap, unsigned long long));
             break;
          }
          case VAL_FLOAT: {
-            dict_add_float(d, key, (float)va_arg(ap, double) );
+            dict_add_float(d, key, (float)va_arg(ap, double));
             break;
          }
          case VAL_DOUBLE: {
-            dict_add_double(d, key, va_arg(ap, double) );
+            dict_add_double(d, key, va_arg(ap, double));
             break;
          }
          case VAL_BOOL: {
@@ -900,15 +902,15 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
       return NULL;
    }
 
-   if (!strcmp(val, "null") ) {
+   if (!strcmp(val, "null")) {
       if (dict_add_null(d, path) != 0) {
          goto fail;
       }
-   } else if (!strcmp(val, "true") ) {
+   } else if (!strcmp(val, "true")) {
       if (dict_add_bool(d, path, true) != 0) {
          goto fail;
       }
-   } else if (!strcmp(val, "false") ) {
+   } else if (!strcmp(val, "false")) {
       if (dict_add_bool(d, path, false) != 0) {
          goto fail;
       }
@@ -1009,7 +1011,7 @@ static const char *json_parse_value(const char *s, const char *path, dict *d, un
          errno = 0;
          double v = strtod(val, &ep);
 
-         if (errno == ERANGE || ep == val || *ep != '\0' || !isfinite(v) ) {
+         if (errno == ERANGE || ep == val || *ep != '\0' || !isfinite(v)) {
             goto fail;
          }
 

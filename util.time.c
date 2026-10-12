@@ -48,13 +48,11 @@ const char *get_chat_ts(time_t ts) {
    localtime_r(&now, &tcurr);
 
    // Check if the message is from today
-   if (tmsg.tm_year == tcurr.tm_year &&
-      tmsg.tm_yday == tcurr.tm_yday) {
+   if (tmsg.tm_year == tcurr.tm_year && tmsg.tm_yday == tcurr.tm_yday) {
       strftime(chat_ts, sizeof(chat_ts), "\00314[\00310%H\00314:\00310%M\00314:\00310%S\00314]\017 ", &tmsg);
    } else {
       // Include the date for messages before today
-      strftime(chat_ts, sizeof(chat_ts), "\00314[\00310%Y-%m-%d\00314 "
-         "\00310%H\00314:\00310%M\00314:\00310%S\00314]\017 ", &tmsg);
+      strftime(chat_ts, sizeof(chat_ts), "\00314[\00310%Y-%m-%d\00314 " "\00310%H\00314:\00310%M\00314:\00310%S\00314]\017 ", &tmsg);
    }
 
    return chat_ts;
@@ -71,7 +69,7 @@ time_t dhms2time_t(const char *str) {
    }
    size_t len = strlen(str);
 
-   if ( (copy = malloc(len + 1) ) == NULL) {
+   if ((copy = malloc(len + 1)) == NULL) {
       Log(LOG_DEBUG, "librustyaxe", "ERR: timestr2time_t: out of memory");
       exit(ENOMEM);
    }
@@ -87,29 +85,29 @@ time_t dhms2time_t(const char *str) {
 
       switch (unit) {
          case 'y': {
-            seconds += value * 365 * 24 * 60 * 60;   // Convert years to seconds
-                                                     // (assuming 365 days per
-                                                     // year)
+            seconds += value * 365 * 24 * 60 * 60;    // Convert years to seconds
+            // (assuming 365 days per
+            // year)
             break;
          }
          case 'w': {
-            seconds += value * 7 * 24 * 60 * 60;   // Convert weeks to seconds
+            seconds += value * 7 * 24 * 60 * 60;      // Convert weeks to seconds
             break;
          }
          case 'd': {
-            seconds += value * 24 * 60 * 60;   // Convert days to seconds
+            seconds += value * 24 * 60 * 60;    // Convert days to seconds
             break;
          }
          case 'h': {
-            seconds += value * 60 * 60;   // Convert hours to seconds
+            seconds += value * 60 * 60;      // Convert hours to seconds
             break;
          }
          case 'm': {
-            seconds += value * 60;   // Convert minutes to seconds
+            seconds += value * 60;     // Convert minutes to seconds
             break;
          }
          case 's': {
-            seconds += value;   // Add seconds
+            seconds += value;    // Add seconds
             break;
          }
       }
@@ -119,9 +117,9 @@ time_t dhms2time_t(const char *str) {
       if (unit == '\0') {
          break;
       }
-      ptr++;   // Move past the unit (recognized or malformed) to next input
+      ptr++;                    // Move past the unit (recognized or malformed) to next input
    }
-   free(copy);   // Free the memory allocated for the copy
+   free(copy);                  // Free the memory allocated for the copy
 
    return seconds;
 }
@@ -156,7 +154,7 @@ char *time_t2dhms(time_t seconds) {
 
    char buf[128] = {
       0
-   };                       // big enough for practical output
+   };                           // big enough for practical output
    char *p = buf;
 
    for (size_t i = 0 ; i < sizeof(parts) / sizeof(parts[0]) ; i++) {
@@ -178,7 +176,7 @@ void format_timestamp(time_t t, char *buf, size_t buflen) {
    }
    buf[0] = '\0';
 
-   if (!localtime_r(&t, &tm) ) {
+   if (!localtime_r(&t, &tm)) {
       return;
    }
 
@@ -188,9 +186,9 @@ void format_timestamp(time_t t, char *buf, size_t buflen) {
 }
 
 long long timespec_diff_ms(const struct timespec *a, const struct timespec *b) {
-   return (long long)(a->tv_sec - b->tv_sec) * 1000LL +
-          (a->tv_nsec - b->tv_nsec) / 1000000LL;
+   return (long long)(a->tv_sec - b->tv_sec) * 1000LL + (a->tv_nsec - b->tv_nsec) / 1000000LL;
 }
+
 ////////////////////////////
 // Monotonic milliseconds //
 ////////////////////////////
@@ -201,7 +199,7 @@ long long mono_ms(void) {
       return 0;
    }
 
-   return ( (long long)ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
+   return ((long long)ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
 }
 
 ////////////////////////////
@@ -214,5 +212,5 @@ long long mono_us(void) {
       return 0;
    }
 
-   return ( (long long)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
+   return ((long long)ts.tv_sec * 1000000) + (ts.tv_nsec / 1000);
 }

@@ -14,8 +14,8 @@
 #endif
 
 typedef struct tui_window {
-   ansi_entry_t    *default_bg, *default_fg;
-   char            *buffer[LOG_LINES];
+   ansi_entry_t *default_bg, *default_fg;
+   char *buffer[LOG_LINES];
    int log_head;
    int scroll_offset;
    int log_count;

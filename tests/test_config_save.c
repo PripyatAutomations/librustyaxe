@@ -15,6 +15,7 @@ static bool test_reload_callback(const char *key) {
 
    return true;
 }
+
 #define CHECK(cond) do { \
            if (!(cond)) { \
               fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
@@ -43,8 +44,7 @@ int main(void) {
       CHECK(dict_add(cfg, "site:gridsquare", "EM98") == 0);
       CHECK(dict_add(cfg, "callsign-lookup:use-qrz", "true") == 0);
       CHECK(dict_add(cfg, "long-value", "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-         "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-         "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == 0);
+         "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == 0);
       CHECK(cfg_save(cfg, path));
    }
 
@@ -90,9 +90,7 @@ int main(void) {
 
    if (manual) {
       fputs("[general]\nwrapped=first\\\n\t   second\\\n    third\n"
-         "tui.status-line=\\C04red \\Bbold\\B\\O\n"
-         "theme.literal=\\\\C04\n"
-         "path=C:\\Backup\n", manual);
+         "tui.status-line=\\C04red \\Bbold\\B\\O\n" "theme.literal=\\\\C04\n" "path=C:\\Backup\n", manual);
       fclose(manual);
       dict *loaded = cfg_load(path);
       CHECK(loaded != NULL);

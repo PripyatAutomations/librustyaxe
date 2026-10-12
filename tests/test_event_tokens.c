@@ -30,8 +30,7 @@
 
 static int hits;
 
-static void count_cb(const char *event, const char *data, rrconn_t *cptr, void *user)
-{
+static void count_cb(const char *event, const char *data, rrconn_t *cptr, void *user) {
    (void)event;
    (void)data;
    (void)cptr;
@@ -39,8 +38,7 @@ static void count_cb(const char *event, const char *data, rrconn_t *cptr, void *
    hits++;
 }
 
-static void count_binary_cb(const char *event, const void *data, size_t len, rrconn_t *cptr, void *user)
-{
+static void count_binary_cb(const char *event, const void *data, size_t len, rrconn_t *cptr, void *user) {
    (void)event;
    (void)data;
    (void)len;
@@ -51,8 +49,7 @@ static void count_binary_cb(const char *event, const void *data, size_t len, rrc
 
 static rr_event_token_t self_token;
 
-static void self_unregister_cb(const char *event, const char *data, rrconn_t *cptr, void *user)
-{
+static void self_unregister_cb(const char *event, const char *data, rrconn_t *cptr, void *user) {
    (void)event;
    (void)data;
    (void)cptr;
@@ -61,8 +58,7 @@ static void self_unregister_cb(const char *event, const char *data, rrconn_t *cp
    event_off_token(self_token);
 }
 
-int main(void)
-{
+int main(void) {
    int failures = 0;
 #define CHECK(cond, msg)                     \
         do {                                         \
@@ -119,8 +115,8 @@ int main(void)
    event_off("tok.wild", count_cb, (void *)0xAAAA);   // removes only c
    event_emit("tok.wild", NULL, NULL);
    CHECK(hits == 1, "wildcard removed one, token d still active");
-   event_off_token(c);                      // already gone: no-op, must not
-                                            // remove d's listener
+   event_off_token(c);          // already gone: no-op, must not
+   // remove d's listener
    event_emit("tok.wild", NULL, NULL);
    CHECK(hits == 2, "stale token off does not kill a different listener");
    event_off_token(d);
@@ -142,7 +138,7 @@ int main(void)
    rr_event_token_t f = event_on_token("tok.stale", count_cb, NULL);
    event_off_token(f);
    rr_event_token_t g = event_on_token("tok.stale", count_cb, NULL);
-   event_off_token(f); // stale: must not remove g's listener
+   event_off_token(f);          // stale: must not remove g's listener
    event_emit("tok.stale", NULL, NULL);
    CHECK(hits == 1, "stale token cannot remove a re-registered listener");
    event_off_token(g);

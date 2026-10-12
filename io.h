@@ -24,7 +24,7 @@ typedef enum {
 
 typedef struct rr_io_context {
    rr_io_type_t type;
-   int fd;              // File descriptor for socket, device, or pipe
+   int fd;                      // File descriptor for socket, device, or pipe
 } rr_io_context_t;
 
 extern int rr_io_open(rr_io_context_t *ctx, rr_io_type_t type, const char *path_or_address, int port);
