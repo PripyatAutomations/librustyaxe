@@ -20,7 +20,7 @@ maidenhead.c:	Maidenhead coordinate conversions
 module.c:	Loadable modules on posix/win64 machines
 posix.c:	Things only relevant on posix-ish hosts
 ringbuffer.c:	Basic implementation of ring buffer, for audio/video
-subproc.c:	Subprocess management (for managing fwdsp, etc)
+subproc.c:	Generic subprocess lifecycle, line pipes and descriptor mappings (subproc.h)
 termkey.c:	libtermkey keyboard processing
 tui.c:		Simple Text User Interface library
 tui.colorpick.c: Future color selector popup for IRC
@@ -33,3 +33,9 @@ util.math.c:	Portable implementations of some maths
 util.string.c:	String utilities
 util.time.c:	Time conversion utilities
 
+
+Subprocess API
+-------------
+Include subproc.h and initialize a subproc_t with SUBPROC_INIT. Use
+subproc_spawn/spawn_fds/read_line/write_line/reap/stop/close. Restart policy belongs to
+the caller. The old rr_subproc names and compiled-out supervisor are removed.

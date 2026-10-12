@@ -3,6 +3,7 @@ LDFLAGS +=$(call pkgconfig, --libs tinfo)
 
 librustyaxe ?= ../librustyaxe.so
 # !ls *.c|sed 's/.c$/.o/g'|sed 's/^/librustyaxe_objs += /g'
+librustyaxe_objs += acl.o
 librustyaxe_objs += config.o
 #librustyaxe_objs += daemon.o
 librustyaxe_objs += dict.o
@@ -24,7 +25,6 @@ librustyaxe_objs += mongoose.o
 librustyaxe_objs += posix.o
 librustyaxe_objs += runtime-globals.o
 librustyaxe_objs += ringbuffer.o
-# XXX: This needs cleanup to remove remnants of termbox/old logger
 librustyaxe_objs += subproc.o
 librustyaxe_objs += termkey.o
 librustyaxe_objs += tui.o

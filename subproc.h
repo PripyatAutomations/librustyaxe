@@ -1,49 +1,51 @@
-//      This is part of rustyrig-fw.
-// https://github.com/pripyatautomations/rustyrig-fw
-//
-// Do not pay money for this, except donations to the project, if you wish to.
-// The software is not for sale. It is freely available, always.
-//
-// Licensed under MIT license, if built without mongoose or GPL if built with.
-#if     !defined(_subproc_h)
-#define _subproc_h
-#include <limits.h>
-#include <stdlib.h>
-#define MAX_SUBPROC 128         // i doubt we'll ever reach this
-                                // limit, but it'd be cool if we
-                                // could (that's a lot of
-                                // bands!)
+/* Generic subprocess lifecycle with line pipes or caller-owned descriptors. */
+#ifndef LIBRUSTYAXE_SUBPROC_H
+#define LIBRUSTYAXE_SUBPROC_H
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <sys/types.h>
 
 typedef struct subproc subproc_t;
 struct subproc {
-   int pid;                     // host process id
-   char name[91];               // subprocess name (for subproc_list()
-   // etc)
-   char path[PATH_MAX];         // path to executable
-   char *argv[128];             // pointer to the arguments needed to
-   // execute the process
-   int argc;                    // arguments counter
-   time_t restart_time;         // when should we restart?
-   time_t watchdog_start;       // watchdog is started if the process
-   // crashes, it expires after
-   // cfg:supervisor/max-crash-time.
-   // when active, watchdog_events tracks the number of crashes
-   int watchdog_events;         // during watchdog, this is incremented
-   // with the number of crashes
-   int needs_restarted;         // does it need restarted by the
-   // periodic thread?
-   ///////////////////////
-   // stdio redirection //
-   ///////////////////////
-   int _stdin[2];               // stdin of process
-   int _stdout[2];              // stdout of process
-   int _stderr[2];              // stderr of process
+   pid_t pid;
+   FILE *input;
+   FILE *output;
+   int error_fd;
+   bool running;
 };
-extern bool subproc_init(void);
-extern int subproc_killall(int signum);
-extern void subproc_shutdown_all(void);
-extern int subproc_check_all(void);
-extern bool subproc_start(int slot);
-extern int subproc_create(const char *name, const char *path, const char **argv, int argc);
+#define SUBPROC_INIT { .pid = -1, .error_fd = -1 }
 
-#endif // !defined(_subproc_h)
+/* argv includes argv[0] and a final NULL. No shell or PATH lookup is performed.
+ * Initialize with SUBPROC_INIT. Stop an existing child before reusing its handle.
+ * With merge_stderr=false, the caller must drain error_fd separately.
+ * Success means pipes and child were created; exec failure is child status 127. */
+bool subproc_spawn(subproc_t * process, const char *path, const char *const argv[], bool merge_stderr);
+typedef struct subproc_fd {
+   int source;
+   int target;
+} subproc_fd_t;
+/* Fork/exec with explicit descriptor mappings (pipes, socketpairs, files, etc.).
+ * Sources may overlap targets; all mappings are applied without clobbering sources.
+ * close_fds are closed in the child only, except mapped targets. Other descriptors
+ * retain their normal exec inheritance. Set FD_CLOEXEC on unrelated descriptors.
+ * Parent descriptors remain caller-owned; input/output/error_fd stay unset.
+ * NULL arrays are valid only with zero counts. Targets must be distinct.
+ * Lifecycle and exec failure semantics are the same as subproc_spawn(). */
+bool subproc_spawn_fds(subproc_t * process, const char *path, const char *const argv[],
+   const subproc_fd_t * mappings, size_t mapping_count, const int *close_fds, size_t close_count);
+/* timeout_ms waits for initial output: 0 probes, -1 waits indefinitely.
+ * Like fgets(), the helper must produce complete lines and capacity may split them. */
+bool subproc_read_line(subproc_t * process, char *line, size_t length, int timeout_ms);
+/* Adds one newline and flushes. The host owns its SIGPIPE handling policy. */
+bool subproc_write_line(subproc_t * process, const char *line);
+/* Nonblocking wait for this child; true supplies a waitpid status if requested.
+ * Clears pid after reaping so stop cannot signal a recycled PID.
+ * False means no exit was collected (including waitpid failure). */
+bool subproc_reap(subproc_t * process, int *status);
+/* Close pipes, signal and reap, escalating to SIGKILL after about one second.
+ * Calling stop again on an idle handle is safe. */
+bool subproc_stop(subproc_t * process, int signal_number);
+/* Close pipes only; the caller still owns any unreaped child. */
+void subproc_close(subproc_t * process);
+#endif
