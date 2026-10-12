@@ -34,6 +34,9 @@ int main(void) {
    assert(match(true, "guest", "::1", "guest") == ACL_ALLOW);
    assert(match(true, "guest", "::1", "GUEST") == ACL_DENY);
    assert(match(true, "guest", "::1", "") == ACL_DENY);
+   assert(match(true, "10.0.0.0/8", NULL, "guest") == ACL_DEFER);
+   assert(match(true, "guest@10.0.0.0/8", NULL, "operator") == ACL_DENY);
+   assert(match(true, "@admin@10.0.0.0/8", NULL, "guest") == ACL_DEFER);
    acl_rule_t rules[3];
    assert(acl_rule_parse(rules, false, "guest@10.200.0.0/16"));
    assert(acl_rule_parse(rules + 1, true, "10.0.0.0/8"));

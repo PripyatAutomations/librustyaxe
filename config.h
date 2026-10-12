@@ -19,8 +19,7 @@
 #define MAX_CFG_EXP_STRLEN 65535
 // Maximum depth to recurse when expanding strings (cfg_get_exp)
 #define MAX_CFG_EXP_RECURSION 6
-// maximum supported section callbacks
-#define CONFIG_MAX_CALLBACKS 512
+// Section callbacks are dynamically allocated; registration has no fixed count limit.
 
 typedef enum defconfig_type {
    DEFCONFIG_STRING = 0,

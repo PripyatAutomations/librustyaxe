@@ -303,8 +303,7 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    if (!cbp) {
       return false;
    }
-   int i = 0;
-   while (cbp && i < CONFIG_MAX_CALLBACKS) {
+   while (cbp) {
       if (cbp->section && fnmatch(cbp->section, section, 0) == 0) {
          if (!cbp->path || (fnmatch(cbp->path, path, 0) == 0)) {
             Log(LOG_CRAZY, "cfg", "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)", cbp->callback, section, cbp->section,
@@ -318,14 +317,9 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
             }
          }
       }
-      i++;
       prev = cbp;
       cbp = cbp->next;
       Log(LOG_CRAZY, "cfg", "prev;<%p> cbp:<%p> list:<%p>", prev, cbp, cfg_callbacks);
-   }
-
-   if (i > 10) {
-      Log(LOG_WARN, "cfg", "%s: made (%d) iterations for cbp:<%p> for |%s| and probably could be optimized", __FUNCTION__, i, cfg_callbacks, cbp->path);
    }
 
    return false;
