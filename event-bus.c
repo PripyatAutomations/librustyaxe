@@ -46,7 +46,7 @@ static pthread_mutex_t event_lock = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef USE_PROFILING
 typedef struct {
-   const char *event;
+   char *event;
    uint64_t count;
 } event_profile_row_t;
 
@@ -67,10 +67,15 @@ static int event_profile_compare(const void *a, const void *b) {
    return strcmp(left->event, right->event);
 }
 
-static void event_profile_dump_locked(void) {
+#endif
+
+void event_profile_dump(void) {
+#ifdef USE_PROFILING
    const time_t current = time(NULL);
 
+   pthread_mutex_lock(&event_lock);
    if (event_profile_last_dump && current - event_profile_last_dump < 300) {
+      pthread_mutex_unlock(&event_lock);
       return;
    }
    event_profile_last_dump = current;
@@ -88,13 +93,16 @@ static void event_profile_dump_locked(void) {
          event_entry_t *entry = value.p;
 
          if (entry->emit_count) {
-            rows[used].event = key;
+            rows[used].event = xstrdup(key);
             rows[used].count = entry->emit_count;
             used++;
          }
       }
    }
+   pthread_mutex_unlock(&event_lock);
 
+   // Log callbacks can emit events or unregister listeners. Own the names
+   // and release the registry lock before calling any of those callbacks.
    if (used > 1) {
       qsort(rows, used, sizeof(*rows), event_profile_compare);
    }
@@ -105,15 +113,10 @@ static void event_profile_dump_locked(void) {
       Log(LOG_INFO, "profile", "  %s: %llu", rows[i].event, (unsigned long long)rows[i].count);
    }
 
+   for (size_t i = 0 ; i < used ; i++) {
+      free(rows[i].event);
+   }
    free(rows);
-}
-#endif
-
-void event_profile_dump(void) {
-#ifdef USE_PROFILING
-   pthread_mutex_lock(&event_lock);
-   event_profile_dump_locked();
-   pthread_mutex_unlock(&event_lock);
 #endif
 }
 
@@ -653,6 +656,9 @@ void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *use
 void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    event_listener_t *snapshot = NULL;
    size_t count = 0;
+#ifdef USE_PROFILING
+   bool profile = false;
+#endif
 
    if (!event) {
       return;
@@ -669,13 +675,19 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
 
       if (entry) {
          entry->emit_count++;
-         event_profile_dump_locked();
+         profile = true;
       }
 #endif
       snapshot = event_snapshot_locked(entry, &count);
    }
 
    pthread_mutex_unlock(&event_lock);
+
+#ifdef USE_PROFILING
+   if (profile) {
+      event_profile_dump();
+   }
+#endif
 
    if (count) {
       for (size_t i = 0 ; i < count ; i++) {
@@ -726,6 +738,9 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
 void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size_t len) {
    event_binary_listener_t *snapshot = NULL;
    size_t count = 0;
+#ifdef USE_PROFILING
+   bool profile = false;
+#endif
 
    if (!event) {
       return;
@@ -741,7 +756,7 @@ void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size
 
       if (entry) {
          entry->emit_count++;
-         event_profile_dump_locked();
+         profile = true;
       }
 #endif
 
@@ -749,6 +764,12 @@ void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size
    }
 
    pthread_mutex_unlock(&event_lock);
+
+#ifdef USE_PROFILING
+   if (profile) {
+      event_profile_dump();
+   }
+#endif
 
    for (size_t i = 0 ; i < count ; i++) {
       event_fire_binary_listener(&snapshot[i], event, cptr, data, len);
