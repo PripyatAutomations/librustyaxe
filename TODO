@@ -9,25 +9,10 @@
 
 *: Add memblocks, simple allocator who maintains small allocations (replace malloc,realloc,free,etc) with page tracking for release on module unload
 
-*: IRC protocol will be used to link sites, with large messages enabled (16k)
-
-* track rx bytes & tx bytes in the session
-	- all
-	- text, media (binary)
-
-* Implement ALERT message that pops up for all users (for shutdown, overheat, SWR alerts).
-
-* User management
-  - Add/edit users
-  - Reset password
-  - User change own password
-
 * CW-U and CW-L
    - CW is centered on the CW dial freq; CW-L is center and width below; CW-R is center and width above
 
 [CAT]
-* Implement control over unix pipes or a file in posix mode
-
 * Implement control over stm32 serial over usb
 
 * Merge rr_cat_cmd and CATCommandTable
