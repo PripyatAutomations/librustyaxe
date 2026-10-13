@@ -51,8 +51,7 @@ int main(void) {
    subject.ignore_case = true;
    assert(acl_check(rules, 3, &subject) == ACL_DENY);
    assert(acl_check(rules + 1, 2, &subject) == ACL_ALLOW);
-   const char *invalid[] =
-   {
+   const char *invalid[] = {
       "", "@", "user@", "user@@all", "10.0.0.0/33", "::/129", "::/-1", "10.0.0.0/8junk", "999.1.2.3", "10.2.3", "all/0", "localhost/8", "user name",
       "allow=all"
    };
