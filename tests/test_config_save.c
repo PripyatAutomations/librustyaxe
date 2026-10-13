@@ -26,8 +26,12 @@ static bool test_reload_callback(const char *key) {
 
 static unsigned late_calls;
 static bool section_callback(const char *path, int line, const char *section, const char *input) {
-   (void)path; (void)line; (void)section; (void)input;
+   (void)path;
+   (void)line;
+   (void)section;
+   (void)input;
    late_calls++;
+
    return false;
 }
 
@@ -114,17 +118,26 @@ int main(void) {
 
    /* Every registered callback must remain reachable beyond the former 512 limit. */
    log_add_filter("cfg", LOG_CRIT);
-   for (unsigned i = 0; i < 520; i++) CHECK(cfg_add_callback(NULL, "unused", section_callback));
+
+   for (unsigned i = 0 ; i < 520 ; i++) {
+      CHECK(cfg_add_callback(NULL, "unused", section_callback));
+   }
+
    CHECK(cfg_add_callback(NULL, "callback-test", section_callback));
    CHECK(cfg_add_callback(NULL, "callback-test", section_callback));
    manual = fopen(path, "w");
    CHECK(manual != NULL);
+
    if (manual) {
-      fputs("[callback-test]\nvalue=yes\n", manual); fclose(manual);
+      fputs("[callback-test]\nvalue=yes\n", manual);
+      fclose(manual);
       dict *loaded = cfg_load(path);
       CHECK(loaded != NULL);
       CHECK(late_calls == 2);
-      if (loaded) dict_free(loaded);
+
+      if (loaded) {
+         dict_free(loaded);
+      }
    }
    log_clear_filters();
 

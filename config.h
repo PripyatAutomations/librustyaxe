@@ -115,9 +115,8 @@ extern bool cfg_save_overrides(dict *d, const char *path);
 // Register a callback to emit module-owned config sections during cfg_save.
 // These registration/removal functions and cfg_run_save_callbacks return true on success.
 extern bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback);
-/* For custom dictionary representations: omit owned keys from generic output,
- * then let the callback serialize its sections. Caller supplies a pure filter. */
-extern bool cfg_add_owned_save_callback(const char *name, cfg_save_cb_t callback, bool (*owns_key)(const char *key));
+/* For custom dictionary representations: omit owned keys from generic output, then let the callback serialize its sections. Caller supplies a pure filter. */
+extern bool cfg_add_owned_save_callback(const char *name, cfg_save_cb_t callback, bool (*owns_key) (const char *key));
 extern bool cfg_remove_save_callback(cfg_save_cb_t callback);
 extern bool cfg_run_save_callbacks(FILE *fp, const char *path);
 

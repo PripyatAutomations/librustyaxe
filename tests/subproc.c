@@ -11,29 +11,38 @@
 #include <librustyaxe/subproc.h>
 static const char *program;
 static bool spawn(subproc_t *p, const char *mode, bool merge) {
-   const char *args[] = { program, mode, NULL };
+   const char *args[] = {
+      program, mode, NULL
+   };
+
    return subproc_spawn(p, program, args, merge);
 }
 static int exited(subproc_t *p) {
    int status = -1;
-   for (unsigned i = 0; i < 400; i++) {
+
+   for (unsigned i = 0 ; i < 400 ; i++) {
       if (subproc_reap(p, &status)) {
          assert(!p->running && p->pid == -1);
+
          return status;
       }
       usleep(5000);
    }
+
    assert(!"child did not exit");
+
    return -1;
 }
 int main(int argc, char **argv) {
    program = argv[0];
+
    if (argc > 1) {
       if (!strcmp(argv[1], "--mapped")) {
          char packet[8];
          assert(read(3, packet, 8) == 8 && !memcmp(packet, "request!", 8));
          assert(write(3, "reply!!!", 8) == 8);
          assert(write(1, "output", 6) == 6);
+
          return 9;
       } else if (!strcmp(argv[1], "--echo")) {
          char line[256];
@@ -51,9 +60,12 @@ int main(int argc, char **argv) {
          signal(SIGTERM, SIG_IGN);
          puts("ready");
          fflush(stdout);
-         for (;;)
+
+         for ( ;; ) {
             pause();
+         }
       }
+
       return 0;
    }
    subproc_t p = SUBPROC_INIT;
@@ -102,11 +114,22 @@ int main(int argc, char **argv) {
    int control_source = fcntl(control[1], F_DUPFD_CLOEXEC, 10);
    int output_source = fcntl(output[1], F_DUPFD_CLOEXEC, 10);
    assert(control_source >= 10 && output_source > control_source);
-   const char *mapped_args[] = { program, "--mapped", NULL };
-   subproc_fd_t maps[] = { { control_source, 3 }, { output_source, 1 },
-   { control_source, output_source }, { output_source, control_source }
+   const char *mapped_args[] = {
+      program, "--mapped", NULL
    };
-   int closed[] = { control[0], control[1], output[0], output[1], control_source, output_source };
+   subproc_fd_t maps[] = { {
+                              control_source, 3
+                           }, {
+                              output_source, 1
+                           },
+                           {
+                              control_source, output_source
+                           }, {
+                              output_source, control_source
+                           } };
+   int closed[] = {
+      control[0], control[1], output[0], output[1], control_source, output_source
+   };
    assert(subproc_spawn_fds(&p, program, mapped_args, maps, 4, closed, 6));
    assert(!p.input && !p.output && p.error_fd == -1);
    close(control[1]);
@@ -124,7 +147,8 @@ int main(int argc, char **argv) {
    close(control[0]);
    close(output[0]);
    maps[0] = (subproc_fd_t) {
-   STDOUT_FILENO, 1};
+      STDOUT_FILENO, 1
+   };
    maps[1] = maps[0];
    assert(!subproc_spawn_fds(&p, program, mapped_args, maps, 2, NULL, 0));
    assert(!subproc_spawn_fds(&p, program, mapped_args, NULL, 1, NULL, 0));
@@ -138,6 +162,6 @@ int main(int argc, char **argv) {
    assert(p.pid == owned && subproc_write_line(&p, "still owned"));
    assert(subproc_read_line(&p, line, sizeof(line), 500));
    assert(subproc_stop(&p, SIGTERM));
-   puts
-      ("PASS: common subprocess API, request/reply pipes, stderr modes, descriptor mappings, independent child ownership, exit status, shutdown escalation and handle reuse");
+   puts(
+      "PASS: common subprocess API, request/reply pipes, stderr modes, descriptor mappings, independent child ownership, exit status, shutdown escalation and handle reuse");
 }

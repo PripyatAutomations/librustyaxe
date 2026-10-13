@@ -321,7 +321,6 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
       cbp = cbp->next;
       Log(LOG_CRAZY, "cfg", "prev;<%p> cbp:<%p> list:<%p>", prev, cbp, cfg_callbacks);
    }
-
    return false;
 }
 
@@ -909,14 +908,19 @@ bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
    return true;
 }
 
-bool cfg_add_owned_save_callback(const char *name, cfg_save_cb_t callback, bool (*owns_key)(const char *key)) {
-   if (!owns_key || !cfg_add_save_callback(name, callback)) return false;
-   for (cfg_save_cb_entry_t *entry = cfg_save_callbacks; entry; entry = entry->next) {
+bool cfg_add_owned_save_callback(const char *name, cfg_save_cb_t callback, bool (*owns_key) (const char *key)) {
+   if (!owns_key || !cfg_add_save_callback(name, callback)) {
+      return false;
+   }
+
+   for (cfg_save_cb_entry_t *entry = cfg_save_callbacks ; entry ; entry = entry->next) {
       if (entry->callback == callback) {
          entry->owns_key = owns_key;
+
          return true;
       }
    }
+
    return false;
 }
 
@@ -1055,8 +1059,10 @@ static bool cfg_save_entry_is_skipped(const char *key) {
       return true;
    }
 
-   for (cfg_save_cb_entry_t *entry = cfg_save_callbacks; entry; entry = entry->next) {
-      if (entry->owns_key && entry->owns_key(key)) return true;
+   for (cfg_save_cb_entry_t *entry = cfg_save_callbacks ; entry ; entry = entry->next) {
+      if (entry->owns_key && entry->owns_key(key)) {
+         return true;
+      }
    }
 
    /* Legacy scalar CSS setting: [gtk-css] is authoritative now. Do not copy the obsolete key back into a saved configuration. */

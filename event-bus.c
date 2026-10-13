@@ -74,8 +74,10 @@ void event_profile_dump(void) {
    const time_t current = time(NULL);
 
    pthread_mutex_lock(&event_lock);
+
    if (event_profile_last_dump && current - event_profile_last_dump < 300) {
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
    event_profile_last_dump = current;
@@ -116,6 +118,7 @@ void event_profile_dump(void) {
    for (size_t i = 0 ; i < used ; i++) {
       free(rows[i].event);
    }
+
    free(rows);
 #endif
 }
@@ -684,6 +687,7 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    pthread_mutex_unlock(&event_lock);
 
 #ifdef USE_PROFILING
+
    if (profile) {
       event_profile_dump();
    }
@@ -766,6 +770,7 @@ void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size
    pthread_mutex_unlock(&event_lock);
 
 #ifdef USE_PROFILING
+
    if (profile) {
       event_profile_dump();
    }

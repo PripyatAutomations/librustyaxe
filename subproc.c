@@ -47,72 +47,91 @@ void subproc_close(subproc_t *process) {
    process->error_fd = -1;
 }
 
-bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const argv[],
-   const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds, size_t close_count) {
+bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
+   size_t close_count) {
    if (!process || process->pid > 0 || !path || !*path || !argv || !argv[0] ||
       (mapping_count && !mappings) || (close_count && !close_fds) || mapping_count > SIZE_MAX / sizeof(int)) {
       return false;
    }
    int first_fd = 3;
-   for (size_t i = 0; i < mapping_count; i++) {
+
+   for (size_t i = 0 ; i < mapping_count ; i++) {
       if (mappings[i].source < 0 || mappings[i].target < 0 || mappings[i].target == INT_MAX) {
          return false;
       }
-      for (size_t j = 0; j < i; j++) {
+
+      for (size_t j = 0 ; j < i ; j++) {
          if (mappings[i].target == mappings[j].target) {
             return false;
          }
       }
+
       if (mappings[i].target >= first_fd) {
          first_fd = mappings[i].target + 1;
       }
    }
+
    int *sources = mapping_count ? malloc(mapping_count * sizeof(*sources)) : NULL;
+
    if (mapping_count && !sources) {
       return false;
    }
    size_t duplicated = 0;
-   for (; duplicated < mapping_count; duplicated++) {
+
+   for ( ; duplicated < mapping_count ; duplicated++) {
       sources[duplicated] = fcntl(mappings[duplicated].source, F_DUPFD_CLOEXEC, first_fd);
+
       if (sources[duplicated] < 0) {
          break;
       }
    }
+
    pid_t pid = duplicated == mapping_count ? fork() : -1;
+
    if (pid == 0) {
-      for (size_t i = 0; i < mapping_count; i++) {
+      for (size_t i = 0 ; i < mapping_count ; i++) {
          if (dup2(sources[i], mappings[i].target) < 0) {
             _exit(126);
          }
       }
-      for (size_t i = 0; i < mapping_count; i++) {
+
+      for (size_t i = 0 ; i < mapping_count ; i++) {
          close(sources[i]);
       }
-      for (size_t i = 0; i < close_count; i++) {
+
+      for (size_t i = 0 ; i < close_count ; i++) {
          bool target = false;
-         for (size_t j = 0; j < mapping_count; j++) {
+
+         for (size_t j = 0 ; j < mapping_count ; j++) {
             target |= close_fds[i] == mappings[j].target;
          }
+
          if (!target && close_fds[i] >= 0) {
             close(close_fds[i]);
          }
       }
+
       execv(path, (char *const *)argv);
       dprintf(STDERR_FILENO, "subproc: exec %s failed: %s\n", path, strerror(errno));
       _exit(127);
    }
    int saved_errno = errno;
-   for (size_t i = 0; i < duplicated; i++) {
+
+   for (size_t i = 0 ; i < duplicated ; i++) {
       close(sources[i]);
    }
+
    free(sources);
+
    if (pid < 0) {
       errno = saved_errno;
+
       return false;
    }
    subproc_reset(process);
    process->pid = pid;
    process->running = true;
+
    return true;
 }
 
@@ -162,23 +181,34 @@ bool subproc_spawn(subproc_t *process, const char *path, const char *const argv[
    }
 
    subproc_fd_t mappings[] = {
-      { child_input[0], STDIN_FILENO }, { child_output[1], STDOUT_FILENO },
-      { merge_stderr ? child_output[1] : child_error[1], STDERR_FILENO }
+      {
+         child_input[0], STDIN_FILENO
+      }, {
+         child_output[1], STDOUT_FILENO
+      },
+      {
+         merge_stderr ? child_output[1] : child_error[1], STDERR_FILENO
+      }
    };
-   int close_fds[] = { child_input[0], child_input[1], child_output[0], child_output[1], child_error[0], child_error[1] };
+   int close_fds[] = {
+      child_input[0], child_input[1], child_output[0], child_output[1], child_error[0], child_error[1]
+   };
    bool prepared = true;
-   for (size_t i = 0; i < 6; i++) {
+
+   for (size_t i = 0 ; i < 6 ; i++) {
       if (close_fds[i] >= 0 && fcntl(close_fds[i], F_SETFD, FD_CLOEXEC) < 0) {
          prepared = false;
          break;
       }
    }
+
    if (!prepared || !subproc_spawn_fds(process, path, argv, mappings, 3, close_fds, 6)) {
-      for (size_t i = 0; i < 6; i++) {
+      for (size_t i = 0 ; i < 6 ; i++) {
          if (close_fds[i] >= 0) {
             close(close_fds[i]);
          }
       }
+
       return false;
    }
 
@@ -221,7 +251,7 @@ bool subproc_read_line(subproc_t *process, char *line, size_t length, int timeou
       return false;
    }
    struct pollfd descriptor = {
-      .fd = fileno(process->output),.events = POLLIN
+      .fd = fileno(process->output), .events = POLLIN
    };
    int result;
    do {
@@ -292,7 +322,7 @@ bool subproc_stop(subproc_t *process, int signal_number) {
    }
    int status = 0;
 
-   for (int i = 0; i < 20; i++) {
+   for (int i = 0 ; i < 20 ; i++) {
       pid_t result = waitpid(process->pid, &status, WNOHANG);
 
       if (result == process->pid || (result < 0 && errno == ECHILD)) {
@@ -305,7 +335,7 @@ bool subproc_stop(subproc_t *process, int signal_number) {
          break;
       }
       struct timespec delay = {
-         .tv_sec = 0,.tv_nsec = 50000000L
+         .tv_sec = 0, .tv_nsec = 50000000L
       };
       nanosleep(&delay, NULL);
    }

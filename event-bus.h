@@ -72,7 +72,7 @@ extern void event_init(void);
 extern void event_shutdown(void);
 
 /* Emit the accumulated event dispatch counters when profiling is enabled. Applications with a main loop may call this periodically; the profiler rate-limits
- * dumps internally so callers do not need their own wall clock. Logging uses an owned snapshot outside the registry lock so log callbacks may emit events. */
+* dumps internally so callers do not need their own wall clock. Logging uses an owned snapshot outside the registry lock so log callbacks may emit events. */
 extern void event_profile_dump(void);
 
 
