@@ -144,6 +144,7 @@ typedef struct server_cfg {
    char ident[USERLEN + 1];
    char account[LOGINLEN + 1];
    char pass[PASSLEN + 1];
+   char sasl_user[LOGINLEN + 1], sasl_pass[PASSLEN + 1], sasl_mechanism[16];
    char autojoin[AUTOJOIN_LEN + 1];
    int port;
    int priority;
