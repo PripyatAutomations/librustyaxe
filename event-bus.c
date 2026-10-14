@@ -51,6 +51,7 @@ typedef struct {
 } event_profile_row_t;
 
 static time_t event_profile_last_dump;
+static long long event_profile_started_ms;
 
 static int event_profile_compare(const void *a, const void *b) {
    const event_profile_row_t *left = a;
@@ -81,6 +82,7 @@ void event_profile_dump(void) {
       return;
    }
    event_profile_last_dump = current;
+   const time_t elapsed = (mono_ms() - event_profile_started_ms) / 1000;
 
    size_t capacity = event_store ? event_store->used : 0;
    event_profile_row_t *rows = capacity ? xcalloc(capacity, sizeof(*rows)) : NULL;
@@ -108,7 +110,9 @@ void event_profile_dump(void) {
    if (used > 1) {
       qsort(rows, used, sizeof(*rows), event_profile_compare);
    }
-   Log(LOG_INFO, "profile", "Event dispatch counts (cumulative):");
+   char *uptime = time_t2dhms(elapsed);
+   Log(LOG_INFO, "profile", "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown");
+   free(uptime);
    size_t limit = used < 32 ? used : 32;
 
    for (size_t i = 0 ; i < limit ; i++) {
@@ -390,6 +394,10 @@ void event_init(void) {
 
    if (!event_store) {
       event_store = dict_new();
+#ifdef USE_PROFILING
+      event_profile_started_ms = mono_ms();
+      event_profile_last_dump = 0;
+#endif
    }
 
    pthread_mutex_unlock(&event_lock);
