@@ -73,6 +73,7 @@ extern int handle_pgdn(int count, int key);
 extern int handle_pgup(int count, int key);
 extern void handle_enter_key(tui_window_t *win, int cursor_pos);
 extern void tui_update_input_line(void);
+extern bool (*tui_input_blocked_cb)(const char *input);
 extern bool (*tui_readline_cb)(const char *input);
 extern const char *history_prev(void);
 extern const char *history_next(void);
