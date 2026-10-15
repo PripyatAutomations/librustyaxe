@@ -913,6 +913,10 @@ void tui_update_input_line(void) {
             buf_pos += snprintf(&buf[buf_pos], sizeof(buf) - buf_pos, "{reverse}C{reverse-off}");
             break;
          }
+         case 0x04: {
+            buf_pos += snprintf(&buf[buf_pos], sizeof(buf) - buf_pos, "{reverse}H{reverse-off}");
+            break;
+         }
          case 0x0F: {
             // Reset
             buf_pos += snprintf(&buf[buf_pos], sizeof(buf) - buf_pos, "{reset}");

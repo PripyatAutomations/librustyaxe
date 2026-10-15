@@ -112,7 +112,7 @@ char *tui_colorize_string(const char *in) {
       return NULL;
    }
    // Convert IRC controls to terminal ANSI before handling TUI style tags.
-   char *irc = strpbrk(in, "\003\002\021\026\035\036\037\017") ? irc_to_tui_colors(in) : NULL;
+   char *irc = strpbrk(in, "\003\004\002\021\026\035\036\037\017") ? irc_to_tui_colors(in) : NULL;
    bool converted_irc = irc != NULL;
 
    if (irc) {
@@ -209,7 +209,11 @@ char *irc_to_tui_colors(const char *in) {
       "107", "40", "44", "42", "101", "48;5;94", "45", "48;5;208",
       "103", "102", "46", "106", "104", "105", "100", "47"
    };
-   char *out = malloc(strlen(in) * 32 + 64);
+   size_t len = strlen(in);
+   if (len > (SIZE_MAX - 64) / 32) {
+      return NULL;
+   }
+   char *out = malloc(len * 32 + 64);
 
    if (!out) {
       return NULL;
@@ -221,35 +225,25 @@ char *irc_to_tui_colors(const char *in) {
    while (*input_cursor) {
       unsigned char control = *input_cursor++;
 
-      if (control == 0x03) {
-         int foreground_index = -1, background_index = -1;
-
-         if (isdigit(*input_cursor)) {
-            foreground_index = *input_cursor++ - '0';
-
-            if (isdigit(*input_cursor)) {
-               foreground_index = foreground_index * 10 + (*input_cursor++ - '0');
-            }
-         }
-
-         if (*input_cursor == ',' && isdigit(input_cursor[1])) {
-            input_cursor++;
-            background_index = *input_cursor++ - '0';
-
-            if (isdigit(*input_cursor)) {
-               background_index = background_index * 10 + (*input_cursor++ - '0');
-            }
-         }
-
-         if (foreground_index < 0 && background_index < 0) {
+      if (control == 0x03 || control == 0x04) {
+         irc_color_t color;
+         input_cursor += irc_color_parse((const char *)input_cursor - 1, &color) - 1;
+         if (color.reset) {
             output_cursor += sprintf(output_cursor, "\033[39;49m");
          } else {
-            if (foreground_index >= 0 && foreground_index < 16) {
-               output_cursor += sprintf(output_cursor, "\033[%sm", foreground[foreground_index]);
-            }
-
-            if (background_index >= 0 && background_index < 16) {
-               output_cursor += sprintf(output_cursor, "\033[%sm", background[background_index]);
+            for (unsigned component = 0; component < (color.background ? 2u : 1u); component++) {
+               unsigned value = component ? color.bg : color.foreground;
+               unsigned prefix = component ? 48 : 38;
+               if (color.hex) {
+                  output_cursor += sprintf(output_cursor, "\033[%u;2;%u;%u;%um", prefix,
+                     value >> 16, (value >> 8) & 255, value & 255);
+               } else if (value == 99) {
+                  output_cursor += sprintf(output_cursor, "\033[%um", component ? 49 : 39);
+               } else if (value < 16) {
+                  output_cursor += sprintf(output_cursor, "\033[%sm", component ? background[value] : foreground[value]);
+               } else {
+                  output_cursor += sprintf(output_cursor, "\033[%u;5;%um", prefix, irc_color_ansi_extended(value));
+               }
             }
          }
       } else {
@@ -382,38 +376,12 @@ char *strip_mirc_formatting(const char *input) {
    while (*p) {
       unsigned char c = *p;
 
-      if (c == 0x02             // Bold
-         || c == 0x1D           // Italic
-         || c == 0x1F           // Underline
-         || c == 0x0F           // Reset
-         || c == 0x11           // Reverse (mIRC specific)
-         ) {
-         p++;                   // skip formatting
-      } else if (c == 0x03) {
-         // Color
+      if (c == 0x02 || c == 0x1d || c == 0x1f || c == 0x0f ||
+         c == 0x11 || c == 0x16 || c == 0x1e) {
          p++;
-
-         // skip up to two digits for foreground
-         if (isdigit((unsigned char)*p)) {
-            p++;
-         }
-
-         if (isdigit((unsigned char)*p)) {
-            p++;
-         }
-
-         // optionally skip comma and up to two digits for background
-         if (*p == ',') {
-            p++;
-
-            if (isdigit((unsigned char)*p)) {
-               p++;
-            }
-
-            if (isdigit((unsigned char)*p)) {
-               p++;
-            }
-         }
+      } else if (c == 0x03 || c == 0x04) {
+         irc_color_t color;
+         p += irc_color_parse(p, &color);
       } else {
          *q++ = *p++;
       }
