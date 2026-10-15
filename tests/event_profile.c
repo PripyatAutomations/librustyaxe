@@ -17,7 +17,10 @@ static time_t profile_time(time_t *result) {
    return test_now;
 }
 
-static long long profile_mono_ms(void) { return (long long)test_now * 1000; }
+static long long profile_mono_ms(void) {
+   return (long long)test_now * 1000;
+}
+
 #define mono_ms profile_mono_ms
 #define time profile_time
 #ifndef EVENT_BUS_SOURCE

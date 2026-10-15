@@ -216,8 +216,10 @@ void handle_enter_key(tui_window_t *win, int cursor) {
 
    if (tui_input_len > 0 && tui_input_blocked_cb && tui_input_blocked_cb(input_buf)) {
       tui_update_input_line();
+
       return;
    }
+
    if (tui_input_len > 0) {
       history_add(input_buf);
 
