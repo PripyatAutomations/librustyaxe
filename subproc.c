@@ -53,10 +53,10 @@ void subproc_close(subproc_t *process) {
    process->error_fd = -1;
 }
 
-static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
-   size_t close_count, bool group) {
-   if (!process || process->pid > 0 || !path || !*path || !argv || !argv[0] ||
-      (mapping_count && !mappings) || (close_count && !close_fds) || mapping_count > SIZE_MAX / sizeof(int)) {
+static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const
+   int *close_fds, size_t close_count, bool group) {
+   if (!process || process->pid > 0 || !path || !*path || !argv || !argv[0] || (mapping_count && !mappings) || (close_count && !close_fds)
+      || mapping_count > SIZE_MAX / sizeof(int)) {
       return false;
    }
    int first_fd = 3;
@@ -95,7 +95,10 @@ static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const c
    pid_t pid = duplicated == mapping_count ? fork() : -1;
 
    if (pid == 0) {
-      if (group && setpgid(0, 0) < 0) _exit(126);
+      if (group && setpgid(0, 0) < 0) {
+         _exit(126);
+      }
+
       for (size_t i = 0 ; i < mapping_count ; i++) {
          if (dup2(sources[i], mappings[i].target) < 0) {
             _exit(126);
@@ -135,7 +138,10 @@ static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const c
 
       return false;
    }
-   if (group) (void)setpgid(pid, pid); // Child also establishes the group before exec.
+
+   if (group) {
+      (void)setpgid(pid, pid);  // Child also establishes the group before exec.
+   }
    subproc_reset(process);
    process->pid = pid;
    process->running = true;

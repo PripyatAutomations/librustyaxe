@@ -162,7 +162,9 @@ int main(int argc, char **argv) {
    assert(p.pid == owned && subproc_write_line(&p, "still owned"));
    assert(subproc_read_line(&p, line, sizeof(line), 500));
    assert(subproc_stop(&p, SIGTERM));
-   const char *group_args[] = {program, "--echo", NULL};
+   const char *group_args[] = {
+      program, "--echo", NULL
+   };
    assert(subproc_spawn_group(&p, program, group_args, true));
    assert(getpgid(p.pid) == p.pid);
    assert(kill(-p.pid, SIGKILL) == 0);

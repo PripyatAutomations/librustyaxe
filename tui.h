@@ -47,6 +47,9 @@ extern void tui_render_unlock(void);
 // colorized string (freed by the TUI), or NULL to use the window's topic.
 extern void tui_set_topline_renderer(char *(*renderer) (tui_window_t *win));
 
+/* Optional application prompt title. Return a borrowed string valid for this draw, or NULL to retain the window title. Does not change window identity. */
+extern void tui_set_prompt_renderer(const char *(*renderer) (tui_window_t *win));
+
 // True when running in an SSH session (SSH_TTY set): clock shows HH:MM and
 // callers should only repaint on actual changes instead of once a second
 extern bool tui_is_over_ssh(void);

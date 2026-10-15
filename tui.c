@@ -40,6 +40,7 @@ static int term_rows = 24;      // default lines
 static int term_cols = 80;      // default width
 static char status_line[STATUS_LEN];
 static char *(*topline_renderer)(tui_window_t *win);
+static const char *(*prompt_renderer)(tui_window_t *win);
 static volatile sig_atomic_t tui_redraw_pending = 0;
 static bool tui_finalized = false;
 static bool tui_atexit_registered = false;
@@ -68,6 +69,12 @@ void tui_render_unlock(void) {
 void tui_set_topline_renderer(char *(*renderer) (tui_window_t *win)) {
    tui_render_lock();
    topline_renderer = renderer;
+   tui_render_unlock();
+}
+
+void tui_set_prompt_renderer(const char *(*renderer) (tui_window_t *win)) {
+   tui_render_lock();
+   prompt_renderer = renderer;
    tui_render_unlock();
 }
 
@@ -879,7 +886,12 @@ void tui_update_input_line(void) {
       tui_cursor_pos = tui_input_len;
    }
    int width = term_cols;
-   int prompt_len = visible_length(win->title) + 2;   // title + '>' + space
+   const char *prompt_title = prompt_renderer ? prompt_renderer(win) : NULL;
+
+   if (!prompt_title) {
+      prompt_title = win->title;
+   }
+   int prompt_len = visible_length(prompt_title) + 2; // title + '>' + space
 
    // --- build visible input buffer with placeholders ---
    char buf[2048];
@@ -970,7 +982,7 @@ void tui_update_input_line(void) {
 
    // --- prepare colored prompt ---
    char prompt[512];
-   snprintf(prompt, sizeof(prompt), "\00311%s\00310>\017 ", win->title);
+   snprintf(prompt, sizeof(prompt), "\00311%s\00310>\017 ", prompt_title);
    char *color_prompt = tui_colorize_string(prompt);
 
    // --- redraw line ---
