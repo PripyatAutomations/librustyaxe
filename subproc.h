@@ -25,6 +25,9 @@ struct subproc {
 /* argv includes argv[0] and a final NULL. No shell or PATH lookup is performed. Initialize with SUBPROC_INIT. Stop an existing child before reusing its handle.
  * With merge_stderr=false, the caller must drain error_fd separately. Success means pipes and child were created; exec failure is child status 127. */
 bool subproc_spawn(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr);
+/* As above, in a new process group whose id is process->pid. The caller may
+ * signal the group before reaping its leader; stop/reap otherwise stay per-child. */
+bool subproc_spawn_group(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr);
 typedef struct subproc_fd {
    int source;
    int target;

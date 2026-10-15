@@ -53,8 +53,8 @@ void subproc_close(subproc_t *process) {
    process->error_fd = -1;
 }
 
-bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
-   size_t close_count) {
+static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
+   size_t close_count, bool group) {
    if (!process || process->pid > 0 || !path || !*path || !argv || !argv[0] ||
       (mapping_count && !mappings) || (close_count && !close_fds) || mapping_count > SIZE_MAX / sizeof(int)) {
       return false;
@@ -95,6 +95,7 @@ bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const a
    pid_t pid = duplicated == mapping_count ? fork() : -1;
 
    if (pid == 0) {
+      if (group && setpgid(0, 0) < 0) _exit(126);
       for (size_t i = 0 ; i < mapping_count ; i++) {
          if (dup2(sources[i], mappings[i].target) < 0) {
             _exit(126);
@@ -134,6 +135,7 @@ bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const a
 
       return false;
    }
+   if (group) (void)setpgid(pid, pid); // Child also establishes the group before exec.
    subproc_reset(process);
    process->pid = pid;
    process->running = true;
@@ -141,7 +143,12 @@ bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const a
    return true;
 }
 
-bool subproc_spawn(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr) {
+bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
+   size_t close_count) {
+   return subproc_spawn_fds_impl(process, path, argv, mappings, mapping_count, close_fds, close_count, false);
+}
+
+static bool subproc_spawn_pipes(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr, bool group) {
 
    if (!process || process->pid > 0 || !path || !*path || !argv || !argv[0]) {
       return false;
@@ -208,7 +215,7 @@ bool subproc_spawn(subproc_t *process, const char *path, const char *const argv[
       }
    }
 
-   if (!prepared || !subproc_spawn_fds(process, path, argv, mappings, 3, close_fds, 6)) {
+   if (!prepared || !subproc_spawn_fds_impl(process, path, argv, mappings, 3, close_fds, 6, group)) {
       for (size_t i = 0 ; i < 6 ; i++) {
          if (close_fds[i] >= 0) {
             close(close_fds[i]);
@@ -250,6 +257,13 @@ bool subproc_spawn(subproc_t *process, const char *path, const char *const argv[
    }
 
    return true;
+}
+
+bool subproc_spawn(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr) {
+   return subproc_spawn_pipes(process, path, argv, merge_stderr, false);
+}
+bool subproc_spawn_group(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr) {
+   return subproc_spawn_pipes(process, path, argv, merge_stderr, true);
 }
 
 bool subproc_read_line(subproc_t *process, char *line, size_t length, int timeout_ms) {
