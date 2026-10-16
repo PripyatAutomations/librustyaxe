@@ -82,6 +82,22 @@ int main(void) {
    }
 
    report("parse/free 20 fields", start, 10000);
+   start = mono_us();
+   for (unsigned i = 0; i < 10000; i++) {
+      dict *copy = dict_clone(d);
+      assert(copy);
+      dict_free(copy);
+   }
+   report("clone/free 20 fields", start, 10000);
+   start = mono_us();
+   for (unsigned i = 0; i < 10000; i++) {
+      char *encoded = dict2json(d);
+      dict *copy = encoded ? json2dict(encoded) : NULL;
+      assert(copy);
+      free(encoded);
+      dict_free(copy);
+   }
+   report("JSON roundtrip/free", start, 10000);
    printf("Dictionary: %zu fields, %zu JSON bytes; checksum=%u\n", KEY_COUNT, strlen(json), checksum);
    free(json);
    dict_free(d);

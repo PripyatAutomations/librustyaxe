@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <librustyaxe/dict.h>
 
 static int failures = 0;
@@ -133,7 +134,37 @@ static void test_key_alignment(void) {
    dict_free(d);
 }
 
+static void test_clone(void) {
+   CHECK(dict_clone(NULL) == NULL);
+   dict *source = dict_new();
+   dict *empty = dict_clone(source);
+   CHECK(empty && empty->used == 0);
+   dict_free(empty);
+   static int target = 17;
+   CHECK(!dict_add(source, "text", "independent string"));
+   CHECK(!dict_add_ullong(source, "large", ULLONG_MAX));
+   CHECK(!dict_add_bool(source, "enabled", true));
+   CHECK(!dict_add_null(source, "nothing"));
+   CHECK(!dict_add_char(source, "character", 'x'));
+   CHECK(!dict_add_ptr(source, "borrowed", &target));
+   dict *copy = dict_clone(source);
+   CHECK(copy && copy->used == source->used);
+   CHECK(dict_get(copy, "text", NULL) != dict_get(source, "text", NULL));
+   CHECK(dict_get_type(copy, "large") == VAL_ULLONG);
+   CHECK(dict_get_ullong(copy, "large", 0) == ULLONG_MAX);
+   CHECK(dict_get_type(copy, "enabled") == VAL_BOOL && dict_get_bool(copy, "enabled", false));
+   CHECK(dict_get_type(copy, "nothing") == VAL_NULL);
+   CHECK(dict_get_type(copy, "character") == VAL_CHAR && dict_get_char(copy, "character", 0) == 'x');
+   CHECK(dict_get_ptr(copy, "borrowed", NULL) == &target);
+   CHECK(!dict_add(source, "text", "changed"));
+   dict_free(source);
+   CHECK(!strcmp(dict_get(copy, "text", ""), "independent string"));
+   dict_free(copy);
+   CHECK(target == 17);
+}
+
 int main(void) {
+   test_clone();
    test_key_alignment();
    test_str_basic();
    test_typed();

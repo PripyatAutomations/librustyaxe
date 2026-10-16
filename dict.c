@@ -1714,6 +1714,16 @@ int dict_merge(dict *dst, dict *src) {
    return 0;
 }
 
+dict *dict_clone(dict *source) {
+   if (!source) return NULL;
+   dict *copy = dict_new();
+   if (copy && dict_merge(copy, source) != 0) {
+      dict_free(copy);
+      return NULL;
+   }
+   return copy;
+}
+
 dict *dict_merge_new(dict *a, dict *b) {
    dict *merged;
 

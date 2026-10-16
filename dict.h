@@ -230,6 +230,10 @@ extern int dict_merge(dict *dst, dict *src);
 // Merge two dicts into a new one, with values from B being preferred. Be sure
 // to dict_free() the result!
 extern dict *dict_merge_new(dict *a, dict *b);
+/* Independent keys/strings and exact scalar types. Pointer entries remain
+ * borrowed aliases: neither dictionary owns or clones their target objects.
+ * NULL source/allocation failure returns NULL. Free the result with dict_free. */
+extern dict *dict_clone(dict *source);
 
 // XXX: Compare old and new configuration, yielding a dict with ONLY changes
 extern dict *dict_diff(dict *a, dict *b);
