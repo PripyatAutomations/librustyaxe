@@ -633,7 +633,9 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       // A leading '\' escapes the comment characters (#, ;, //) so e.g.
       // CSS selectors like '#chat-view' can be used in config sections.
       // We unescape in place here, before any comment processing.
+      bool escaped_comment = false;
       if (*skip == '\\' && (skip[1] == '#' || skip[1] == ';' || (skip[1] == '/' && skip[2] == '/') || skip[1] == '\\')) {
+         escaped_comment = true;
          memmove(skip, skip + 1, strlen(skip)); // shift left incl. NUL
 
          // Unescape any further occurrences in the line (e.g. 'a \# b \# c')
@@ -651,11 +653,11 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          in_comment = false;
          continue;
       } else if (*skip == '/' && *(skip + 1) == '*') {
-         in_comment = true;
+         in_comment = strstr(skip + 2, "*/") == NULL;
          continue;
       } else if (in_comment) {
          continue;
-      } else if ((*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';') {
+      } else if (!escaped_comment && ((*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';')) {
          continue;
       } else if (*skip == '[' && *end == ']') {
          size_t section_len = sizeof(this_section);
