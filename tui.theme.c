@@ -19,6 +19,7 @@
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <librustyaxe/core.h>
+#include <librustyaxe/tui.internal.h>
 #include <librrprotocol/rrprotocol.h>
 
 bool cfg_tui_colors = true;
@@ -330,6 +331,7 @@ void tui_vprint(tui_window_t *win, const char *fmt, va_list ap) {
       free(win->buffer[win->log_head]);
    }
 
+   tui_scrollback_appended(win, line);
    win->buffer[win->log_head] = line;
    win->log_head = (win->log_head + 1) % LOG_LINES;
 

@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <librustyaxe/core.h>
+#include <librustyaxe/tui.internal.h>
 #include <librrprotocol/rrprotocol.h>
 
 extern void tui_keys_init(void); // tui.keys.c
@@ -180,6 +181,13 @@ static int tui_line_rows(const char *s, int width) {
    }
    return rows;
 }
+
+/* Preserve the visible rows while reading older scrollback. Ring eviction is
+ * clamped by the normal renderer when the oldest visible row has expired. */
+void tui_scrollback_appended(tui_window_t *window, const char *line) {
+   if (window->scroll_offset > 0) window->scroll_offset += tui_line_rows(line, tui_cols());
+}
+
 
 // Read the terminal size and update our size to match
 static void update_term_size(void) {
