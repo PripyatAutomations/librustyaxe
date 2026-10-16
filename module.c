@@ -188,6 +188,12 @@ bool rr_unload_module(const char *name) {
    }
    rr_module_t *mp = *link;
 
+   bool (*can_unload)(void) = dlsym(mp->dlptr, "rr_module_can_unload");
+   if (can_unload && !can_unload()) {
+      Log(LOG_WARN, "module", "Module %s is still in use; refusing to unload", name);
+      return true;
+   }
+
    // Give the module a chance to unregister events, cancel timers, and
    // invalidate pointers it handed out before its code is unmapped.
    void (*mod_shutdown)(void) = dlsym(mp->dlptr, "rr_module_shutdown");

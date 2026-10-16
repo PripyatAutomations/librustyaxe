@@ -20,6 +20,8 @@ typedef struct rr_module_event {
  * Optional per-module lifecycle entry points, resolved by dlsym() when present:
  *
  *   bool rr_module_init(void)          called once after dlopen(); return false on success, true on failure. Returning true unloads the module.
+ *   bool rr_module_can_unload(void)  optional guard; false refuses unload while host-owned instances still use module callbacks.
+ *
  *   void rr_module_shutdown(void)      called before dlclose(); the module must unregister every event token it created and invalidate any pointer it handed to
  * the host.
  *
