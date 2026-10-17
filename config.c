@@ -404,16 +404,11 @@ static void cfg_expand_format_escapes(char *value) {
 static dict *cfg_load_depth(const char *path, unsigned depth);
 
 static bool cfg_merge_dict(dict *dst, dict *src) {
-   int rank = 0;
-   const char *key = NULL;
-   char *val = NULL;
-
-   while ((rank = dict_enumerate(src, rank, &key, &val)) >= 0) {
-      if (dict_add(dst, key, val) != 0) {
-         Log(LOG_WARN, "cfg", "Unable to merge included key |%s|", key);
-
-         return true;
-      }
+   // dict_merge copies each entry with its original value type, rather
+   // than converting non-string values to NULL through dict_enumerate().
+   if (dict_merge(dst, src) != 0) {
+      Log(LOG_WARN, "cfg", "Unable to merge included configuration dictionary");
+      return true;
    }
    return false;
 }
@@ -479,94 +474,6 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       }
 
       if ((end - skip) < 0) {
-         continue;
-      }
-      // Includes are processed inline. Values from the included file are
-      // copied into the current dictionary, so entries later in this file
-      // retain normal last-value-wins behavior. A leading ! makes an include
-      // optional; a missing mandatory include is a fatal configuration error.
-      bool optional_include = (*skip == '!' && strncasecmp(skip + 1, "include", 7) == 0);
-      bool mandatory_include = (*skip == '.' && strncasecmp(skip + 1, "include", 7) == 0);
-
-      if (!in_comment && (optional_include || mandatory_include) && (skip[8] == '\0' || skip[8] == ' ' || skip[8] == '\t' || skip[8] == '=')) {
-         bool optional = optional_include;
-         char *include_path = skip + 8;
-         while (*include_path == ' ' || *include_path == '\t' || *include_path == '=') {
-            include_path++;
-         }
-
-         if (*include_path == '"' || *include_path == '\'') {
-            char quote = *include_path++;
-            char *close = strrchr(include_path, quote);
-
-            if (close) {
-               *close = '\0';
-            }
-         }
-
-         if (!*include_path) {
-            if (optional) {
-               Log(LOG_INFO, "cfg", "Empty optional !include at %s:%d", path, line);
-            } else {
-               Log(LOG_CRIT, "cfg", "Empty mandatory .include at %s:%d", path, line);
-               exit(EXIT_FAILURE);
-            }
-            errors++;
-            continue;
-         }
-
-         if (depth >= 4) {
-            if (optional) {
-               Log(LOG_INFO, "cfg", "Maximum !include depth reached at %s:%d (limit 4)", path, line);
-            } else {
-               Log(LOG_CRIT, "cfg", "Maximum .include depth reached at %s:%d (limit 4)", path, line);
-               exit(EXIT_FAILURE);
-            }
-            errors++;
-            continue;
-         }
-
-         char resolved[PATH_MAX];
-
-         if (include_path[0] == '/') {
-            snprintf(resolved, sizeof(resolved), "%s", include_path);
-         } else {
-            char parent[PATH_MAX];
-            snprintf(parent, sizeof(parent), "%s", path);
-            char *dir = dirname(parent);
-            snprintf(resolved, sizeof(resolved), "%s/%s", dir, include_path);
-         }
-
-         if (!file_exists(resolved)) {
-            if (optional) {
-               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
-               continue;
-            }
-            Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
-            exit(EXIT_FAILURE);
-         }
-         dict *included = cfg_load_depth(resolved, depth + 1);
-
-         if (!included) {
-            if (optional) {
-               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
-            } else {
-               Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
-               exit(EXIT_FAILURE);
-            }
-            errors++;
-         } else {
-            if (cfg_merge_dict(newcfg, included)) {
-               if (!optional) {
-                  Log(LOG_CRIT, "cfg", "Unable to merge mandatory include %s", resolved);
-                  dict_free(included);
-                  exit(EXIT_FAILURE);
-               }
-               Log(LOG_INFO, "cfg", "Unable to merge optional include %s", resolved);
-               errors++;
-            }
-            dict_free(included);
-         }
          continue;
       }
       // Handle line continuations
@@ -649,17 +556,138 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          end = buf + strlen(buf) - 1;
       }
 
-      if (*skip == '*' && *(skip + 1) == '/') {
-         in_comment = false;
+      // Remove C-style comments, including inline and multiline blocks.
+      // Keep quoted strings intact, and retain the existing leading #, ;,
+      // and // comment conventions.
+      char *src = skip, *dst = skip;
+      char quote = 0;
+      while (*src) {
+         if (in_comment) {
+            if (src[0] == '*' && src[1] == '/') {
+               in_comment = false;
+               src += 2;
+            } else {
+               src++;
+            }
+            continue;
+         }
+         if (quote) {
+            if (*src == '\\' && src[1]) {
+               *dst++ = *src++;
+               *dst++ = *src++;
+               continue;
+            }
+            if (*src == quote) quote = 0;
+            *dst++ = *src++;
+            continue;
+         }
+         if (*src == '"' || *src == '\'') {
+            quote = *src;
+            *dst++ = *src++;
+            continue;
+         }
+         if (src[0] == '/' && src[1] == '*') {
+            in_comment = true;
+            src += 2;
+            continue;
+         }
+         *dst++ = *src++;
+      }
+      *dst = '\0';
+      while (dst > skip && isspace((unsigned char)dst[-1])) *--dst = '\0';
+      end = dst > skip ? dst - 1 : skip;
+      if (!*skip) continue;
+      if (!escaped_comment && ((*skip == '/' && skip[1] == '/') || *skip == '#' || *skip == ';')) continue;
+
+      // Includes are processed inline. Values from the included file are
+      // copied into the current dictionary, so entries later in this file
+      // retain normal last-value-wins behavior. A leading ! makes an include
+      // optional; a missing mandatory include is a fatal configuration error.
+      bool optional_include = (*skip == '!' && strncasecmp(skip + 1, "include", 7) == 0);
+      bool mandatory_include = (*skip == '.' && strncasecmp(skip + 1, "include", 7) == 0);
+
+      if ((optional_include || mandatory_include) && (skip[8] == '\0' || skip[8] == ' ' || skip[8] == '\t' || skip[8] == '=')) {
+         bool optional = optional_include;
+         char *include_path = skip + 8;
+         while (*include_path == ' ' || *include_path == '\t' || *include_path == '=') {
+            include_path++;
+         }
+
+         if (*include_path == '"' || *include_path == '\'') {
+            char quote = *include_path++;
+            char *close = strrchr(include_path, quote);
+
+            if (close) {
+               *close = '\0';
+            }
+         }
+
+         if (!*include_path) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Empty optional !include at %s:%d", path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Empty mandatory .include at %s:%d", path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+            continue;
+         }
+
+         if (depth >= 4) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Maximum !include depth reached at %s:%d (limit 4)", path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Maximum .include depth reached at %s:%d (limit 4)", path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+            continue;
+         }
+
+         char resolved[PATH_MAX];
+
+         if (include_path[0] == '/') {
+            snprintf(resolved, sizeof(resolved), "%s", include_path);
+         } else {
+            char parent[PATH_MAX];
+            snprintf(parent, sizeof(parent), "%s", path);
+            char *dir = dirname(parent);
+            snprintf(resolved, sizeof(resolved), "%s/%s", dir, include_path);
+         }
+
+         if (!file_exists(resolved)) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
+               continue;
+            }
+            Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
+            exit(EXIT_FAILURE);
+         }
+         dict *included = cfg_load_depth(resolved, depth + 1);
+
+         if (!included) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+         } else {
+            if (cfg_merge_dict(newcfg, included)) {
+               if (!optional) {
+                  Log(LOG_CRIT, "cfg", "Unable to merge mandatory include %s", resolved);
+                  dict_free(included);
+                  exit(EXIT_FAILURE);
+               }
+               Log(LOG_INFO, "cfg", "Unable to merge optional include %s", resolved);
+               errors++;
+            }
+            dict_free(included);
+         }
          continue;
-      } else if (*skip == '/' && *(skip + 1) == '*') {
-         in_comment = strstr(skip + 2, "*/") == NULL;
-         continue;
-      } else if (in_comment) {
-         continue;
-      } else if (!escaped_comment && ((*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';')) {
-         continue;
-      } else if (*skip == '[' && *end == ']') {
+      }
+      if (*skip == '[' && *end == ']') {
          size_t section_len = sizeof(this_section);
          size_t skip_len = strlen(skip);
          // Copy only the text between the opening and closing brackets.
@@ -682,7 +710,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          continue;
       }
 
-      if (strncasecmp(this_section, "general", 7) == 0) {
+      if (strcasecmp(this_section, "general") == 0) {
          key = NULL;
          val = NULL;
          char *eq = strchr(skip, '=');
@@ -711,7 +739,10 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          if (val && cfg_formatting_key(key)) {
             cfg_expand_format_escapes(val);
          }
-         dict_add(newcfg, key, val);
+         if (dict_add(newcfg, key, val) != 0) {
+            Log(LOG_CRIT, "cfg", "Failed to store key %s at %s:%d", key, path, line);
+            errors++;
+         }
       } else if (strncasecmp(this_section, "server:", 7) == 0) {
          key = NULL;
          val = NULL;
@@ -1299,88 +1330,65 @@ bool cfg_save_overrides(dict *d, const char *path) {
 }
 
 /* PARITY: rustyrig-www/js/webui.config.js */
-bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
-   if (!newcfg) {
-      Log(LOG_CRIT, "cfg", "cfg_apply_new: newcfg is NULL, ignoring");
-
-      return false;
-   }
-
+/* Presence must be checked independently of dict_get(): NULL is a valid value. */
+static bool cfg_dict_has_key(dict *d, const char *wanted) {
    int rank = 0;
    const char *key;
    dict_value_t val;
    val_type_t type;
-   int changed = 0, added = 0, removed = 0;
 
-   /* Full swap into the live cfg dict: add/update everything in newcfg, remove everything in oldcfg that's gone from newcfg. */
+   while ((rank = dict_enumerate_typed(d, rank, &key, &val, &type)) >= 0) {
+      if (strcmp(key, wanted) == 0) return true;
+   }
+   return false;
+}
 
-   // Add/update every key from the new config in the live config
-   while ((rank = dict_enumerate_typed(newcfg, rank, &key, &val, &type)) >= 0) {
-      const char *oldval = NULL;
-      const char *newval = NULL;
+/* PARITY: rustyrig-www/js/webui.config.js */
+bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
+   if (!cfg || !newcfg || newcfg == cfg) {
+      Log(LOG_CRIT, "cfg", "cfg_apply_new: invalid live/new configuration");
+      return false;
+   }
 
-      if (oldcfg) {
-         oldval = dict_get(oldcfg, key, NULL);
-      }
+   /* Capture changes before modifying the live dictionary. dict_diff()
+    * compares native types and values, including NULL and numeric values. */
+   dict *changes = dict_diff(cfg, newcfg);
+   if (!changes) return false;
 
-      if (type == VAL_STR) {
-         newval = val.s;
-      }
+   /* Prepare a complete replacement first, so an allocation failure cannot
+    * leave the live dictionary partially updated. */
+   dict *staged = dict_clone(newcfg);
+   if (!staged) {
+      dict_free(changes);
+      return false;
+   }
 
-      if (oldcfg && oldval && newval && strcmp(oldval, newval) == 0) {
-         continue;              // Unchanged
-      }
-      // Replace the value in the live config
-      dict_add(cfg, key, newval);
+   /* Preserve the stable address of cfg for modules holding its pointer. */
+   dict old_contents = *cfg;
+   *cfg = *staged;
+   *staged = old_contents;
 
-      if (oldcfg && oldval) {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' changed", key);
-         changed++;
-      } else {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' added", key);
-         added++;
-      }
+   int added = 0, changed = 0, removed = 0;
+   int rank = 0;
+   const char *key;
+   dict_value_t value;
+   val_type_t type;
 
-      // Run any reload callbacks registered for this key
+   while ((rank = dict_enumerate_typed(changes, rank, &key, &value, &type)) >= 0) {
+      bool exists_now = cfg_dict_has_key(cfg, key);
+      bool existed = cfg_dict_has_key(staged, key);
+      if (!exists_now) removed++;
+      else if (existed) changed++;
+      else added++;
       reload_event_run(key);
    }
-   // Remove keys from the live config that no longer exist in the new config
-   rank = 0;
-   const char *rkey;
-   char *rval;
-
-   while ((rank = dict_enumerate(cfg, rank, &rkey, &rval)) >= 0) {
-      if (!dict_get(newcfg, rkey, NULL)) {
-         /* dict_del() frees the stored key, so we must work on a copy:
-          *  rkey would otherwise dangle for the Log/reload_event_run calls below (and any callbacks they trigger). */
-         char *rkcopy = strdup(rkey);
-
-         if (!rkcopy) {
-            Log(LOG_CRIT, "cfg", "cfg_apply_new: strdup failed removing '%s'", rkey);
-            rank = 0;
-            continue;
-         }
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' removed", rkcopy);
-         dict_del(cfg, rkcopy);
-         removed++;
-         reload_event_run(rkcopy);
-         free(rkcopy);
-         rank = 0;              // Restart enumeration, the dict may have been modified
-      }
-   }
-   /* Notify modules once after the complete new configuration is live.  A reload event registered with a NULL key is intentionally reserved for this phase, so
-    * cached runtime settings can be refreshed atomically. */
    reload_event_run(NULL);
 
    Log(LOG_INFO, "cfg", "cfg_apply_new: %d added, %d changed, %d removed", added, changed, removed);
-
-   // Free the old config dict if it isn't the live one
-   if (oldcfg && oldcfg != cfg) {
-      dict_free(oldcfg);
-   }
-   // Free the temporary new dict -- its values were copied into cfg
+   dict_free(changes);
+   dict_free(staged);
+   if (oldcfg && oldcfg != cfg && oldcfg != newcfg) dict_free(oldcfg);
    dict_free(newcfg);
-
    return true;
 }
 
