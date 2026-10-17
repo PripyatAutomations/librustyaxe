@@ -137,6 +137,8 @@ extern unsigned int cfg_get_uint(const char *key, unsigned int def);
 
 ///////////
 // Register a section parser; true means registered, false means invalid input.
+// Section callbacks return true when the line was handled successfully and
+// false on a malformed entry or failure. Multiple matching callbacks must succeed.
 extern bool cfg_add_callback(const char *path, const char *section, bool (*cb) ());
 
 /////////////
