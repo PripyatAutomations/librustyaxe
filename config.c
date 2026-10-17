@@ -341,6 +341,8 @@ dict *cfg_load(const char *path) {
       while (*skip == ' ' || *skip == '\t') {
          skip++;
       }
+      if (!*skip) continue;
+
       // trim trailing newlines and whitespace
       end = buf + strlen(buf);
       if (end > buf) end--;
@@ -348,7 +350,7 @@ dict *cfg_load(const char *path) {
          *end-- = '\0';
       }
 
-      if ( (end - skip) < 0 ) {
+      if (end < skip) {
          continue;
       }
       // Handle line continuations
