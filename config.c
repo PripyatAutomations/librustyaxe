@@ -1367,7 +1367,6 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    dict old_contents = *cfg;
    *cfg = *staged;
    *staged = old_contents;
-   dict_free(staged);
 
    int added = 0, changed = 0, removed = 0;
    int rank = 0;
@@ -1377,16 +1376,17 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
 
    while ((rank = dict_enumerate_typed(changes, rank, &key, &value, &type)) >= 0) {
       bool exists_now = cfg_dict_has_key(cfg, key);
-      bool existed = oldcfg && oldcfg != cfg && cfg_dict_has_key(oldcfg, key);
+      bool existed = cfg_dict_has_key(staged, key);
       if (!exists_now) removed++;
       else if (existed) changed++;
-      else changed++; /* Old live keys were replaced before callback phase. */
+      else added++;
       reload_event_run(key);
    }
    reload_event_run(NULL);
 
    Log(LOG_INFO, "cfg", "cfg_apply_new: %d added, %d changed, %d removed", added, changed, removed);
    dict_free(changes);
+   dict_free(staged);
    if (oldcfg && oldcfg != cfg && oldcfg != newcfg) dict_free(oldcfg);
    dict_free(newcfg);
    return true;
