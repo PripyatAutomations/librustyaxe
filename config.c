@@ -242,7 +242,7 @@ bool cfg_detect_and_load(const char *configs[], int num_configs) {
    return true;
 }
 
-bool cfg_add_callback(const char *path, const char *section, bool (*cb) ()) {
+bool cfg_add_callback(const char *path, const char *section, cfg_section_cb_t cb) {
    if (!section || !cb) {
       return false;
    }
