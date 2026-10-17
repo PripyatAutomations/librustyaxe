@@ -3,7 +3,7 @@
 
 /* Strip C-style block comments without interpreting delimiters inside quotes.
  * Keep text on both sides of an inline comment; a separating space prevents
- * "foo/* note */bar" from silently turning into "foobar".
+ * adjacent tokens from silently turning into one token.
  * The state is carried between physical lines, including continuations. */
 static void cfg_strip_block_comments(char *line, bool *in_comment) {
    char *readp = line, *writep = line;
