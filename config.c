@@ -1330,88 +1330,65 @@ bool cfg_save_overrides(dict *d, const char *path) {
 }
 
 /* PARITY: rustyrig-www/js/webui.config.js */
-bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
-   if (!newcfg) {
-      Log(LOG_CRIT, "cfg", "cfg_apply_new: newcfg is NULL, ignoring");
-
-      return false;
-   }
-
+/* Presence must be checked independently of dict_get(): NULL is a valid value. */
+static bool cfg_dict_has_key(dict *d, const char *wanted) {
    int rank = 0;
    const char *key;
    dict_value_t val;
    val_type_t type;
-   int changed = 0, added = 0, removed = 0;
 
-   /* Full swap into the live cfg dict: add/update everything in newcfg, remove everything in oldcfg that's gone from newcfg. */
+   while ((rank = dict_enumerate_typed(d, rank, &key, &val, &type)) >= 0) {
+      if (strcmp(key, wanted) == 0) return true;
+   }
+   return false;
+}
 
-   // Add/update every key from the new config in the live config
-   while ((rank = dict_enumerate_typed(newcfg, rank, &key, &val, &type)) >= 0) {
-      const char *oldval = NULL;
-      const char *newval = NULL;
+/* PARITY: rustyrig-www/js/webui.config.js */
+bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
+   if (!cfg || !newcfg || newcfg == cfg) {
+      Log(LOG_CRIT, "cfg", "cfg_apply_new: invalid live/new configuration");
+      return false;
+   }
 
-      if (oldcfg) {
-         oldval = dict_get(oldcfg, key, NULL);
-      }
+   /* Capture changes before modifying the live dictionary. dict_diff()
+    * compares native types and values, including NULL and numeric values. */
+   dict *changes = dict_diff(cfg, newcfg);
+   if (!changes) return false;
 
-      if (type == VAL_STR) {
-         newval = val.s;
-      }
+   /* Prepare a complete replacement first, so an allocation failure cannot
+    * leave the live dictionary partially updated. */
+   dict *staged = dict_clone(newcfg);
+   if (!staged) {
+      dict_free(changes);
+      return false;
+   }
 
-      if (oldcfg && oldval && newval && strcmp(oldval, newval) == 0) {
-         continue;              // Unchanged
-      }
-      // Replace the value in the live config
-      dict_add(cfg, key, newval);
+   /* Preserve the stable address of cfg for modules holding its pointer. */
+   dict old_contents = *cfg;
+   *cfg = *staged;
+   *staged = old_contents;
+   dict_free(staged);
 
-      if (oldcfg && oldval) {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' changed", key);
-         changed++;
-      } else {
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' added", key);
-         added++;
-      }
+   int added = 0, changed = 0, removed = 0;
+   int rank = 0;
+   const char *key;
+   dict_value_t value;
+   val_type_t type;
 
-      // Run any reload callbacks registered for this key
+   while ((rank = dict_enumerate_typed(changes, rank, &key, &value, &type)) >= 0) {
+      bool exists_now = cfg_dict_has_key(cfg, key);
+      bool existed = oldcfg && oldcfg != cfg && cfg_dict_has_key(oldcfg, key);
+      if (!exists_now) removed++;
+      else if (existed) changed++;
+      else changed++; /* Old live keys were replaced before callback phase. */
       reload_event_run(key);
    }
-   // Remove keys from the live config that no longer exist in the new config
-   rank = 0;
-   const char *rkey;
-   char *rval;
-
-   while ((rank = dict_enumerate(cfg, rank, &rkey, &rval)) >= 0) {
-      if (!dict_get(newcfg, rkey, NULL)) {
-         /* dict_del() frees the stored key, so we must work on a copy:
-          *  rkey would otherwise dangle for the Log/reload_event_run calls below (and any callbacks they trigger). */
-         char *rkcopy = strdup(rkey);
-
-         if (!rkcopy) {
-            Log(LOG_CRIT, "cfg", "cfg_apply_new: strdup failed removing '%s'", rkey);
-            rank = 0;
-            continue;
-         }
-         Log(LOG_DEBUG, "cfg", "cfg_apply_new: '%s' removed", rkcopy);
-         dict_del(cfg, rkcopy);
-         removed++;
-         reload_event_run(rkcopy);
-         free(rkcopy);
-         rank = 0;              // Restart enumeration, the dict may have been modified
-      }
-   }
-   /* Notify modules once after the complete new configuration is live.  A reload event registered with a NULL key is intentionally reserved for this phase, so
-    * cached runtime settings can be refreshed atomically. */
    reload_event_run(NULL);
 
    Log(LOG_INFO, "cfg", "cfg_apply_new: %d added, %d changed, %d removed", added, changed, removed);
-
-   // Free the old config dict if it isn't the live one
-   if (oldcfg && oldcfg != cfg) {
-      dict_free(oldcfg);
-   }
-   // Free the temporary new dict -- its values were copied into cfg
+   dict_free(changes);
+   if (oldcfg && oldcfg != cfg && oldcfg != newcfg) dict_free(oldcfg);
    dict_free(newcfg);
-
    return true;
 }
 
