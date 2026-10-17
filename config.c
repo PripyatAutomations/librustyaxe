@@ -404,16 +404,11 @@ static void cfg_expand_format_escapes(char *value) {
 static dict *cfg_load_depth(const char *path, unsigned depth);
 
 static bool cfg_merge_dict(dict *dst, dict *src) {
-   int rank = 0;
-   const char *key = NULL;
-   char *val = NULL;
-
-   while ((rank = dict_enumerate(src, rank, &key, &val)) >= 0) {
-      if (dict_add(dst, key, val) != 0) {
-         Log(LOG_WARN, "cfg", "Unable to merge included key |%s|", key);
-
-         return true;
-      }
+   // dict_merge copies each entry with its original value type, rather
+   // than converting non-string values to NULL through dict_enumerate().
+   if (dict_merge(dst, src) != 0) {
+      Log(LOG_WARN, "cfg", "Unable to merge included configuration dictionary");
+      return true;
    }
    return false;
 }
