@@ -294,34 +294,21 @@ bool cfg_add_callback(const char *path, const char *section, bool (*cb) ()) {
    return true;
 }
 
+/* Section callbacks return true on success, false on failure.
+ * Return false for an unhandled section or failed callback. */
 static bool cfg_dispatch_callback(const char *path, int line, const char *section, const char *buf) {
-   if (!path || !section || !buf) {
-      return true;
-   }
-   cfg_cb_list_t *cbp = cfg_callbacks, *prev = NULL;
-
-   if (!cbp) {
-      return false;
-   }
-   while (cbp) {
-      if (cbp->section && fnmatch(cbp->section, section, 0) == 0) {
-         if (!cbp->path || (fnmatch(cbp->path, path, 0) == 0)) {
-            Log(LOG_CRAZY, "cfg", "cfg_dispatch_callback: Found callback at <%p> for section %s (%s) in path %s (%s)", cbp->callback, section, cbp->section,
-               path, cbp->path);
-
-            if (cbp->callback) {
-               cbp->callback(path, line, section, buf);
-            } else {
-               Log(LOG_CRIT, "cfg", "cfg_dispatch_callback: The callback at <%p> for section |%s| path |%s| doesn't have a valid function attached", cbp,
-                  section, path);
-            }
-         }
+   if (!path || !section || !buf) return false;
+   bool matched = false;
+   for (cfg_cb_list_t *cbp = cfg_callbacks; cbp; cbp = cbp->next) {
+      if (!cbp->section || fnmatch(cbp->section, section, 0) != 0 ||
+          (cbp->path && fnmatch(cbp->path, path, 0) != 0)) continue;
+      matched = true;
+      if (!cbp->callback || !cbp->callback(path, line, section, buf)) {
+         Log(LOG_CRIT, "cfg", "Section callback failed for [%s] at %s:%d", section, path, line);
+         return false;
       }
-      prev = cbp;
-      cbp = cbp->next;
-      Log(LOG_CRAZY, "cfg", "prev;<%p> cbp:<%p> list:<%p>", prev, cbp, cfg_callbacks);
    }
-   return false;
+   return matched;
 }
 
 static dict *cfg_load_depth(const char *path, unsigned depth);
@@ -814,8 +801,8 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          } else {
             Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
-      } else if (cfg_dispatch_callback(path, line, this_section, buf)) {
-         Log(LOG_CRIT, "cfg", "Unknown configuration section |%s| parsing |%s| at %s:%d", this_section, buf, path, line);
+      } else if (!cfg_dispatch_callback(path, line, this_section, buf)) {
+         Log(LOG_WARN, "cfg", "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
          errors++;
       }
    }
