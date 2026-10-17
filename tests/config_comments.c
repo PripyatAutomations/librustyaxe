@@ -16,8 +16,8 @@ int main(void) {
    bool block = false;
    check("a=one /* explanation */ two", &block, "a=one  two", false);
    check("[general] /* trailing section note */", &block, "[general] ", false);
-   check("/* first */ a=1 /* second */", &block,  " a=1 " ", false);
-   check("a=one /* spanning", &block,  "a=one " ", true);
+   check("/* first */ a=1 /* second */", &block,  " a=1 ", false);
+   check("a=one /* spanning", &block,  "a=one ", true);
    check("multiple /* nested syntax is just text", &block, "", true);
    check("continued */ b=2", &block, " b=2", false);
    check("url=\"http://host/*literal*/\"", &block,
