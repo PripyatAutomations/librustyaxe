@@ -802,7 +802,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
       } else if (!cfg_dispatch_callback(path, line, this_section, buf)) {
-         Log(LOG_WARN, "cfg", "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
+         Log(LOG_DEBUG, "cfg", "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
          errors++;
       }
    }
@@ -810,7 +810,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    if (errors > 0) {
       Log(LOG_INFO, "cfg", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
    } else {
-      Log(LOG_INFO, "cfg", "cfg loaded %d lines from %s with no errors", line, path);
+      Log(LOG_DEBUG, "cfg", "cfg loaded %d lines from %s with no errors", line, path);
    }
 
    if (fp) {
