@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
    assert(host);
 
    for (unsigned i = 0 ; i < 3 ; i++) {
-      assert(!rr_load_module("module_log_fixture"));
+      assert(rr_load_module("module_log_fixture"));
       rr_module_t *module = rr_find_loaded_module("module_log_fixture");
       assert(module);
       unsigned (*calls)(void) = dlsym(module->dlptr, "fixture_calls");
@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
       Log(LOG_INFO, "test", "loaded callback is callable");
       assert(calls() == before + 1);
       // Use the module-owned name just as rrclient_cleanup() does.
-      assert(!rr_unload_module(module->mod_name));
+      assert(rr_unload_module(module->mod_name));
       unsigned host_before = host_calls;
       Log(LOG_INFO, "test", "logging after dlclose remains safe");
       assert(host_calls == host_before + 1);
