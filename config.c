@@ -1456,7 +1456,7 @@ void cfg_fini(void) {
 // This facility allows us to notify modules when a configuration key is changed
 reload_event_t *reload_events = NULL;
 
-reload_event_t *reload_event_add(const char *key, bool (*callback) (), const char *note) {
+reload_event_t *reload_event_add(const char *key, cfg_reload_cb_t callback, const char *note) {
    /* A NULL key registers a callback for a completed configuration reload. */
    if (!callback) {
       return NULL;
@@ -1515,7 +1515,7 @@ bool reload_event_list(const char *key) {
 }
 
 // Find an event in the linked list
-reload_event_t *reload_event_find(const char *key, bool (*callback) ()) {
+reload_event_t *reload_event_find(const char *key, cfg_reload_cb_t callback) {
    reload_event_t *r = reload_events;
 
    // one or both must be passed
