@@ -93,6 +93,39 @@ int main(void) {
       CHECK(dict_get(loaded, "should-not-be-general", NULL) == NULL);
       dict_free(loaded);
    }
+   /* Typed reload: preserve values, distinguish NULL from missing,
+    * and report only changed/removed keys to reload listeners. */
+   cfg = dict_new();
+   CHECK(cfg != NULL);
+   if (cfg) {
+      CHECK(dict_add_int(cfg, "n", 1) == 0);
+      CHECK(dict_add_bool(cfg, "unchanged", true) == 0);
+      CHECK(dict_add_null(cfg, "removed") == 0);
+      dict *replacement = dict_new();
+      CHECK(replacement != NULL);
+      if (replacement) {
+         CHECK(dict_add_double(replacement, "n", 2.5) == 0);
+         CHECK(dict_add_bool(replacement, "unchanged", true) == 0);
+         CHECK(dict_add_null(replacement, "new-null") == 0);
+         CHECK(cfg_apply_new(cfg, replacement));
+         CHECK(dict_get_type(cfg, "n") == VAL_DOUBLE);
+         CHECK(dict_get_double(cfg, "n", 0) == 2.5);
+         CHECK(dict_get_type(cfg, "unchanged") == VAL_BOOL);
+         CHECK(dict_get_type(cfg, "new-null") == VAL_NULL);
+         const char *key;
+         dict_value_t value;
+         val_type_t type;
+         bool removed_seen = false, null_seen = false;
+         int rank = 0;
+         while ((rank = dict_enumerate_typed(cfg, rank, &key, &value, &type)) >= 0) {
+            if (!strcmp(key, "removed")) removed_seen = true;
+            if (!strcmp(key, "new-null")) null_seen = true;
+         }
+         CHECK(!removed_seen && null_seen);
+      }
+      dict_free(cfg);
+      cfg = NULL;
+   }
    unlink(mainpath);
    unlink(subpath);
    unlink(nestedpath);
