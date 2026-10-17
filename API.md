@@ -13,9 +13,8 @@ this guide is a starting point, not a replacement for those declarations.
   Enumeration returns the next cursor, or -1 when finished.
 * Allocating functions return NULL on failure unless documented otherwise.
 * OS-style functions returning descriptors use -1 on failure.
-* **Known 1.0 review exception:** `cfg_save_cb_t` callbacks still return
-  false on success and true on error. Do not assume callback and registration
-  return conventions are interchangeable. See the release audit below.
+* `cfg_save_cb_t` callbacks return true on success, false on failure,
+  consistent with section-load callbacks and callback registration.
 
 ## Dictionaries — `dict.h`
 
@@ -86,8 +85,6 @@ functions return an OS descriptor or -1.
 
 ## API review notes before tagging 1.0
 
-* Normalize `cfg_save_cb_t` and its registered implementations to true-on-success,
-  or explicitly retain its documented exception for binary compatibility.
 * Prefer typed callback declarations instead of old-style `bool (*)()`.
 * Review global-singleton initialization, thread affinity, and pointer lifetimes
   before promising reentrant or thread-safe behavior to plugin authors.

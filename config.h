@@ -46,10 +46,12 @@ struct defconfig {
 };
 typedef struct defconfig defconfig_t;
 
+typedef bool (*cfg_section_cb_t)(const char *path, int line, const char *section, const char *buf);
+
 typedef struct cfg_cb_list {
    const char *section;
    const char *path;
-   bool (*callback)(const char *path, int line, const char *section, const char *buf);
+   cfg_section_cb_t callback;
    struct cfg_cb_list *next;
 } cfg_cb_list_t;
 
@@ -66,7 +68,7 @@ typedef struct reload_event reload_event_t;
 //    Modules that own non-dict config data (parsed [server:*], [network:*]
 //    sections, runtime state, etc.) register a save callback.  When the
 //    config is saved, each callback is invoked with the output FILE * and
-//    writes its own sections.  Return false on success, true on error.
+//    writes its own sections.  Return true on success, false on error.
 typedef bool (*cfg_save_cb_t)(FILE *fp, const char *path);
 
 struct cfg_save_cb_entry {
@@ -139,7 +141,7 @@ extern unsigned int cfg_get_uint(const char *key, unsigned int def);
 // Register a section parser; true means registered, false means invalid input.
 // Section callbacks return true when the line was handled successfully and
 // false on a malformed entry or failure. Multiple matching callbacks must succeed.
-extern bool cfg_add_callback(const char *path, const char *section, bool (*cb) ());
+extern bool cfg_add_callback(const char *path, const char *section, cfg_section_cb_t cb);
 
 /////////////
 extern reload_event_t *reload_events;
