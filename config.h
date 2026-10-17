@@ -68,7 +68,7 @@ typedef struct reload_event reload_event_t;
 //    Modules that own non-dict config data (parsed [server:*], [network:*]
 //    sections, runtime state, etc.) register a save callback.  When the
 //    config is saved, each callback is invoked with the output FILE * and
-//    writes its own sections.  Return false on success, true on error.
+//    writes its own sections.  Return true on success, false on error.
 typedef bool (*cfg_save_cb_t)(FILE *fp, const char *path);
 
 struct cfg_save_cb_entry {
