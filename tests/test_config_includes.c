@@ -8,6 +8,16 @@
 #include <librustyaxe/dict.h>
 
 static int failures;
+extern dict *cfg;
+
+static bool typed_callback(const char *path, int line, const char *section, const char *input) {
+   (void)path; (void)line; (void)section; (void)input;
+   return dict_add_int(cfg, "typed:int", 42) != 0 ||
+      dict_add_bool(cfg, "typed:bool", true) != 0 ||
+      dict_add_null(cfg, "typed:null") != 0 ||
+      dict_add_double(cfg, "typed:double", 3.5) != 0;
+}
+
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #x); failures++; } } while (0)
 
 static void write_file(const char *path, const char *data) {
@@ -57,9 +67,22 @@ int main(void) {
       "[general]\nlast=three\n"
       "[general-extra]\nshould-not-be-general=bad\n"
       "[general]\nend=ok\n");
+   CHECK(cfg_add_callback(NULL, "typed-test", typed_callback));
    dict *loaded = cfg_load(mainpath);
    CHECK(loaded != NULL);
    if (loaded) {
+      const char *key;
+      dict_value_t value;
+      val_type_t type;
+      int rank = 0;
+      unsigned found = 0;
+      while ((rank = dict_enumerate_typed(loaded, rank, &key, &value, &type)) >= 0) {
+         if (!strcmp(key, "typed:int")) { CHECK(type == VAL_INT && value.i == 42); found |= 1; }
+         if (!strcmp(key, "typed:bool")) { CHECK(type == VAL_BOOL && value.i == 1); found |= 2; }
+         if (!strcmp(key, "typed:null")) { CHECK(type == VAL_NULL); found |= 4; }
+         if (!strcmp(key, "typed:double")) { CHECK(type == VAL_DOUBLE && value.d == 3.5); found |= 8; }
+      }
+      CHECK(found == 15);
       expect(loaded, "foo", "nested");
       expect(loaded, "bar", "again");
       expect(loaded, "nested", "yes");
