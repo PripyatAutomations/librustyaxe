@@ -29,13 +29,13 @@
 
 static bool cfg_modules_section_cb(const char *path, int line, const char *section, const char *buf) {
    if (!path || !section || strcmp(section, "modules") != 0 || !buf) {
-      return true;
+      return false;
    }
 
    char *copy = strdup(buf);
 
    if (!copy) {
-      return true;
+      return false;
    }
    char *value = strchr(copy, '=');
 
@@ -43,7 +43,7 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
       Log(LOG_CRIT, "cfg.modules", "Missing '=' in [%s] at %s:%d", section, path, line);
       free(copy);
 
-      return true;
+      return false;
    }
    *value++ = '\0';
 
@@ -69,7 +69,7 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
       Log(LOG_CRIT, "cfg.modules", "Empty module name in [%s] at %s:%d", section, path, line);
       free(copy);
 
-      return true;
+      return false;
    }
    // Normalize: store under the name without a trailing .so
    char name[128];
@@ -86,11 +86,11 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
       Log(LOG_CRIT, "cfg.modules", "Unable to store options for %s at %s:%d", name, path, line);
       free(copy);
 
-      return true;
+      return false;
    }
    free(copy);
 
-   return false;
+   return true;
 }
 
 bool cfg_modules_init(void) {
