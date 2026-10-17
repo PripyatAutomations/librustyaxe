@@ -56,9 +56,11 @@ typedef struct cfg_cb_list {
 } cfg_cb_list_t;
 
 // This handles stuff like restarting audio pipelines, etc
+typedef bool (*cfg_reload_cb_t)(const char *key);
+
 struct reload_event {
    char *key;
-   bool (*callback)();
+   cfg_reload_cb_t callback;
    char *note;
    struct reload_event *next;
 };
@@ -149,11 +151,11 @@ extern reload_event_t *reload_events;
 extern bool run_reload_events(const char *key);
 
 // Find an event in the linked list
-extern reload_event_t *reload_event_find(const char *key, bool (*callback) ());
+extern reload_event_t *reload_event_find(const char *key, cfg_reload_cb_t callback);
 
 // Add a reload event to the list.  A NULL key is invoked once after a
 // complete cfg_apply_new() reload, after all individual key events.
-extern reload_event_t *reload_event_add(const char *key, bool (*callback) (), const char *note);
+extern reload_event_t *reload_event_add(const char *key, cfg_reload_cb_t callback, const char *note);
 
 // Remove a reload event from the list
 extern bool reload_event_remove(reload_event_t *evt);
