@@ -29,13 +29,13 @@
 
 static bool cfg_modules_section_cb(const char *path, int line, const char *section, const char *buf) {
    if (!path || !section || strcmp(section, "modules") != 0 || !buf) {
-      return true;
+      return false;
    }
 
    char *copy = strdup(buf);
 
    if (!copy) {
-      return true;
+      return false;
    }
    char *value = strchr(copy, '=');
 
@@ -43,7 +43,7 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
       Log(LOG_CRIT, "cfg.modules", "Missing '=' in [%s] at %s:%d", section, path, line);
       free(copy);
 
-      return true;
+      return false;
    }
    *value++ = '\0';
 
@@ -69,11 +69,15 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
       Log(LOG_CRIT, "cfg.modules", "Empty module name in [%s] at %s:%d", section, path, line);
       free(copy);
 
-      return true;
+      return false;
    }
    // Normalize: store under the name without a trailing .so
    char name[128];
-   snprintf(name, sizeof(name), "%s", key);
+   int copied = snprintf(name, sizeof(name), "%s", key);
+   if (copied <= 0 || (size_t)copied >= sizeof(name)) {
+      free(copy);
+      return false;
+   }
    size_t nlen = strlen(name);
 
    if (nlen > 3 && strcmp(name + nlen - 3, ".so") == 0) {
@@ -82,15 +86,16 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
 
    char fullkey[160];
 
-   if (snprintf(fullkey, sizeof(fullkey), "module:%s.options", name) <= 0 || dict_add(cfg, fullkey, value) != 0) {
+   int written = snprintf(fullkey, sizeof(fullkey), "module:%s.options", name);
+   if (written <= 0 || (size_t)written >= sizeof(fullkey) || dict_add(cfg, fullkey, value) != 0) {
       Log(LOG_CRIT, "cfg.modules", "Unable to store options for %s at %s:%d", name, path, line);
       free(copy);
 
-      return true;
+      return false;
    }
    free(copy);
 
-   return false;
+   return true;
 }
 
 bool cfg_modules_init(void) {

@@ -19,7 +19,7 @@ typedef struct rr_module_event {
 /*
  * Optional per-module lifecycle entry points, resolved by dlsym() when present:
  *
- *   bool rr_module_init(void)          called once after dlopen(); return false on success, true on failure. Returning true unloads the module.
+ *   bool rr_module_init(void)          called once after dlopen(); return true on success, false on failure. Returning true unloads the module.
  *   bool rr_module_can_unload(void)  optional guard; false refuses unload while host-owned instances still use module callbacks.
  *
  *   void rr_module_shutdown(void)      called before dlclose(); the module must unregister every event token it created and invalidate any pointer it handed to
@@ -39,13 +39,13 @@ typedef struct rr_module {
 } rr_module_t;
 
 /*
- * Load a module by name (resolved through config:path.modules). Returns false on success. The module's rr_module_init() runs as part of loading; a failed init
+ * Load a module by name (resolved through config:path.modules). Returns true on success. The module's rr_module_init() runs as part of loading; a failed init
  * unloads the module again.
  */
 extern bool rr_load_module(const char *name);
 
 /*
- * Unload a module previously loaded by name. Runs rr_module_shutdown() (if present) then dlclose(). Returns false on success.
+ * Unload a module previously loaded by name. Runs rr_module_shutdown() (if present) then dlclose(). Returns true on success.
  *
  * Hot-unload is only safe for modules whose callbacks are all removed in their shutdown path; if any remain armed the module is left loaded.
  */

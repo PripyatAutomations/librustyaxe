@@ -72,14 +72,14 @@ char *rr_find_module(const char *name) {
 
 bool rr_load_module(const char *name) {
    if (!name) {
-      return true;
+      return false;
    }
 
    // Already loaded?
    if (rr_find_loaded_module(name)) {
       Log(LOG_WARN, "module", "rr_load_module: %s is already loaded", name);
 
-      return false;
+      return true;
    }
    // Does the module exist?
    char *mod_path = rr_find_module(name);
@@ -88,7 +88,7 @@ bool rr_load_module(const char *name) {
       // Display an error that the module wasn't found
       Log(LOG_WARN, "module", "rr_load_module: Couldn't find module %s (is path.modules set?): File not found.", name);
 
-      return true;
+      return false;
    }
    // Try to load the module
    void *dp = dlopen(mod_path, RTLD_NOW | RTLD_GLOBAL);
@@ -97,7 +97,7 @@ bool rr_load_module(const char *name) {
       Log(LOG_WARN, "module", "rr_load_module: Failed opening module %s: %s", mod_path, dlerror());
       free(mod_path);
 
-      return true;
+      return false;
    }
    Log(LOG_DEBUG, "module", "rr_load_module: Module %s opened from %s at <%p>", name, mod_path, dp);
    rr_module_t *mp = calloc(1, sizeof(rr_module_t));
@@ -107,7 +107,7 @@ bool rr_load_module(const char *name) {
       dlclose(dp);
       free(mod_path);
 
-      return true;
+      return false;
    }
 
    mp->dlptr = dp;
@@ -123,7 +123,7 @@ bool rr_load_module(const char *name) {
    // failed init leaves no half-initialized module behind.
    bool (*mod_init)(void) = dlsym(mp->dlptr, "rr_module_init");
 
-   if (mod_init && mod_init()) {
+   if (mod_init && !mod_init()) {
       Log(LOG_CRIT, "module", "rr_load_module: init failed for %s", mod_path);
       dlclose(mp->dlptr);
       free((void *)mp->mod_name);
@@ -131,7 +131,7 @@ bool rr_load_module(const char *name) {
       free(mp);
       free(mod_path);
 
-      return true;
+      return false;
    }
    // Look for export list
    rr_module_event_t *mep = dlsym(mp->dlptr, "modexports");
@@ -155,7 +155,7 @@ bool rr_load_module(const char *name) {
    Log(LOG_INFO, "module", "rr_load_module: Module %s loaded from %s", name, mod_path);
    free(mod_path);
 
-   return false;
+   return true;
 }
 
 void *rr_find_loaded_module(const char *name) {
@@ -174,7 +174,7 @@ void *rr_find_loaded_module(const char *name) {
 
 bool rr_unload_module(const char *name) {
    if (!name) {
-      return true;
+      return false;
    }
    rr_module_t **link = &modules;
    while (*link && strcmp((*link)->mod_name ? (*link)->mod_name : "", name) != 0) {
@@ -184,14 +184,14 @@ bool rr_unload_module(const char *name) {
    if (!*link) {
       Log(LOG_WARN, "module", "rr_unload_module: %s not loaded", name);
 
-      return true;
+      return false;
    }
    rr_module_t *mp = *link;
 
    bool (*can_unload)(void) = dlsym(mp->dlptr, "rr_module_can_unload");
    if (can_unload && !can_unload()) {
       Log(LOG_WARN, "module", "Module %s is still in use; refusing to unload", name);
-      return true;
+      return false;
    }
 
    // Give the module a chance to unregister events, cancel timers, and
@@ -213,5 +213,5 @@ bool rr_unload_module(const char *name) {
    free((void *)mp->mod_path);
    free(mp);
 
-   return failed;
+   return !failed;
 }

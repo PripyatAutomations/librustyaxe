@@ -32,7 +32,7 @@ static bool section_callback(const char *path, int line, const char *section, co
    (void)input;
    late_calls++;
 
-   return false;
+   return true;
 }
 
 int main(void) {

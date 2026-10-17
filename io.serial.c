@@ -411,7 +411,7 @@ static bool serial_config(const char *path, int line, const char *section, const
    }
    free(copy);
 
-   return failed;
+   return !failed;
 }
 
 bool rr_serial_config_register(void) {
