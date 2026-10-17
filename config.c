@@ -481,94 +481,6 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       if ((end - skip) < 0) {
          continue;
       }
-      // Includes are processed inline. Values from the included file are
-      // copied into the current dictionary, so entries later in this file
-      // retain normal last-value-wins behavior. A leading ! makes an include
-      // optional; a missing mandatory include is a fatal configuration error.
-      bool optional_include = (*skip == '!' && strncasecmp(skip + 1, "include", 7) == 0);
-      bool mandatory_include = (*skip == '.' && strncasecmp(skip + 1, "include", 7) == 0);
-
-      if (!in_comment && (optional_include || mandatory_include) && (skip[8] == '\0' || skip[8] == ' ' || skip[8] == '\t' || skip[8] == '=')) {
-         bool optional = optional_include;
-         char *include_path = skip + 8;
-         while (*include_path == ' ' || *include_path == '\t' || *include_path == '=') {
-            include_path++;
-         }
-
-         if (*include_path == '"' || *include_path == '\'') {
-            char quote = *include_path++;
-            char *close = strrchr(include_path, quote);
-
-            if (close) {
-               *close = '\0';
-            }
-         }
-
-         if (!*include_path) {
-            if (optional) {
-               Log(LOG_INFO, "cfg", "Empty optional !include at %s:%d", path, line);
-            } else {
-               Log(LOG_CRIT, "cfg", "Empty mandatory .include at %s:%d", path, line);
-               exit(EXIT_FAILURE);
-            }
-            errors++;
-            continue;
-         }
-
-         if (depth >= 4) {
-            if (optional) {
-               Log(LOG_INFO, "cfg", "Maximum !include depth reached at %s:%d (limit 4)", path, line);
-            } else {
-               Log(LOG_CRIT, "cfg", "Maximum .include depth reached at %s:%d (limit 4)", path, line);
-               exit(EXIT_FAILURE);
-            }
-            errors++;
-            continue;
-         }
-
-         char resolved[PATH_MAX];
-
-         if (include_path[0] == '/') {
-            snprintf(resolved, sizeof(resolved), "%s", include_path);
-         } else {
-            char parent[PATH_MAX];
-            snprintf(parent, sizeof(parent), "%s", path);
-            char *dir = dirname(parent);
-            snprintf(resolved, sizeof(resolved), "%s/%s", dir, include_path);
-         }
-
-         if (!file_exists(resolved)) {
-            if (optional) {
-               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
-               continue;
-            }
-            Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
-            exit(EXIT_FAILURE);
-         }
-         dict *included = cfg_load_depth(resolved, depth + 1);
-
-         if (!included) {
-            if (optional) {
-               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
-            } else {
-               Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
-               exit(EXIT_FAILURE);
-            }
-            errors++;
-         } else {
-            if (cfg_merge_dict(newcfg, included)) {
-               if (!optional) {
-                  Log(LOG_CRIT, "cfg", "Unable to merge mandatory include %s", resolved);
-                  dict_free(included);
-                  exit(EXIT_FAILURE);
-               }
-               Log(LOG_INFO, "cfg", "Unable to merge optional include %s", resolved);
-               errors++;
-            }
-            dict_free(included);
-         }
-         continue;
-      }
       // Handle line continuations
       while (1) {
          // Trim trailing newlines / carriage returns
@@ -649,17 +561,138 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          end = buf + strlen(buf) - 1;
       }
 
-      if (*skip == '*' && *(skip + 1) == '/') {
-         in_comment = false;
+      // Remove C-style comments, including inline and multiline blocks.
+      // Keep quoted strings intact, and retain the existing leading #, ;,
+      // and // comment conventions.
+      char *src = skip, *dst = skip;
+      char quote = 0;
+      while (*src) {
+         if (in_comment) {
+            if (src[0] == '*' && src[1] == '/') {
+               in_comment = false;
+               src += 2;
+            } else {
+               src++;
+            }
+            continue;
+         }
+         if (quote) {
+            if (*src == '\\' && src[1]) {
+               *dst++ = *src++;
+               *dst++ = *src++;
+               continue;
+            }
+            if (*src == quote) quote = 0;
+            *dst++ = *src++;
+            continue;
+         }
+         if (*src == '"' || *src == '\'') {
+            quote = *src;
+            *dst++ = *src++;
+            continue;
+         }
+         if (src[0] == '/' && src[1] == '*') {
+            in_comment = true;
+            src += 2;
+            continue;
+         }
+         *dst++ = *src++;
+      }
+      *dst = '\0';
+      while (dst > skip && isspace((unsigned char)dst[-1])) *--dst = '\0';
+      end = dst > skip ? dst - 1 : skip;
+      if (!*skip) continue;
+      if (!escaped_comment && ((*skip == '/' && skip[1] == '/') || *skip == '#' || *skip == ';')) continue;
+
+      // Includes are processed inline. Values from the included file are
+      // copied into the current dictionary, so entries later in this file
+      // retain normal last-value-wins behavior. A leading ! makes an include
+      // optional; a missing mandatory include is a fatal configuration error.
+      bool optional_include = (*skip == '!' && strncasecmp(skip + 1, "include", 7) == 0);
+      bool mandatory_include = (*skip == '.' && strncasecmp(skip + 1, "include", 7) == 0);
+
+      if ((optional_include || mandatory_include) && (skip[8] == '\0' || skip[8] == ' ' || skip[8] == '\t' || skip[8] == '=')) {
+         bool optional = optional_include;
+         char *include_path = skip + 8;
+         while (*include_path == ' ' || *include_path == '\t' || *include_path == '=') {
+            include_path++;
+         }
+
+         if (*include_path == '"' || *include_path == '\'') {
+            char quote = *include_path++;
+            char *close = strrchr(include_path, quote);
+
+            if (close) {
+               *close = '\0';
+            }
+         }
+
+         if (!*include_path) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Empty optional !include at %s:%d", path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Empty mandatory .include at %s:%d", path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+            continue;
+         }
+
+         if (depth >= 4) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Maximum !include depth reached at %s:%d (limit 4)", path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Maximum .include depth reached at %s:%d (limit 4)", path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+            continue;
+         }
+
+         char resolved[PATH_MAX];
+
+         if (include_path[0] == '/') {
+            snprintf(resolved, sizeof(resolved), "%s", include_path);
+         } else {
+            char parent[PATH_MAX];
+            snprintf(parent, sizeof(parent), "%s", path);
+            char *dir = dirname(parent);
+            snprintf(resolved, sizeof(resolved), "%s/%s", dir, include_path);
+         }
+
+         if (!file_exists(resolved)) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
+               continue;
+            }
+            Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
+            exit(EXIT_FAILURE);
+         }
+         dict *included = cfg_load_depth(resolved, depth + 1);
+
+         if (!included) {
+            if (optional) {
+               Log(LOG_INFO, "cfg", "Optional include file not found: %s (from %s:%d)", resolved, path, line);
+            } else {
+               Log(LOG_CRIT, "cfg", "Mandatory include file not found: %s (from %s:%d)", resolved, path, line);
+               exit(EXIT_FAILURE);
+            }
+            errors++;
+         } else {
+            if (cfg_merge_dict(newcfg, included)) {
+               if (!optional) {
+                  Log(LOG_CRIT, "cfg", "Unable to merge mandatory include %s", resolved);
+                  dict_free(included);
+                  exit(EXIT_FAILURE);
+               }
+               Log(LOG_INFO, "cfg", "Unable to merge optional include %s", resolved);
+               errors++;
+            }
+            dict_free(included);
+         }
          continue;
-      } else if (*skip == '/' && *(skip + 1) == '*') {
-         in_comment = strstr(skip + 2, "*/") == NULL;
-         continue;
-      } else if (in_comment) {
-         continue;
-      } else if (!escaped_comment && ((*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';')) {
-         continue;
-      } else if (*skip == '[' && *end == ']') {
+      }
+      if (*skip == '[' && *end == ']') {
          size_t section_len = sizeof(this_section);
          size_t skip_len = strlen(skip);
          // Copy only the text between the opening and closing brackets.
@@ -682,7 +715,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          continue;
       }
 
-      if (strncasecmp(this_section, "general", 7) == 0) {
+      if (strcasecmp(this_section, "general") == 0) {
          key = NULL;
          val = NULL;
          char *eq = strchr(skip, '=');
@@ -711,7 +744,10 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          if (val && cfg_formatting_key(key)) {
             cfg_expand_format_escapes(val);
          }
-         dict_add(newcfg, key, val);
+         if (dict_add(newcfg, key, val) != 0) {
+            Log(LOG_CRIT, "cfg", "Failed to store key %s at %s:%d", key, path, line);
+            errors++;
+         }
       } else if (strncasecmp(this_section, "server:", 7) == 0) {
          key = NULL;
          val = NULL;
