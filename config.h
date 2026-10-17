@@ -46,10 +46,12 @@ struct defconfig {
 };
 typedef struct defconfig defconfig_t;
 
+typedef bool (*cfg_section_cb_t)(const char *path, int line, const char *section, const char *buf);
+
 typedef struct cfg_cb_list {
    const char *section;
    const char *path;
-   bool (*callback)(const char *path, int line, const char *section, const char *buf);
+   cfg_section_cb_t callback;
    struct cfg_cb_list *next;
 } cfg_cb_list_t;
 
@@ -139,7 +141,7 @@ extern unsigned int cfg_get_uint(const char *key, unsigned int def);
 // Register a section parser; true means registered, false means invalid input.
 // Section callbacks return true when the line was handled successfully and
 // false on a malformed entry or failure. Multiple matching callbacks must succeed.
-extern bool cfg_add_callback(const char *path, const char *section, bool (*cb) ());
+extern bool cfg_add_callback(const char *path, const char *section, cfg_section_cb_t cb);
 
 /////////////
 extern reload_event_t *reload_events;
