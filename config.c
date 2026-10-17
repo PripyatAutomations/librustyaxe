@@ -218,12 +218,11 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    if (!path || !section || !buf) {
       return true;
    }
-   cfg_cb_list_t *cbp = cfg_callbacks, *prev = NULL;
+   cfg_cb_list_t *cbp = cfg_callbacks;
 
    if (!cbp) {
       return false;
    }
-   Log(LOG_CRIT, "config", "cfg_dispatch_callback: starting cbp=%p", cbp);
    int i = 0;
    while (cbp && i < CONFIG_MAX_CALLBACKS) {
       if (cbp->section && fnmatch(cbp->section, section, 0) == 0) {
@@ -242,9 +241,7 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
          }
       }
       i++;
-      prev = cbp;
       cbp = cbp->next;
-      fprintf(stderr, "prev;<%p> cbp:<%p> list:<%p>\n", prev, cbp, cfg_callbacks);
    }
 
    if (i > 10) {
@@ -253,6 +250,50 @@ static bool cfg_dispatch_callback(const char *path, int line, const char *sectio
    }
 
    return false;
+}
+
+/* Strip C-style block comments without interpreting delimiters inside quotes.
+ * Keep text on both sides of an inline comment; a separating space prevents
+ * "foo/* note */bar" from silently turning into "foobar".
+ * The state is carried between physical lines, including continuations. */
+static void cfg_strip_block_comments(char *line, bool *in_comment) {
+   char *readp = line, *writep = line;
+   char quote = '\0';
+   bool escaped = false;
+
+   while (*readp) {
+      if (*in_comment) {
+         if (readp[0] == '*' && readp[1] == '/') {
+            *in_comment = false;
+            readp += 2;
+         } else {
+            readp++;
+         }
+         continue;
+      }
+      if (quote) {
+         char c = *readp++;
+         *writep++ = c;
+         if (escaped) escaped = false;
+         else if (c == '\\') escaped = true;
+         else if (c == quote) quote = '\0';
+         continue;
+      }
+      if (*readp == '"' || *readp == '\'') {
+         quote = *readp;
+         *writep++ = *readp++;
+         continue;
+      }
+      if (readp[0] == '/' && readp[1] == '*') {
+         *in_comment = true;
+         readp += 2;
+         if (writep > line && writep[-1] != ' ' && writep[-1] != '\t')
+            *writep++ = ' ';
+         continue;
+      }
+      *writep++ = *readp++;
+   }
+   *writep = '\0';
 }
 
 dict *cfg_load(const char *path) {
@@ -293,13 +334,16 @@ dict *cfg_load(const char *path) {
       }
       line++;
 
-      // skip leading spaces
+      cfg_strip_block_comments(buf, &in_comment);
+
+      // skip leading whitespace
       skip = buf;
-      while (*skip == ' ') {
+      while (*skip == ' ' || *skip == '\t') {
          skip++;
       }
       // trim trailing newlines and whitespace
-      end = buf + strlen(buf) - 1;
+      end = buf + strlen(buf);
+      if (end > buf) end--;
       while ( end >= buf && (*end == '\r' || *end == '\n' || *end == ' ' || *end == '\t') ) {
          *end-- = '\0';
       }
@@ -341,13 +385,16 @@ dict *cfg_load(const char *path) {
          }
          line++;
 
+         cfg_strip_block_comments(contbuf, &in_comment);
+
          // Trim leading whitespace on continuation line
          char *cont = contbuf;
          while (*cont == ' ' || *cont == '\t') {
             cont++;
          }
          // Trim trailing whitespace/newlines on continuation line
-         char *e2 = cont + strlen(cont) - 1;
+         char *e2 = cont + strlen(cont);
+         if (e2 > cont) e2--;
          while ( e2 >= cont && (*e2 == '\r' || *e2 == '\n' || *e2 == ' ' || *e2 == '\t') ) {
             *e2-- = '\0';
          }
@@ -366,22 +413,23 @@ dict *cfg_load(const char *path) {
       /////////////////////////////
       // parse the line contents //
       /////////////////////////////
-      if (*skip == '*' && *(skip + 1) == '/') {
-         in_comment = false;
+      /* The comment scanner already removed all block comments, including
+       * inline spans. Preserve existing whole-line #, ; and // comments. */
+      while (*skip == ' ' || *skip == '\t') skip++;
+      if (!*skip || (skip[0] == '/' && skip[1] == '/') ||
+          *skip == '#' || *skip == ';') {
          continue;
-      } else if (*skip == '/' && *(skip + 1) == '*') {
-         in_comment = true;
-         continue;
-      } else if (in_comment) {
-         continue;
-      } else if ( (*skip == '/' && *(skip + 1) == '/') || *skip == '#' || *skip == ';' ) {
-         continue;
-      } else if (*skip == '[' && *end == ']') {
-         size_t section_len = sizeof(this_section);
-         size_t skip_len = strlen(skip);
-         size_t copy_len = ( (skip_len - 1) > section_len ? section_len : (skip_len - 1) );
-         memset(this_section, 0, section_len);
-         snprintf(this_section, copy_len, "%s", skip + 1);
+      }
+      size_t text_len = strlen(skip);
+      if (skip[0] == '[' && text_len >= 2 && skip[text_len - 1] == ']') {
+         size_t name_len = text_len - 2;
+         if (!name_len || name_len >= sizeof(this_section)) {
+            Log(LOG_WARN, "config", "Invalid section name at %s:%d", path, line);
+            errors++;
+            continue;
+         }
+         memcpy(this_section, skip + 1, name_len);
+         this_section[name_len] = '\0';
          continue;
       }
 
@@ -451,6 +499,11 @@ dict *cfg_load(const char *path) {
       Log(LOG_INFO, "config", "cfg loaded %d lines from %s with no errors", line, path);
    }
 
+   if (in_comment) {
+      Log(LOG_WARN, "config", "Unterminated /* block comment in %s", path);
+      errors++;
+   }
+   fclose(fp);
    return newcfg;
 }
 
