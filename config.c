@@ -977,7 +977,7 @@ bool cfg_run_save_callbacks(FILE *fp, const char *path) {
    for (cfg_save_cb_entry_t *cbp = cfg_save_callbacks ; cbp ; cbp = cbp->next) {
       Log(LOG_DEBUG, "cfg", "Running save callback |%s| at <%p>", cbp->name ? cbp->name : "unnamed", cbp->callback);
 
-      if (cbp->callback(fp, path)) {
+      if (!cbp->callback(fp, path)) {
          Log(LOG_CRIT, "cfg", "Save callback |%s| reported errors saving %s", cbp->name ? cbp->name : "unnamed", path);
          errors = true;
       }
