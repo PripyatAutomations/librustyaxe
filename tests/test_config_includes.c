@@ -12,10 +12,10 @@ extern dict *cfg;
 
 static bool typed_callback(const char *path, int line, const char *section, const char *input) {
    (void)path; (void)line; (void)section; (void)input;
-   return dict_add_int(cfg, "typed:int", 42) != 0 ||
-      dict_add_bool(cfg, "typed:bool", true) != 0 ||
-      dict_add_null(cfg, "typed:null") != 0 ||
-      dict_add_double(cfg, "typed:double", 3.5) != 0;
+   return dict_add_int(cfg, "typed:int", 42) == 0 &&
+      dict_add_bool(cfg, "typed:bool", true) == 0 &&
+      dict_add_null(cfg, "typed:null") == 0 &&
+      dict_add_double(cfg, "typed:double", 3.5) == 0;
 }
 
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #x); failures++; } } while (0)
