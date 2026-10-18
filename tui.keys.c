@@ -28,6 +28,43 @@ extern int tui_window_swap(int c, int key);
 extern int handle_alt_left(int c, int key);
 extern int handle_alt_right(int c, int key);
 
+/* A first Alt/Escape digit stays pending briefly; a following plain digit
+ * completes a two-digit window number instead of entering chat input. */
+static int pending_window_digit = -1;
+static guint pending_window_timer;
+
+static gboolean tui_window_digit_expired(gpointer unused) {
+   (void)unused;
+   pending_window_timer = 0;
+   int digit = pending_window_digit;
+   pending_window_digit = -1;
+   if (digit >= 0) {
+      (void)tui_window_focus_id(digit == 0 ? 10 : digit);
+      tui_redraw_screen();
+   }
+   return G_SOURCE_REMOVE;
+}
+
+static void tui_window_digit_accept(int digit) {
+   if (pending_window_digit >= 0) {
+      int number = pending_window_digit * 10 + digit;
+      if (pending_window_timer) g_source_remove(pending_window_timer);
+      pending_window_timer = 0;
+      pending_window_digit = -1;
+      if (number > 0) {
+         (void)tui_window_focus_id(number);
+         tui_redraw_screen();
+      }
+      return;
+   }
+   int wait = cfg_get_int("ui.win-digit-wait", 500);
+   if (wait < 0) wait = 0;
+   if (wait > 5000) wait = 5000;
+   pending_window_digit = digit;
+   if (!wait) { tui_window_digit_expired(NULL); return; }
+   pending_window_timer = g_timeout_add((guint)wait, tui_window_digit_expired, NULL);
+}
+
 static struct termios orig_termios;
 char input_buf[TUI_INPUTLEN];
 int input_len = 0;
@@ -249,6 +286,24 @@ void stdin_ev_cb(EV_P_ ev_io *w, int revents) {
       // --- log the key for debugging ---
 //      Log(LOG_DEBUG, "tui.key", "key: type=%d code=%d mod=%d c=%d", key.type,
 // key.code.codepoint, key.modifiers, c);
+      /* TermKey usually reports Esc-digit as Alt+Unicode; some terminals
+       * report digits as keysyms. The second digit need not hold Alt. */
+      if (key.type == TERMKEY_TYPE_UNICODE && c >= '0' && c <= '9' &&
+          ((key.modifiers & TERMKEY_KEYMOD_ALT) || pending_window_digit >= 0)) {
+         tui_window_digit_accept(c - '0');
+         continue;
+      }
+      if (key.type == TERMKEY_TYPE_KEYSYM && c >= '0' && c <= '9' &&
+          ((key.modifiers & TERMKEY_KEYMOD_ALT) || pending_window_digit >= 0)) {
+         tui_window_digit_accept(c - '0');
+         continue;
+      }
+      if (pending_window_digit >= 0) {
+         /* Other input cancels ambiguity by committing the first digit. */
+         if (pending_window_timer) g_source_remove(pending_window_timer);
+         tui_window_digit_expired(NULL);
+      }
+
       // --- Hotkeys / special keys ---
       if (key.type == TERMKEY_TYPE_KEYSYM) {
          switch (key.code.sym) {
