@@ -39,6 +39,16 @@ extern defconfig_t defcfg[] __attribute__((weak));
 extern defconfig_t defcfg[];
 #endif
 
+/* Routine parser tracing is opt-in. Real parse failures remain visible. */
+static bool cfg_parser_verbose(void) {
+#ifdef CFG_TRACE_PARSER
+   return true;
+#else
+   const char *value = getenv("RUSTYAXE_CFG_VERBOSE");
+   return value && *value && strcmp(value, "0") && strcasecmp(value, "false");
+#endif
+}
+
 const char *config_file = NULL;
 dict *cfg = NULL;
 dict *default_cfg = NULL;       // Hard-coded defaults (defcfg.c)
@@ -289,7 +299,7 @@ bool cfg_add_callback(const char *path, const char *section, cfg_section_cb_t cb
          cbp = cbp->next;
       }
    }
-   Log(LOG_DEBUG, "cfg", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
+   if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
 
    return true;
 }
@@ -802,7 +812,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
       } else if (!cfg_dispatch_callback(path, line, this_section, buf)) {
-         Log(LOG_DEBUG, "cfg", "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
+         if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
          errors++;
       }
    }
@@ -810,7 +820,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    if (errors > 0) {
       Log(LOG_INFO, "cfg", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
    } else {
-      Log(LOG_DEBUG, "cfg", "cfg loaded %d lines from %s with no errors", line, path);
+      if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "cfg loaded %d lines from %s with no errors", line, path);
    }
 
    if (fp) {
@@ -923,7 +933,7 @@ bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
       }
       p->next = cb;
    }
-   Log(LOG_DEBUG, "cfg", "Registered save callback |%s| at <%p>", name ? name : "unnamed", callback);
+   if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "Registered save callback |%s| at <%p>", name ? name : "unnamed", callback);
 
    return true;
 }
