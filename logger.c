@@ -225,11 +225,11 @@ bool debug_filter(const char *subsys, logpriority_t msg_level) {
 
 // Dump all log_filters
 void log_dump_log_filters(void) {
-   printf("---------------------\n");
+   fprintf(stderr, "---------------------\n");
    printf("---- Log Filters ----\n");
    struct log_filter *f = log_filters;
    while (f) {
-      printf("  '%s' = %d (%s)\n", f->pattern, f->level, log_priority_to_str(f->level));
+      fprintf(stderr, "  '%s' = %d (%s)\n", f->pattern, f->level, log_priority_to_str(f->level));
       f = f->next;
    }
    printf("---------------------\n");
@@ -265,7 +265,10 @@ void logger_init(const char *logfile, bool tui_mode) {
 
    // Load fine-grained log_filters from config
    load_log_filters_from_config();
+   /* Log filters remain available for explicit diagnostics only. */
+#ifdef LOGGER_TRACE_FILTERS
    log_dump_log_filters();
+#endif
 }
 
 void logger_set_show_timestamp(bool enabled) {
