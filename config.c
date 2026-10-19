@@ -84,7 +84,7 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
 
       return false;
    }
-   Log(LOG_DEBUG, "cfg", "cfg_set_defaults: Loading defaults from <%p>", defaults);
+   if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "cfg_set_defaults: Loading defaults from <%p>", defaults);
 
    int i = 0;
    int warnings = 0;
@@ -103,7 +103,7 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
       }
       i++;
    }
-   Log(LOG_INFO, "cfg", "Imported %d default settings with %d warnings", i, warnings);
+   if (warnings || cfg_parser_verbose()) Log(warnings ? LOG_WARN : LOG_DEBUG, "cfg", "Imported %d default settings with %d warnings", i, warnings);
 
    return true;
 }
@@ -702,7 +702,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       }
 
       if (this_section[0] == '\0') {
-         fprintf(stderr, "[Debug] config %s has line outside section header at line %d: %s\n", path, line, buf);
+         Log(LOG_WARN, "cfg", "Config %s has content outside a section at line %d: %s", path, line, buf);
          errors++;
          continue;
       }
