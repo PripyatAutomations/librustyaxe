@@ -49,6 +49,11 @@ static bool cfg_parser_verbose(void) {
 #endif
 }
 
+static bool cfg_ignore_unknown_sections = false;
+void cfg_set_ignore_unknown_sections(bool ignore) {
+   cfg_ignore_unknown_sections = ignore;
+}
+
 const char *config_file = NULL;
 dict *cfg = NULL;
 dict *default_cfg = NULL;       // Hard-coded defaults (defcfg.c)
@@ -811,9 +816,24 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          } else {
             Log(LOG_CRIT, "cfg", "Malformed line parsing |%s| at %s:%d", buf, path, line);
          }
-      } else if (!cfg_dispatch_callback(path, line, this_section, buf)) {
-         if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
-         errors++;
+      } else {
+         bool registered = false;
+         for (cfg_cb_list_t *cbp = cfg_callbacks; cbp; cbp = cbp->next) {
+            if (cbp->section && fnmatch(cbp->section, this_section, 0) == 0 &&
+                (!cbp->path || fnmatch(cbp->path, path, 0) == 0)) {
+               registered = true;
+               break;
+            }
+         }
+         /* Unknown sections are normal when a helper reads the server's
+          * shared config. Registered-but-failed sections are always errors. */
+         bool invalid = registered ? !cfg_dispatch_callback(path, line, this_section, buf)
+                                   : !cfg_ignore_unknown_sections;
+         if (invalid) {
+            if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg",
+               "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
+            errors++;
+         }
       }
    }
 
