@@ -98,6 +98,8 @@ extern bool cfg_set_defaults(dict *d, defconfig_t *defaults);
 extern const defconfig_t *cfg_defconfig_find(const char *key);
 extern bool cfg_set_value(const char *key, const char *value);
 extern dict *cfg_load(const char *path);
+/* For helpers reading a shared config: ignore sections without handlers. */
+extern void cfg_set_ignore_unknown_sections(bool ignore);
 
 // Boolean API contract: configuration operations return true on success and false on
 // failure.
