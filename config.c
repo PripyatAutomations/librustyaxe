@@ -49,7 +49,10 @@ static bool cfg_parser_verbose(void) {
 #endif
 }
 
-static bool cfg_ignore_unknown_sections = false;
+/* Shared configurations may contain sections owned by other components.
+ * Ignore unregistered sections by default; a registered callback that
+ * rejects its input is still a genuine parsing error. */
+static bool cfg_ignore_unknown_sections = true;
 void cfg_set_ignore_unknown_sections(bool ignore) {
    cfg_ignore_unknown_sections = ignore;
 }
