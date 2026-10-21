@@ -56,7 +56,12 @@ int main(void) {
 
    write_file(nestedpath, "[general]\nnested=yes\nfoo=nested\n");
    write_file(subpath, "[general]\nbar=two\nfoo=extra\n" ".include nested.cfg\n" "[general]\nbar=again\n");
-   write_file(mainpath, "[general]\nfoo=first\n"
+   write_file(mainpath, "/*\n"
+      " * most settings go in [general]\n"
+      " * nested block commentary without an equals sign\n"
+      "\n"
+      " */\n"
+      "[general]\nfoo=first\n"
       "/* .include missing-block.cfg */\n"
       "/* beginning comment\n"
       ".include missing-multiline.cfg\n"
