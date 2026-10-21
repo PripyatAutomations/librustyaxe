@@ -496,7 +496,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          *end-- = '\0';
       }
 
-      if ((end - skip) < 0) {
+      if (!*skip && !in_comment) {
          continue;
       }
       // Handle line continuations
@@ -577,6 +577,12 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
 
          // recompute end pointer after the shifts
          end = buf + strlen(buf) - 1;
+      }
+      /* Continuation/escaping can change the logical line's indentation.
+       * Reposition the scanner before stripping block comments. */
+      skip = buf;
+      while (*skip && isspace((unsigned char)*skip)) {
+         skip++;
       }
       // Remove C-style comments, including inline and multiline blocks.
       // Keep quoted strings intact, and retain the existing leading #, ;,
