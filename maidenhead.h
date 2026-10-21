@@ -9,9 +9,6 @@
 #define _maidenhead_h
 #include <math.h>
 #include <stdint.h>
-#if     !defined(pi)
-#define pi 3.14159265358979323846
-#endif
 
 
 typedef struct Coordinates {
