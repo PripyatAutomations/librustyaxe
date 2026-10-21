@@ -1715,12 +1715,17 @@ int dict_merge(dict *dst, dict *src) {
 }
 
 dict *dict_clone(dict *source) {
-   if (!source) return NULL;
-   dict *copy = dict_new();
-   if (copy && dict_merge(copy, source) != 0) {
-      dict_free(copy);
+   if (!source) {
       return NULL;
    }
+   dict *copy = dict_new();
+
+   if (copy && dict_merge(copy, source) != 0) {
+      dict_free(copy);
+
+      return NULL;
+   }
+
    return copy;
 }
 

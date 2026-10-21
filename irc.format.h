@@ -17,6 +17,6 @@ typedef struct {
 
 /* Includes the control byte. Invalid/incomplete parameters remain visible. */
 size_t irc_color_parse(const char *input, irc_color_t *color);
-const char *irc_color_rgb(unsigned index); /* 99 selects the default. */
-unsigned irc_color_ansi_extended(unsigned index); /* Indices 16..98. */
+const char *irc_color_rgb(unsigned index);   /* 99 selects the default. */
+unsigned irc_color_ansi_extended(unsigned index);  /* Indices 16..98. */
 #endif

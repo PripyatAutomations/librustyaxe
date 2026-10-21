@@ -211,6 +211,7 @@ char *irc_to_tui_colors(const char *in) {
       "103", "102", "46", "106", "104", "105", "100", "47"
    };
    size_t len = strlen(in);
+
    if (len > (SIZE_MAX - 64) / 32) {
       return NULL;
    }
@@ -229,15 +230,16 @@ char *irc_to_tui_colors(const char *in) {
       if (control == 0x03 || control == 0x04) {
          irc_color_t color;
          input_cursor += irc_color_parse((const char *)input_cursor - 1, &color) - 1;
+
          if (color.reset) {
             output_cursor += sprintf(output_cursor, "\033[39;49m");
          } else {
-            for (unsigned component = 0; component < (color.background ? 2u : 1u); component++) {
+            for (unsigned component = 0 ; component < (color.background ? 2u : 1u) ; component++) {
                unsigned value = component ? color.bg : color.foreground;
                unsigned prefix = component ? 48 : 38;
+
                if (color.hex) {
-                  output_cursor += sprintf(output_cursor, "\033[%u;2;%u;%u;%um", prefix,
-                     value >> 16, (value >> 8) & 255, value & 255);
+                  output_cursor += sprintf(output_cursor, "\033[%u;2;%u;%u;%um", prefix, value >> 16, (value >> 8) & 255, value & 255);
                } else if (value == 99) {
                   output_cursor += sprintf(output_cursor, "\033[%um", component ? 49 : 39);
                } else if (value < 16) {
@@ -378,8 +380,7 @@ char *strip_mirc_formatting(const char *input) {
    while (*p) {
       unsigned char c = *p;
 
-      if (c == 0x02 || c == 0x1d || c == 0x1f || c == 0x0f ||
-         c == 0x11 || c == 0x16 || c == 0x1e) {
+      if (c == 0x02 || c == 0x1d || c == 0x1f || c == 0x0f || c == 0x11 || c == 0x16 || c == 0x1e) {
          p++;
       } else if (c == 0x03 || c == 0x04) {
          irc_color_t color;

@@ -38,15 +38,18 @@ unsigned irc_color_ansi_extended(unsigned index) {
       16, 233, 235, 237, 239, 241, 244, 247, 250, 254, 231,
 
    };
+
    return index >= 16 && index <= 98 ? ansi[index - 16] : 0;
 }
 
 static size_t color_component(const char *p, bool hex, unsigned *value) {
    unsigned result = 0;
    size_t count = 0, limit = hex ? 6 : 2;
-   for (; count < limit; count++) {
+
+   for ( ; count < limit ; count++) {
       unsigned char c = (unsigned char)p[count];
       unsigned digit;
+
       if (c >= '0' && c <= '9') {
          digit = c - '0';
       } else if (hex && c >= 'a' && c <= 'f') {
@@ -58,31 +61,41 @@ static size_t color_component(const char *p, bool hex, unsigned *value) {
       }
       result = result * (hex ? 16 : 10) + digit;
    }
+
    if (hex && count != 6) {
       return 0;
    }
    *value = result;
+
    return count;
 }
 
 size_t irc_color_parse(const char *input, irc_color_t *color) {
-   *color = (irc_color_t){0};
+   *color = (irc_color_t) {
+      0
+   };
+
    if (!input || (*input != 0x03 && *input != 0x04)) {
       return 0;
    }
    color->hex = *input == 0x04;
    size_t foreground = color_component(input + 1, color->hex, &color->foreground);
+
    if (!foreground) {
       color->reset = true;
+
       return 1;
    }
    size_t used = 1 + foreground;
+
    if (input[used] == ',') {
       size_t background = color_component(input + used + 1, color->hex, &color->bg);
+
       if (background) {
          color->background = true;
          used += 1 + background;
       }
    }
+
    return used;
 }

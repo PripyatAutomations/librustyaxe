@@ -20,7 +20,8 @@ int main(void) {
    text = irc_to_tui_colors("\00304, text");
    assert(!strcmp(text, "\033[91m, text"));
    free(text);
-   for (unsigned i = 0; i < 99; i++) {
+
+   for (unsigned i = 0 ; i < 99 ; i++) {
       assert(irc_color_rgb(i) && strlen(irc_color_rgb(i)) == 7);
       char input[32];
       snprintf(input, sizeof(input), "\003%02u,98pixel", i);
@@ -31,6 +32,7 @@ int main(void) {
       assert(strstr(text, "pixel") && !strstr(text, ",98"));
       free(text);
    }
+
    assert(!irc_color_rgb(99));
    text = irc_to_tui_colors("\00316,98art\00399,99default");
    assert(!strcmp(text, "\033[38;5;52m\033[48;5;231mart\033[39m\033[49mdefault"));
@@ -44,14 +46,16 @@ int main(void) {
    text = strip_mirc_formatting("\003,12text\00304,tail\00412345,abcdef\004aabbcc,12345!");
    assert(!strcmp(text, ",12text,tail12345,abcdef,12345!"));
    free(text);
+
    /* Every truncated RGB prefix must be safe and leave incomplete digits visible. */
-   for (size_t n = 0; n <= 6; n++) {
+   for (size_t n = 0 ; n <= 6 ; n++) {
       char input[] = "\004aAbBcC";
       input[n + 1] = '\0';
       irc_color_t color;
       assert(irc_color_parse(input, &color) == (n < 6 ? 1u : 7u));
       assert(color.reset == (n < 6));
    }
+
    cfg_tui_colors = false;
    text = tui_colorize_string("\004aabbccRadio\017 \037text\037");
    assert(!strcmp(text, "Radio text"));

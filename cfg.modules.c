@@ -74,8 +74,10 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
    // Normalize: store under the name without a trailing .so
    char name[128];
    int copied = snprintf(name, sizeof(name), "%s", key);
+
    if (copied <= 0 || (size_t)copied >= sizeof(name)) {
       free(copy);
+
       return false;
    }
    size_t nlen = strlen(name);
@@ -87,6 +89,7 @@ static bool cfg_modules_section_cb(const char *path, int line, const char *secti
    char fullkey[160];
 
    int written = snprintf(fullkey, sizeof(fullkey), "module:%s.options", name);
+
    if (written <= 0 || (size_t)written >= sizeof(fullkey) || dict_add(cfg, fullkey, value) != 0) {
       Log(LOG_CRIT, "cfg.modules", "Unable to store options for %s at %s:%d", name, path, line);
       free(copy);

@@ -42,16 +42,17 @@ extern defconfig_t defcfg[];
 /* Routine parser tracing is opt-in. Real parse failures remain visible. */
 static bool cfg_parser_verbose(void) {
 #ifdef CFG_TRACE_PARSER
+
    return true;
 #else
    const char *value = getenv("RUSTYAXE_CFG_VERBOSE");
+
    return value && *value && strcmp(value, "0") && strcasecmp(value, "false");
 #endif
 }
 
-/* Shared configurations may contain sections owned by other components.
- * Ignore unregistered sections by default; a registered callback that
- * rejects its input is still a genuine parsing error. */
+/* Shared configurations may contain sections owned by other components. Ignore unregistered sections by default; a registered callback that rejects its input
+ * is still a genuine parsing error. */
 static bool cfg_ignore_unknown_sections = true;
 void cfg_set_ignore_unknown_sections(bool ignore) {
    cfg_ignore_unknown_sections = ignore;
@@ -92,7 +93,10 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
 
       return false;
    }
-   if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "cfg_set_defaults: Loading defaults from <%p>", defaults);
+
+   if (cfg_parser_verbose()) {
+      Log(LOG_DEBUG, "cfg", "cfg_set_defaults: Loading defaults from <%p>", defaults);
+   }
 
    int i = 0;
    int warnings = 0;
@@ -111,7 +115,10 @@ bool cfg_set_defaults(dict *d, defconfig_t *defaults) {
       }
       i++;
    }
-   if (warnings || cfg_parser_verbose()) Log(warnings ? LOG_WARN : LOG_DEBUG, "cfg", "Imported %d default settings with %d warnings", i, warnings);
+
+   if (warnings || cfg_parser_verbose()) {
+      Log(warnings ? LOG_WARN : LOG_DEBUG, "cfg", "Imported %d default settings with %d warnings", i, warnings);
+   }
 
    return true;
 }
@@ -307,25 +314,34 @@ bool cfg_add_callback(const char *path, const char *section, cfg_section_cb_t cb
          cbp = cbp->next;
       }
    }
-   if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
+
+   if (cfg_parser_verbose()) {
+      Log(LOG_DEBUG, "cfg", "Stored config callback cb:<%p> for section:|%s| path:|%s|", cb, section, path);
+   }
 
    return true;
 }
 
-/* Section callbacks return true on success, false on failure.
- * Return false for an unhandled section or failed callback. */
+/* Section callbacks return true on success, false on failure. Return false for an unhandled section or failed callback. */
 static bool cfg_dispatch_callback(const char *path, int line, const char *section, const char *buf) {
-   if (!path || !section || !buf) return false;
+   if (!path || !section || !buf) {
+      return false;
+   }
    bool matched = false;
-   for (cfg_cb_list_t *cbp = cfg_callbacks; cbp; cbp = cbp->next) {
-      if (!cbp->section || fnmatch(cbp->section, section, 0) != 0 ||
-          (cbp->path && fnmatch(cbp->path, path, 0) != 0)) continue;
+
+   for (cfg_cb_list_t *cbp = cfg_callbacks ; cbp ; cbp = cbp->next) {
+      if (!cbp->section || fnmatch(cbp->section, section, 0) != 0 || (cbp->path && fnmatch(cbp->path, path, 0) != 0)) {
+         continue;
+      }
       matched = true;
+
       if (!cbp->callback || !cbp->callback(path, line, section, buf)) {
          Log(LOG_CRIT, "cfg", "Section callback failed for [%s] at %s:%d", section, path, line);
+
          return false;
       }
    }
+
    return matched;
 }
 
@@ -413,8 +429,10 @@ static bool cfg_merge_dict(dict *dst, dict *src) {
    // than converting non-string values to NULL through dict_enumerate().
    if (dict_merge(dst, src) != 0) {
       Log(LOG_WARN, "cfg", "Unable to merge included configuration dictionary");
+
       return true;
    }
+
    return false;
 }
 
@@ -538,7 +556,6 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          // Update end pointer for next loop iteration
          end = buf + strlen(buf) - 1;
       }
-
       /////////////////////////////
       // parse the line contents //
       /////////////////////////////
@@ -546,6 +563,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       // CSS selectors like '#chat-view' can be used in config sections.
       // We unescape in place here, before any comment processing.
       bool escaped_comment = false;
+
       if (*skip == '\\' && (skip[1] == '#' || skip[1] == ';' || (skip[1] == '/' && skip[2] == '/') || skip[1] == '\\')) {
          escaped_comment = true;
          memmove(skip, skip + 1, strlen(skip)); // shift left incl. NUL
@@ -560,7 +578,6 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          // recompute end pointer after the shifts
          end = buf + strlen(buf) - 1;
       }
-
       // Remove C-style comments, including inline and multiline blocks.
       // Keep quoted strings intact, and retain the existing leading #, ;,
       // and // comment conventions.
@@ -576,21 +593,27 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             }
             continue;
          }
+
          if (quote) {
             if (*src == '\\' && src[1]) {
                *dst++ = *src++;
                *dst++ = *src++;
                continue;
             }
-            if (*src == quote) quote = 0;
+
+            if (*src == quote) {
+               quote = 0;
+            }
             *dst++ = *src++;
             continue;
          }
+
          if (*src == '"' || *src == '\'') {
             quote = *src;
             *dst++ = *src++;
             continue;
          }
+
          if (src[0] == '/' && src[1] == '*') {
             in_comment = true;
             src += 2;
@@ -599,10 +622,18 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          *dst++ = *src++;
       }
       *dst = '\0';
-      while (dst > skip && isspace((unsigned char)dst[-1])) *--dst = '\0';
+      while (dst > skip && isspace((unsigned char)dst[-1])) {
+         *--dst = '\0';
+      }
       end = dst > skip ? dst - 1 : skip;
-      if (!*skip) continue;
-      if (!escaped_comment && ((*skip == '/' && skip[1] == '/') || *skip == '#' || *skip == ';')) continue;
+
+      if (!*skip) {
+         continue;
+      }
+
+      if (!escaped_comment && ((*skip == '/' && skip[1] == '/') || *skip == '#' || *skip == ';')) {
+         continue;
+      }
 
       // Includes are processed inline. Values from the included file are
       // copied into the current dictionary, so entries later in this file
@@ -692,6 +723,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          }
          continue;
       }
+
       if (*skip == '[' && *end == ']') {
          size_t section_len = sizeof(this_section);
          size_t skip_len = strlen(skip);
@@ -744,6 +776,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          if (val && cfg_formatting_key(key)) {
             cfg_expand_format_escapes(val);
          }
+
          if (dict_add(newcfg, key, val) != 0) {
             Log(LOG_CRIT, "cfg", "Failed to store key %s at %s:%d", key, path, line);
             errors++;
@@ -821,20 +854,22 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          }
       } else {
          bool registered = false;
-         for (cfg_cb_list_t *cbp = cfg_callbacks; cbp; cbp = cbp->next) {
-            if (cbp->section && fnmatch(cbp->section, this_section, 0) == 0 &&
-                (!cbp->path || fnmatch(cbp->path, path, 0) == 0)) {
+
+         for (cfg_cb_list_t *cbp = cfg_callbacks ; cbp ; cbp = cbp->next) {
+            if (cbp->section && fnmatch(cbp->section, this_section, 0) == 0 && (!cbp->path || fnmatch(cbp->path, path, 0) == 0)) {
                registered = true;
                break;
             }
          }
-         /* Unknown sections are normal when a helper reads the server's
-          * shared config. Registered-but-failed sections are always errors. */
+
+         /* Unknown sections are normal when a helper reads the server's shared config. Registered-but-failed sections are always errors. */
          bool invalid = registered ? !cfg_dispatch_callback(path, line, this_section, buf)
-                                   : !cfg_ignore_unknown_sections;
+            : !cfg_ignore_unknown_sections;
+
          if (invalid) {
-            if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg",
-               "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
+            if (cfg_parser_verbose()) {
+               Log(LOG_DEBUG, "cfg", "Unhandled or invalid section |%s| at %s:%d", this_section, path, line);
+            }
             errors++;
          }
       }
@@ -843,7 +878,9 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
    if (errors > 0) {
       Log(LOG_INFO, "cfg", "cfg loaded %d lines from %s with %d warnings/errors", line, path, errors);
    } else {
-      if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "cfg loaded %d lines from %s with no errors", line, path);
+      if (cfg_parser_verbose()) {
+         Log(LOG_DEBUG, "cfg", "cfg loaded %d lines from %s with no errors", line, path);
+      }
    }
 
    if (fp) {
@@ -956,7 +993,10 @@ bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback) {
       }
       p->next = cb;
    }
-   if (cfg_parser_verbose()) Log(LOG_DEBUG, "cfg", "Registered save callback |%s| at <%p>", name ? name : "unnamed", callback);
+
+   if (cfg_parser_verbose()) {
+      Log(LOG_DEBUG, "cfg", "Registered save callback |%s| at <%p>", name ? name : "unnamed", callback);
+   }
 
    return true;
 }
@@ -1358,7 +1398,9 @@ static bool cfg_dict_has_key(dict *d, const char *wanted) {
    val_type_t type;
 
    while ((rank = dict_enumerate_typed(d, rank, &key, &val, &type)) >= 0) {
-      if (strcmp(key, wanted) == 0) return true;
+      if (strcmp(key, wanted) == 0) {
+         return true;
+      }
    }
    return false;
 }
@@ -1367,19 +1409,23 @@ static bool cfg_dict_has_key(dict *d, const char *wanted) {
 bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    if (!cfg || !newcfg || newcfg == cfg) {
       Log(LOG_CRIT, "cfg", "cfg_apply_new: invalid live/new configuration");
+
       return false;
    }
 
-   /* Capture changes before modifying the live dictionary. dict_diff()
-    * compares native types and values, including NULL and numeric values. */
+   /* Capture changes before modifying the live dictionary. dict_diff() compares native types and values, including NULL and numeric values. */
    dict *changes = dict_diff(cfg, newcfg);
-   if (!changes) return false;
 
-   /* Prepare a complete replacement first, so an allocation failure cannot
-    * leave the live dictionary partially updated. */
+   if (!changes) {
+      return false;
+   }
+
+   /* Prepare a complete replacement first, so an allocation failure cannot leave the live dictionary partially updated. */
    dict *staged = dict_clone(newcfg);
+
    if (!staged) {
       dict_free(changes);
+
       return false;
    }
 
@@ -1397,9 +1443,14 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    while ((rank = dict_enumerate_typed(changes, rank, &key, &value, &type)) >= 0) {
       bool exists_now = cfg_dict_has_key(cfg, key);
       bool existed = cfg_dict_has_key(staged, key);
-      if (!exists_now) removed++;
-      else if (existed) changed++;
-      else added++;
+
+      if (!exists_now) {
+         removed++;
+      } else if (existed) {
+         changed++;
+      } else {
+         added++;
+      }
       reload_event_run(key);
    }
    reload_event_run(NULL);
@@ -1407,8 +1458,12 @@ bool cfg_apply_new(dict *oldcfg, dict *newcfg) {
    Log(LOG_INFO, "cfg", "cfg_apply_new: %d added, %d changed, %d removed", added, changed, removed);
    dict_free(changes);
    dict_free(staged);
-   if (oldcfg && oldcfg != cfg && oldcfg != newcfg) dict_free(oldcfg);
+
+   if (oldcfg && oldcfg != cfg && oldcfg != newcfg) {
+      dict_free(oldcfg);
+   }
    dict_free(newcfg);
+
    return true;
 }
 

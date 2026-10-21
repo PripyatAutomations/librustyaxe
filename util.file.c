@@ -228,12 +228,12 @@ char *expand_path(const char *path) {
    return strdup(tmp);
 #else
 
-   /* Resolve relative paths against the user's home, never the process CWD.
-    * Services may start in /, a package build directory or an arbitrary
-    * supervisor working directory. HOME must resolve to an absolute path. */
+   /* Resolve relative paths against the user's home, never the process CWD. Services may start in /, a package build directory or an arbitrary supervisor
+   * working directory. HOME must resolve to an absolute path. */
    const char *home = getenv("HOME");
    const char *suffix = NULL;
    bool needs_home = false;
+
    if (path[0] == '~' && (path[1] == '\0' || path[1] == '/')) {
       suffix = path + (path[1] == '/' ? 2 : 1);
       needs_home = true;
@@ -245,19 +245,34 @@ char *expand_path(const char *path) {
       needs_home = true;
    } else if (path[0] != '/') {
       suffix = path;
-      while (suffix[0] == '.' && suffix[1] == '/') suffix += 2;
+      while (suffix[0] == '.' && suffix[1] == '/') {
+         suffix += 2;
+      }
       needs_home = true;
    }
-   if (!needs_home) return strdup(path);
+
+   if (!needs_home) {
+      return strdup(path);
+   }
+
    if (!home || home[0] != '/') {
       Log(LOG_WARN, "path", "Cannot resolve relative path %s: HOME is unset or not absolute", path);
+
       return NULL;
    }
    size_t len = strlen(home) + strlen(suffix) + 2;
    char *expanded = malloc(len);
-   if (!expanded) return NULL;
-   if (*suffix) snprintf(expanded, len, "%s/%s", home, suffix);
-   else snprintf(expanded, len, "%s", home);
+
+   if (!expanded) {
+      return NULL;
+   }
+
+   if (*suffix) {
+      snprintf(expanded, len, "%s/%s", home, suffix);
+   } else {
+      snprintf(expanded, len, "%s", home);
+   }
+
    return expanded;
 #endif
 }

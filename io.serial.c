@@ -366,4 +366,3 @@ void rr_serial_pty_close(int fd, int keeper, const char *path, const char *slave
       }
    }
 }
-
