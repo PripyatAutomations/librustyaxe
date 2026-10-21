@@ -11,22 +11,22 @@ ifeq (${USE_EEPROM},true)
 librustyaxe_objs += eeprom.o
 endif
 librustyaxe_objs += event-bus.o
+librustyaxe_objs += cfg.modules.o
+librustyaxe_objs += cfg.serial.o
 librustyaxe_objs += io.o
 librustyaxe_objs += io.serial.o
-librustyaxe_objs += socks.o
 #librustyaxe_objs += io.socket.o
 librustyaxe_objs += irc.format.o
 librustyaxe_objs += json.o
 librustyaxe_objs += list.o
 librustyaxe_objs += logger.o
 librustyaxe_objs += maidenhead.o
-librustyaxe_objs += cfg.modules.o
-librustyaxe_objs += cfg.serial.o
 librustyaxe_objs += module.o
 librustyaxe_objs += mongoose.o
 librustyaxe_objs += posix.o
 librustyaxe_objs += runtime-globals.o
 librustyaxe_objs += ringbuffer.o
+librustyaxe_objs += socks.o
 librustyaxe_objs += subproc.o
 librustyaxe_objs += termkey.o
 librustyaxe_objs += tui.o
@@ -38,8 +38,8 @@ librustyaxe_objs += tui.window.o
 librustyaxe_objs += tui.completion.o
 librustyaxe_objs += util.file.o
 librustyaxe_objs += util.math.o
-librustyaxe_objs += util.string.o
 librustyaxe_objs += util.mem.o
+librustyaxe_objs += util.string.o
 librustyaxe_objs += util.time.o
 
 # The public headers live in the source tree today.  Track them explicitly so
