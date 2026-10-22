@@ -237,6 +237,9 @@ typedef struct queued_event {
    char *data;
 
    rrconn_t *cptr;
+#ifdef USE_PROFILING
+   uint64_t queued_us;
+#endif
 } queued_event_t;
 
 typedef struct queued_binary_event {
@@ -248,6 +251,9 @@ typedef struct queued_binary_event {
    size_t len;
 
    rrconn_t *cptr;
+#ifdef USE_PROFILING
+   uint64_t queued_us;
+#endif
 } queued_binary_event_t;
 
 /*
@@ -357,7 +363,14 @@ static void event_dispatch_run(void *arg) {
       return;
    }
 
+#ifdef USE_PROFILING
+   const uint64_t started = event_profile_clock_us();
+#endif
    queued->cb(queued->event, queued->data, queued->cptr, queued->user);
+#ifdef USE_PROFILING
+   const uint64_t finished = event_profile_clock_us();
+   event_profile_note_deferred(queued->event, started - queued->queued_us, finished - started);
+#endif
 
    free(queued->event);
    free(queued->data);
@@ -375,7 +388,14 @@ static void event_dispatch_binary_run(void *arg) {
       return;
    }
 
+#ifdef USE_PROFILING
+   const uint64_t started = event_profile_clock_us();
+#endif
    queued->cb(queued->event, queued->data, queued->len, queued->cptr, queued->user);
+#ifdef USE_PROFILING
+   const uint64_t finished = event_profile_clock_us();
+   event_profile_note_deferred(queued->event, started - queued->queued_us, finished - started);
+#endif
 
    free(queued->event);
    free(queued->data);
@@ -406,6 +426,9 @@ static void event_fire_listener(const event_listener_t *listener, const char *ev
    queued->event = xstrdup(event);
    queued->data = data ? xstrdup(data) : NULL;
    queued->cptr = cptr;
+#ifdef USE_PROFILING
+   queued->queued_us = event_profile_clock_us();
+#endif
 
    Log(LOG_CRAZY, "event", "Dispatching event %s from cptr:<%p> user:<%p>", event, cptr, listener->user);
    listener->dispatch(event_dispatch_run, queued, listener->dispatch_user);
@@ -433,6 +456,9 @@ static void event_fire_binary_listener(const event_binary_listener_t *listener, 
    queued->event = xstrdup(event);
    queued->len = len;
    queued->cptr = cptr;
+#ifdef USE_PROFILING
+   queued->queued_us = event_profile_clock_us();
+#endif
 
    if (data && len) {
       queued->data = xmalloc(len);
@@ -804,9 +830,28 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
 #endif
 
    if (count) {
+#ifdef USE_PROFILING
+      event_profile_work_t work = {0};
+#endif
       for (size_t i = 0 ; i < count ; i++) {
+#ifdef USE_PROFILING
+         const uint64_t started = event_profile_clock_us();
+#endif
          event_fire_listener(&snapshot[i], event, cptr, data);
+#ifdef USE_PROFILING
+         if (snapshot[i].dispatch) {
+            work.queued++;
+         } else {
+            const uint64_t elapsed = event_profile_clock_us() - started;
+            work.inline_calls++;
+            work.inline_us += elapsed;
+            if (elapsed > work.inline_max_us) work.inline_max_us = elapsed;
+         }
+#endif
       }
+#ifdef USE_PROFILING
+      event_profile_note_inline(event, data ? strlen(data) : 0, &work);
+#endif
 
       Log(LOG_CRAZY, "event.match", "Event %s from cptr:<%p> hit %zu times", event, cptr, count);
       free(snapshot);
@@ -829,6 +874,9 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    pthread_mutex_unlock(&event_lock);
 
    if (count) {
+#ifdef USE_PROFILING
+      event_profile_work_t work = {0};
+#endif
 #if     defined(DEBUG_EVENTS)
 
       if (cptr && cptr->chatname) {
@@ -839,8 +887,23 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
 #endif // DEBUG_EVENTS
 
       for (size_t i = 0 ; i < count ; i++) {
+#ifdef USE_PROFILING
+         const uint64_t started = event_profile_clock_us();
+#endif
          event_fire_listener(&snapshot[i], event, cptr, data);
+#ifdef USE_PROFILING
+         if (snapshot[i].dispatch) work.queued++;
+         else {
+            const uint64_t elapsed = event_profile_clock_us() - started;
+            work.inline_calls++;
+            work.inline_us += elapsed;
+            if (elapsed > work.inline_max_us) work.inline_max_us = elapsed;
+         }
+#endif
       }
+#ifdef USE_PROFILING
+      event_profile_note_inline(event, data ? strlen(data) : 0, &work);
+#endif
    } else {
       Log(LOG_CRAZY, "event.nomatch", "Event %s from cptr:<%p> didn't match anything. " "data: |%s|", event, cptr, data ? data : "(null)");
    }
@@ -886,9 +949,27 @@ void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size
    }
 #endif
 
+#ifdef USE_PROFILING
+   event_profile_work_t work = {0};
+#endif
    for (size_t i = 0 ; i < count ; i++) {
+#ifdef USE_PROFILING
+      const uint64_t started = event_profile_clock_us();
+#endif
       event_fire_binary_listener(&snapshot[i], event, cptr, data, len);
+#ifdef USE_PROFILING
+      if (snapshot[i].dispatch) work.queued++;
+      else {
+         const uint64_t elapsed = event_profile_clock_us() - started;
+         work.inline_calls++;
+         work.inline_us += elapsed;
+         if (elapsed > work.inline_max_us) work.inline_max_us = elapsed;
+      }
+#endif
    }
+#ifdef USE_PROFILING
+   event_profile_note_inline(event, len, &work);
+#endif
 
    free(snapshot);
 
