@@ -207,18 +207,18 @@ void event_profile_dump(void) {
    size_t limit = used < 32 ? used : 32;
 
    for (size_t i = 0 ; i < limit ; i++) {
-      Log(LOG_INFO, "profile", "  %s: %llu", rows[i].event, (unsigned long long)rows[i].count);
       Log(LOG_INFO, "profile",
-          "    bytes=%llu, inline handlers=%llu avg=%.1f us max=%llu us, deferred queued=%llu completed=%llu avg=%.1f us max=%llu us, queue wait avg=%.1f us max=%llu us",
+          "%s n=%llu bytes=%llu in=%llu avg=%.1fus max=%lluus def=%llu/%llu avg=%.1fus max=%lluus wait=%.1f/%.0fus",
+          rows[i].event, (unsigned long long)rows[i].count,
           (unsigned long long)rows[i].bytes,
           (unsigned long long)rows[i].inline_calls,
           rows[i].inline_calls ? (double)rows[i].inline_us / rows[i].inline_calls : 0.0,
           (unsigned long long)rows[i].inline_max_us,
-          (unsigned long long)rows[i].queued, (unsigned long long)rows[i].completed,
+          (unsigned long long)rows[i].completed, (unsigned long long)rows[i].queued,
           rows[i].completed ? (double)rows[i].deferred_us / rows[i].completed : 0.0,
           (unsigned long long)rows[i].deferred_max_us,
           rows[i].completed ? (double)rows[i].queue_wait_us / rows[i].completed : 0.0,
-          (unsigned long long)rows[i].queue_wait_max_us);
+          (double)rows[i].queue_wait_max_us);
    }
 
    for (size_t i = 0 ; i < used ; i++) {
