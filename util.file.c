@@ -229,7 +229,7 @@ char *expand_path(const char *path) {
 #else
 
    /* Resolve relative paths against the user's home, never the process CWD. Services may start in /, a package build directory or an arbitrary supervisor
-   * working directory. HOME must resolve to an absolute path. */
+    * working directory. HOME must resolve to an absolute path. */
    const char *home = getenv("HOME");
    const char *suffix = NULL;
    bool needs_home = false;

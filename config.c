@@ -578,8 +578,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          // recompute end pointer after the shifts
          end = buf + strlen(buf) - 1;
       }
-      /* Continuation/escaping can change the logical line's indentation.
-       * Reposition the scanner before stripping block comments. */
+      /* Continuation/escaping can change the logical line's indentation. Reposition the scanner before stripping block comments. */
       skip = buf;
       while (*skip && isspace((unsigned char)*skip)) {
          skip++;
@@ -640,7 +639,6 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       if (!escaped_comment && ((*skip == '/' && skip[1] == '/') || *skip == '#' || *skip == ';')) {
          continue;
       }
-
       // Includes are processed inline. Values from the included file are
       // copied into the current dictionary, so entries later in this file
       // retain normal last-value-wins behavior. A leading ! makes an include
