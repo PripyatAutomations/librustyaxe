@@ -38,17 +38,93 @@ typedef struct event_entry {
 
 #ifdef USE_PROFILING
    uint64_t emit_count;
+   uint64_t payload_bytes;
+   uint64_t inline_calls, inline_us, inline_max_us;
+   uint64_t queued, completed, deferred_us, deferred_max_us, queue_wait_us, queue_wait_max_us;
 #endif
 } event_entry_t;
 
 static dict *event_store = NULL;
 static pthread_mutex_t event_lock = PTHREAD_MUTEX_INITIALIZER;
+static event_entry_t *event_lookup_locked(const char *event);
 
 #ifdef USE_PROFILING
 typedef struct {
    char *event;
-   uint64_t count;
+   uint64_t count, bytes;
+   uint64_t inline_calls, inline_us, inline_max_us;
+   uint64_t queued, completed, deferred_us, deferred_max_us, queue_wait_us, queue_wait_max_us;
 } event_profile_row_t;
+
+/* Called outside the registry lock, including from a GTK dispatcher thread.
+ * Only a pair of monotonic clock reads per callback in profiling builds. */
+static uint64_t event_profile_clock_us(void) {
+   struct timespec now;
+   clock_gettime(CLOCK_MONOTONIC, &now);
+   return (uint64_t)now.tv_sec * 1000000ull + (uint64_t)now.tv_nsec / 1000ull;
+}
+
+typedef struct {
+   uint64_t inline_calls, inline_us, inline_max_us, queued;
+} event_profile_work_t;
+
+/* No lock is held while dispatching callbacks, which may re-enter the bus. */
+static void event_profile_note_inline(const char *name, size_t bytes, const event_profile_work_t *work) {
+   pthread_mutex_lock(&event_lock);
+   event_entry_t *entry = event_lookup_locked(name);
+   if (entry) {
+      entry->payload_bytes += bytes;
+      entry->inline_calls += work->inline_calls;
+      entry->inline_us += work->inline_us;
+      if (work->inline_max_us > entry->inline_max_us)
+         entry->inline_max_us = work->inline_max_us;
+      entry->queued += work->queued;
+   }
+   pthread_mutex_unlock(&event_lock);
+}
+
+static void event_profile_note_deferred(const char *name, uint64_t waited_us, uint64_t handled_us) {
+   pthread_mutex_lock(&event_lock);
+   event_entry_t *entry = event_lookup_locked(name);
+   if (entry) {
+      entry->completed++;
+      entry->queue_wait_us += waited_us;
+      entry->deferred_us += handled_us;
+      if (waited_us > entry->queue_wait_max_us) entry->queue_wait_max_us = waited_us;
+      if (handled_us > entry->deferred_max_us) entry->deferred_max_us = handled_us;
+   }
+   pthread_mutex_unlock(&event_lock);
+}
+
+bool event_profile_summary(event_profile_summary_t *summary) {
+   if (!summary) return false;
+   memset(summary, 0, sizeof(*summary));
+   pthread_mutex_lock(&event_lock);
+   int position = 0;
+   const char *key = NULL;
+   dict_value_t value;
+   val_type_t type;
+   while (event_store && (position = dict_enumerate_typed(event_store, position, &key, &value, &type)) >= 0) {
+      if (type != VAL_PTR || !value.p) continue;
+      const event_entry_t *entry = value.p;
+      summary->emits += entry->emit_count;
+      summary->payload_bytes += entry->payload_bytes;
+      summary->inline_calls += entry->inline_calls;
+      summary->inline_us += entry->inline_us;
+      summary->queued += entry->queued;
+      summary->completed += entry->completed;
+      summary->deferred_us += entry->deferred_us;
+      summary->queue_wait_us += entry->queue_wait_us;
+      if (entry->inline_max_us > summary->max_inline_us) {
+         summary->max_inline_us = entry->inline_max_us;
+         snprintf(summary->slowest_event, sizeof(summary->slowest_event), "%s", key);
+      }
+      if (entry->deferred_max_us > summary->max_deferred_us)
+         summary->max_deferred_us = entry->deferred_max_us;
+   }
+   pthread_mutex_unlock(&event_lock);
+   return true;
+}
 
 static time_t event_profile_last_dump;
 static long long event_profile_started_ms;
@@ -68,6 +144,11 @@ static int event_profile_compare(const void *a, const void *b) {
    return strcmp(left->event, right->event);
 }
 
+#else
+bool event_profile_summary(event_profile_summary_t *summary) {
+   if (summary) memset(summary, 0, sizeof(*summary));
+   return false;
+}
 #endif
 
 void event_profile_dump(void) {
@@ -99,6 +180,16 @@ void event_profile_dump(void) {
          if (entry->emit_count) {
             rows[used].event = xstrdup(key);
             rows[used].count = entry->emit_count;
+            rows[used].bytes = entry->payload_bytes;
+            rows[used].inline_calls = entry->inline_calls;
+            rows[used].inline_us = entry->inline_us;
+            rows[used].inline_max_us = entry->inline_max_us;
+            rows[used].queued = entry->queued;
+            rows[used].completed = entry->completed;
+            rows[used].deferred_us = entry->deferred_us;
+            rows[used].deferred_max_us = entry->deferred_max_us;
+            rows[used].queue_wait_us = entry->queue_wait_us;
+            rows[used].queue_wait_max_us = entry->queue_wait_max_us;
             used++;
          }
       }
@@ -117,6 +208,17 @@ void event_profile_dump(void) {
 
    for (size_t i = 0 ; i < limit ; i++) {
       Log(LOG_INFO, "profile", "  %s: %llu", rows[i].event, (unsigned long long)rows[i].count);
+      Log(LOG_INFO, "profile",
+          "    bytes=%llu, inline handlers=%llu avg=%.1f us max=%llu us, deferred queued=%llu completed=%llu avg=%.1f us max=%llu us, queue wait avg=%.1f us max=%llu us",
+          (unsigned long long)rows[i].bytes,
+          (unsigned long long)rows[i].inline_calls,
+          rows[i].inline_calls ? (double)rows[i].inline_us / rows[i].inline_calls : 0.0,
+          (unsigned long long)rows[i].inline_max_us,
+          (unsigned long long)rows[i].queued, (unsigned long long)rows[i].completed,
+          rows[i].completed ? (double)rows[i].deferred_us / rows[i].completed : 0.0,
+          (unsigned long long)rows[i].deferred_max_us,
+          rows[i].completed ? (double)rows[i].queue_wait_us / rows[i].completed : 0.0,
+          (unsigned long long)rows[i].queue_wait_max_us);
    }
 
    for (size_t i = 0 ; i < used ; i++) {
