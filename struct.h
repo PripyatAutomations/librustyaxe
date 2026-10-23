@@ -189,7 +189,13 @@ struct rr_media_flow {
    unsigned quality, remote_quality;
 };
 
+/* IRC state is library-owned; transport stays with the client. */
+typedef struct rustyirc_connection irc_conn_t;
+
 struct rrconn {
+#ifdef USE_RUSTYIRC
+   irc_conn_t *irc_conn;
+#endif
    bool active;                 // Is this slot actually used or is it
    // free-listed?
    bool authenticated;          // Is the user fully logged in?
