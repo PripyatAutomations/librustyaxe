@@ -62,10 +62,26 @@ static void test_bearing_distance(void) {
    CHECK(calculateDistance(10.0, 20.0, 10.0, 20.0) < 0.001);
 }
 
+static void test_location_display(void) {
+   rr_location_t loc;
+   char text[160];
+   CHECK(rr_location_resolve("51.5074, -0.1278", "FN20", &loc));
+   CHECK(loc.valid && !loc.approximate && strlen(loc.locator) == 6);
+   CHECK(fabs(loc.latitude - 51.5074) < 0.0001);
+   CHECK(rr_location_resolve(NULL, "IO91WM", &loc));
+   CHECK(loc.approximate && strlen(loc.locator) == 6);
+   CHECK(!rr_location_resolve(NULL, "ZZ99ZZ", &loc));
+   CHECK(!rr_location_resolve("999, 999", NULL, &loc));
+   CHECK(rr_location_format(NULL, "IO91WM", false, text, sizeof(text)));
+   CHECK(strstr(text, "Approximate Coordinates:") != NULL);
+   CHECK(strstr(text, "Grid square:") != NULL);
+   CHECK(!rr_location_format(NULL, NULL, true, text, sizeof(text)));
+}
 int main(void) {
    test_locator_to_latlon();
    test_latlon_to_locator();
    test_roundtrip();
+   test_location_display();
    test_bearing_distance();
 
    if (failures) {
