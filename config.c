@@ -583,10 +583,9 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
       while (*skip && isspace((unsigned char)*skip)) {
          skip++;
       }
-      /* A whole-line //, # or ; comment must be recognized BEFORE the
-       * block scanner. Its text may mention block-comment delimiters. */
-      if (!in_comment && !escaped_comment &&
-          ((*skip == '/' && skip[1] == '/') || *skip == '#' || *skip == ';')) {
+
+      /* A whole-line //, # or ; comment must be recognized BEFORE the block scanner. Its text may mention block-comment delimiters. */
+      if (!in_comment && !escaped_comment && ((*skip == '/' && skip[1] == '/') || *skip == '#' || *skip == ';')) {
          continue;
       }
       // Remove C-style comments, including inline and multiline blocks.

@@ -75,8 +75,7 @@ extern void event_shutdown(void);
 * dumps internally so callers do not need their own wall clock. Logging uses an owned snapshot outside the registry lock so log callbacks may emit events. */
 extern void event_profile_dump(void);
 
-/* Lock-safe snapshot for diagnostics, not a subscription or live event.
- * Handler time excludes queue wait and the caller's dispatch overhead. */
+/* Lock-safe snapshot for diagnostics, not a subscription or live event. Handler time excludes queue wait and the caller's dispatch overhead. */
 typedef struct event_profile_summary {
    uint64_t emits, payload_bytes, inline_calls, inline_us, max_inline_us;
    uint64_t queued, completed, deferred_us, max_deferred_us, queue_wait_us;
