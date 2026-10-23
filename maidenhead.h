@@ -9,6 +9,8 @@
 #define _maidenhead_h
 #include <math.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 
 typedef struct Coordinates {
@@ -39,5 +41,18 @@ extern Coordinates maidenhead2latlon(const char *locator);
 extern const char *latlon2maidenhead(Coordinates *c);
 extern double calculateBearing(double lat1, double lon1, double lat2, double lon2);
 extern double calculateDistance(double lat1, double lon1, double lat2, double lon2);
+
+/* Shared location formatting. Coordinate strings are "lat, lon" in decimal
+ * degrees; a valid coordinate fix wins over a Maidenhead locator. Grid-only
+ * locations use the approximate center of that square. The resulting locator
+ * always has six characters. Output belongs to the caller. */
+typedef struct {
+   double latitude, longitude;
+   bool valid, approximate;
+   char locator[7];
+} rr_location_t;
+bool rr_location_resolve(const char *coordinates, const char *grid, rr_location_t *out);
+bool rr_location_format(const char *coordinates, const char *grid, bool compact,
+                        char *out, size_t capacity);
 
 #endif // !defined(_maidenhead_h)
