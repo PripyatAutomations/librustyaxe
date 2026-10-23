@@ -53,41 +53,8 @@
 typedef struct rrconn rrconn_t;
 typedef struct irc_command irc_command_t;
 
-typedef struct {
-   char mode;                   // mode letter, e.g. 'o', 'v', 'k'
-   const char *desc;            // description
-   bool arg_set;                // requires argument when being set
-   bool arg_unset;              // requires argument when being unset
-} irc_mode_t;
-
-typedef struct irc_message {
-   int argc;                    // number of arguments
-   char **argv;
-   char *prefix;                // server prefix, if given
-} irc_message_t;
-
-typedef struct irc_chan_user {
-   char nick[NICKLEN + 1];
-   bool is_op;                  // @
-   bool is_voice;               // +
-   bool is_halfop;              // % optional
-   struct irc_chan_user *next;  // hash bucket chain
-} irc_chan_user_t;
-
-typedef struct irc_channel {
-   char name[CHANLEN + 1];
-   char mode[16];
-   char topic[TOPICLEN + 1];
-   int users;
-
-   bool names_in_progress;
-   bool userlist_complete;
-
-   irc_chan_user_t *user_table[USER_HASHSZ]; // hash table of users
-   struct irc_channel *next;    // list of channels
-} irc_channel_t;
-
-
+/* IRC wire and channel layouts are owned by librustyirc. */
+typedef struct irc_message irc_message_t;
 // XXX: we need to merge this into irc_command_cb
 typedef struct irc_callback {
    char *cmd;                   // IRC command
@@ -132,10 +99,7 @@ typedef struct {
    bool unidle;                 // clears idle for the user
 } irc_numeric_t;
 
-typedef struct {
-   const char *name;
-   const char *desc;
-} irc_cap_t;
+
 
 typedef struct server_cfg {
    char host[HOSTLEN + 1];
