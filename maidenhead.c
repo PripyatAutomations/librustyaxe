@@ -13,6 +13,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
+#include <stdio.h>
+#include <librustyaxe/maidenhead.h>
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
@@ -195,4 +197,60 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
    double distance = RADIUS_EARTH * c;
 
    return distance;
+}
+
+/* Validate before invoking the legacy converter, which assumes valid pairs. */
+static bool rr_grid_valid(const char *grid) {
+   if (!grid) return false;
+   size_t n = strlen(grid);
+   if (n != 4 && n != 6 && n != 8 && n != 10) return false;
+   for (size_t i = 0; i < n; ++i) {
+      unsigned char c = (unsigned char)toupper((unsigned char)grid[i]);
+      bool letter = ((i / 2) % 2 == 0);
+      if (letter) {
+         unsigned limit = i < 2 ? 18 : i < 6 ? 24 : 24;
+         if (c < 'A' || c >= 'A' + limit) return false;
+      } else if (c < '0' || c > '9') return false;
+   }
+   return true;
+}
+bool rr_location_resolve(const char *coordinates, const char *grid, rr_location_t *out) {
+   if (!out) return false;
+   memset(out, 0, sizeof(*out));
+   double lat = 0, lon = 0;
+   char extra;
+   bool measured = coordinates && sscanf(coordinates, " %lf , %lf %c", &lat, &lon, &extra) == 2 &&
+                   isfinite(lat) && isfinite(lon) && lat >= -90 && lat <= 90 &&
+                   lon >= -180 && lon <= 180;
+   if (!measured) {
+      if (!rr_grid_valid(grid)) return false;
+      Coordinates center = maidenhead2latlon(grid);
+      if (center.error) return false;
+      lat = center.latitude;
+      lon = center.longitude;
+   }
+   /* The existing converter returns a static buffer; copy before returning. */
+   Coordinates location = {.latitude = lat, .longitude = lon, .precision = 3, .error = 0};
+   const char *locator = latlon2maidenhead(&location);
+   if (!locator || strlen(locator) != 6) return false;
+   out->latitude = lat;
+   out->longitude = lon;
+   out->approximate = !measured;
+   memcpy(out->locator, locator, 7);
+   out->valid = true;
+   return true;
+}
+bool rr_location_format(const char *coordinates, const char *grid, bool compact,
+                        char *out, size_t capacity) {
+   if (!out || !capacity) return false;
+   out[0] = 0;
+   rr_location_t location;
+   if (!rr_location_resolve(coordinates, grid, &location)) return false;
+   int n = compact ?
+      snprintf(out, capacity, "%s(%.2f, %.2f) [%s]", location.approximate ? "~" : "",
+               location.latitude, location.longitude, location.locator) :
+      snprintf(out, capacity, "%sCoordinates: %.6f, %.6f · Grid square: %s",
+               location.approximate ? "Approximate " : "", location.latitude,
+               location.longitude, location.locator);
+   return n >= 0 && (size_t)n < capacity;
 }
