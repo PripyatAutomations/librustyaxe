@@ -641,12 +641,9 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
          continue;
       }
 
-      /* C-style documentation headers sometimes contain a literal close
-       * delimiter in their explanatory text. Treat orphaned star-prefixed
-       * documentation lines as comments rather than invalid INI settings.
-       * Do not interfere with values inside a section. */
-      if (!this_section[0] && *skip == '*' &&
-          (skip[1] == '/' || isspace((unsigned char)skip[1]))) {
+      /* C-style documentation headers sometimes contain a literal close delimiter in their explanatory text. Treat orphaned star-prefixed documentation lines
+       * as comments rather than invalid INI settings. Do not interfere with values inside a section. */
+      if (!this_section[0] && *skip == '*' && (skip[1] == '/' || isspace((unsigned char)skip[1]))) {
          continue;
       }
 
