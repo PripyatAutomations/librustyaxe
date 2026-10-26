@@ -398,18 +398,13 @@ int update_timestamp(void) {
 }
 
 void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
-   char msgbuf[16385];
-   char ts_log_msg[1025];
-   char log_msg[16640];
-   va_list ap, ap_c1;
+   va_list ap;
 
    if (!subsys || !fmt) {
       fprintf(stderr, "Invalid Log request: No subsys/fmt\n");
-
       return;
    }
    va_start(ap, fmt);
-   va_copy(ap_c1, ap);
    bool allowed = !debug_filter(subsys, priority);
    unsigned suppressed = 0;
    if (allowed) {
@@ -418,74 +413,60 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
          filter->rate_count, filter->rate_seconds, &suppressed)) allowed = false;
    }
 
-   // Call registered callbacks even if this message is filtered from the
-   // console/logfile below, e.g. for auditing; the callback can check
-   // log_level itself if it only wants messages that would be shown
-   if (log_callbacks) {
-      struct log_callback *lp = log_callbacks;
-      while (lp) {
-         if (lp->callback && (lp->policy == LOG_CALLBACK_RAW || allowed)) {
-            va_list cb_ap;
-            va_copy(cb_ap, ap_c1);
-            lp->callback(priority, subsys, fmt, cb_ap);
-            va_end(cb_ap);
-         }
-         lp = lp->next;
+   /* Audit/storage subscribers receive raw events; display subscribers
+    * receive only admitted events. Each callback owns a fresh va_list. */
+   for (struct log_callback *cb = log_callbacks; cb; cb = cb->next) {
+      if (cb->callback && (cb->policy == LOG_CALLBACK_RAW || allowed)) {
+         va_list args;
+         va_copy(args, ap);
+         cb->callback(priority, subsys, fmt, args);
+         va_end(args);
       }
    }
 
    if (!allowed) {
-      va_end(ap_c1);
       va_end(ap);
       return;
    }
+   if (cfg_log_show_ts) update_timestamp();
 
-   // this is arranged so that it will return cached, if called more than once a second
-   if (cfg_log_show_ts) {
-      update_timestamp();
+   /* Format exactly once without a fixed buffer ceiling. Do not consume
+    * the original arguments while determining the required allocation. */
+   va_list sizing;
+   va_copy(sizing, ap);
+   int length = vsnprintf(NULL, 0, fmt, sizing);
+   va_end(sizing);
+   if (length < 0 || (size_t)length == SIZE_MAX) {
+      va_end(ap);
+      return;
    }
-
-   /* clear the message buffer */
-   memset(msgbuf, 0, sizeof(msgbuf));
-
-   /* Expand the format string */
-   vsnprintf(msgbuf, sizeof(msgbuf) - 1, fmt, ap);
-   if (suppressed) {
-      size_t len = strlen(msgbuf);
-      snprintf(msgbuf + len, sizeof(msgbuf) - len,
-         " [rate limit: %u earlier messages suppressed]", suppressed);
+   char *message = malloc((size_t)length + 1);
+   if (!message) {
+      fprintf(stderr, "Log: out of memory formatting %s message\n", subsys);
+      va_end(ap);
+      return;
    }
-   memset(log_msg, 0, sizeof(log_msg));
-   int log_prefix_len = snprintf(log_msg, sizeof(log_msg), "<%s@%s> ", subsys ? subsys : "core", log_priority_to_str(priority));
-
-   if (log_prefix_len < 0) {
-      log_msg[0] = '\0';
-   } else if ((size_t)log_prefix_len < sizeof(log_msg)) {
-      strlcpy(log_msg + log_prefix_len, msgbuf, sizeof(log_msg) - (size_t)log_prefix_len);
-   }
+   vsnprintf(message, (size_t)length + 1, fmt, ap);
    va_end(ap);
 
-   if (logfp) {
-      if (cfg_log_show_ts) {
-         fprintf(logfp, "[%s] %s\n", latest_timestamp, log_msg);
-      } else {
-         fprintf(logfp, "%s\n", log_msg);
-      }
-      fflush(logfp);
+   /* Output the prefix, message and suppression summary separately. This
+    * avoids allocating another copy or truncating at the output stage. */
+   const char *level = log_priority_to_str(priority);
+   FILE *destinations[2] = {logfp, NULL};
+   if (!tui_mode_enabled && (!logfp || log_stdout) && logfp != stdout)
+      destinations[1] = stdout;
+   for (unsigned i = 0; i < 2; i++) {
+      FILE *stream = destinations[i];
+      if (!stream) continue;
+      if (cfg_log_show_ts) fprintf(stream, "[%s] ", latest_timestamp);
+      fprintf(stream, "<%s@%s> ", subsys, level);
+      fputs(message, stream);
+      if (suppressed)
+         fprintf(stream, " [rate limit: %u earlier messages suppressed]", suppressed);
+      fputc('\n', stream);
+      fflush(stream);
    }
-
-   if (!tui_mode_enabled) {
-      /* Only spew to the console if logfile is closed or log.stdout == true, but avoid duplicating messages */
-      if ((!logfp || log_stdout) && (logfp != stdout)) {
-         if (cfg_log_show_ts) {
-            fprintf(stdout, "[%s] %s\n", latest_timestamp, log_msg);
-         } else {
-            fprintf(stdout, "%s\n", log_msg);
-         }
-         fflush(stdout);
-      }
-   }
-   va_end(ap_c1);
+   free(message);
 }
 
 bool log_remove_callback(struct log_callback *log_callback) {
