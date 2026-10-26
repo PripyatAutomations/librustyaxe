@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
    assert(argc == 2);
    cfg = dict_new();
    dict_add(cfg, "path.modules", argv[1]);
-   struct log_callback *host = log_add_callback_token(host_callback);
+   struct log_callback *host = log_add_callback_token(host_callback, LOG_CALLBACK_FILTERED);
    assert(host);
 
    for (unsigned i = 0 ; i < 3 ; i++) {
