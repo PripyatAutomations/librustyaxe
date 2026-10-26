@@ -408,7 +408,6 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
 
       return;
    }
-   if (debug_filter(subsys, priority)) return;
    const struct log_filter *filter = log_matching_filter(subsys);
    unsigned suppressed = 0;
    if (filter && !log_rate_allowed(subsys, priority,
