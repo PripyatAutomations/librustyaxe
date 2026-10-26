@@ -223,17 +223,22 @@ void event_profile_dump(void) {
       qsort(rows, used, sizeof(*rows), event_profile_compare);
    }
    char *uptime = time_t2dhms(elapsed);
-   Log(LOG_INFO, "profile", "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown");
+   char report[16384];
+   size_t offset = 0;
+   int n = snprintf(report, sizeof(report), "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown");
+   if (n > 0) offset = (size_t)n < sizeof(report) ? (size_t)n : sizeof(report) - 1;
    free(uptime);
    size_t limit = used < 32 ? used : 32;
 
    for (size_t i = 0 ; i < limit ; i++) {
-      Log(LOG_INFO, "profile", "%s n=%llu bytes=%llu in=%llu avg=%.1fus max=%lluus def=%llu/%llu avg=%.1fus max=%lluus wait=%.1f/%.0fus", rows[i].event, (
+      n = snprintf(report + offset, sizeof(report) - offset, "\n%s n=%llu bytes=%llu in=%llu avg=%.1fus max=%lluus def=%llu/%llu avg=%.1fus max=%lluus wait=%.1f/%.0fus", rows[i].event, (
          unsigned long long)rows[i].count, (unsigned long long)rows[i].bytes, (unsigned long long)rows[i].inline_calls, rows[i].inline_calls ? (double)rows[i].
          inline_us / rows[i].inline_calls : 0.0, (unsigned long long)rows[i].inline_max_us, (unsigned long long)rows[i].completed, (unsigned long long)rows[i].
          queued, rows[i].completed ? (double)rows[i].deferred_us / rows[i].completed : 0.0, (unsigned long long)rows[i].deferred_max_us, rows[i].completed ? (
             double)rows[i].queue_wait_us / rows[i].completed : 0.0, (double)rows[i].queue_wait_max_us);
+      if (n > 0) offset += (size_t)n < sizeof(report) - offset ? (size_t)n : sizeof(report) - offset - 1;
    }
+   Log(LOG_INFO, "profile", "%s", report);
 
    for (size_t i = 0 ; i < used ; i++) {
       free(rows[i].event);
