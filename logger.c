@@ -424,7 +424,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (log_callbacks) {
       struct log_callback *lp = log_callbacks;
       while (lp) {
-         if (lp->callback && (!lp->policy == LOG_CALLBACK_RAW || allowed)) {
+         if (lp->callback && (lp->policy == LOG_CALLBACK_RAW || allowed)) {
             va_list cb_ap;
             va_copy(cb_ap, ap_c1);
             lp->callback(priority, subsys, fmt, cb_ap);
