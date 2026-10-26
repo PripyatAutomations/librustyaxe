@@ -408,10 +408,6 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
 
       return;
    }
-   const struct log_filter *filter = log_matching_filter(subsys);
-   unsigned suppressed = 0;
-   if (filter && !log_rate_allowed(subsys, priority,
-      filter->rate_count, filter->rate_seconds, &suppressed)) return;
    va_start(ap, fmt);
    va_copy(ap_c1, ap);
 
@@ -434,7 +430,14 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (debug_filter(subsys, priority)) {
       va_end(ap_c1);
       va_end(ap);
-
+      return;
+   }
+   const struct log_filter *filter = log_matching_filter(subsys);
+   unsigned suppressed = 0;
+   if (filter && !log_rate_allowed(subsys, priority,
+      filter->rate_count, filter->rate_seconds, &suppressed)) {
+      va_end(ap_c1);
+      va_end(ap);
       return;
    }
 
