@@ -36,11 +36,13 @@ struct log_priority {
 };
 typedef enum LogPriority logpriority_t;
 
+enum log_callback_policy { LOG_CALLBACK_RAW = 0, LOG_CALLBACK_FILTERED = 1 };
+
 struct log_callback {
    enum LogPriority prio;
    const char *msg;
    bool (*callback)(logpriority_t priority, const char *subsys, const char *fmt, va_list ap);
-   bool respect_filters; /* false: raw audit/storage; true: display verbosity and rate limits */
+   enum log_callback_policy policy;
    struct log_callback *next;
 };
 
@@ -63,16 +65,15 @@ extern enum LogPriority log_priority_from_str(const char *priority);
 extern const char *log_priority_to_str(logpriority_t priority);
 extern void logger_end(void);
 
-/* Opt-in delivery policy: raw callbacks see all events; filtered callbacks only
- * see events admitted to console/logfile by verbosity and rate limits. */
-extern struct log_callback *log_add_callback_token_filtered(bool (*callback)(logpriority_t, const char *, const char *, va_list), bool respect_filters);
-extern bool log_add_callback_filtered(bool (*callback)(logpriority_t, const char *, const char *, va_list), bool respect_filters);
-
-// Token registrations must be removed before their owner module is unloaded.
-extern struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap));
-
-// Add a callback to the Log() call
-extern bool log_add_callback(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap));
+/* Every subscriber explicitly selects raw delivery or output-filtered delivery.
+ * Filtered callbacks respect verbosity and rate limiting; raw callbacks
+ * receive original events regardless of console/logfile settings. */
+extern struct log_callback *log_add_callback_token(
+   bool (*callback)(logpriority_t, const char *, const char *, va_list),
+   enum log_callback_policy policy);
+extern bool log_add_callback(
+   bool (*callback)(logpriority_t, const char *, const char *, va_list),
+   enum log_callback_policy policy);
 extern bool log_remove_callback(struct log_callback *log_callback);
 
 // Filters
