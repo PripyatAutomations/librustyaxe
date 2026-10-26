@@ -11,7 +11,7 @@ unsigned fixture_calls(void) {
    return calls;
 }
 bool rr_module_init(void) {
-   token = log_add_callback_token(callback);
+   token = log_add_callback_token(callback, LOG_CALLBACK_RAW);
 
    return token != NULL;
 }
