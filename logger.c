@@ -410,6 +410,13 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    }
    va_start(ap, fmt);
    va_copy(ap_c1, ap);
+   bool allowed = !debug_filter(subsys, priority);
+   unsigned suppressed = 0;
+   if (allowed) {
+      const struct log_filter *filter = log_matching_filter(subsys);
+      if (filter && !log_rate_allowed(subsys, priority,
+         filter->rate_count, filter->rate_seconds, &suppressed)) allowed = false;
+   }
 
    // Call registered callbacks even if this message is filtered from the
    // console/logfile below, e.g. for auditing; the callback can check
@@ -417,7 +424,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (log_callbacks) {
       struct log_callback *lp = log_callbacks;
       while (lp) {
-         if (lp->callback) {
+         if (lp->callback && (!lp->respect_filters || allowed)) {
             va_list cb_ap;
             va_copy(cb_ap, ap_c1);
             lp->callback(priority, subsys, fmt, cb_ap);
@@ -427,15 +434,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       }
    }
 
-   if (debug_filter(subsys, priority)) {
-      va_end(ap_c1);
-      va_end(ap);
-      return;
-   }
-   const struct log_filter *filter = log_matching_filter(subsys);
-   unsigned suppressed = 0;
-   if (filter && !log_rate_allowed(subsys, priority,
-      filter->rate_count, filter->rate_seconds, &suppressed)) {
+   if (!allowed) {
       va_end(ap_c1);
       va_end(ap);
       return;
@@ -508,7 +507,7 @@ bool log_remove_callback(struct log_callback *log_callback) {
    return false;                // callback not found
 }
 
-struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap)) {
+struct log_callback *log_add_callback_token_filtered(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap), bool respect_filters) {
    struct log_callback *newcb = malloc(sizeof(struct log_callback));
 
    if (!newcb) {
@@ -518,6 +517,7 @@ struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t pri
    }
    memset(newcb, 0, sizeof(struct log_callback));
    newcb->callback = log_va_cb;
+   newcb->respect_filters = respect_filters;
 
    if (log_callbacks) {
       // find the end
@@ -541,6 +541,12 @@ struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t pri
    return newcb;
 }
 
+struct log_callback *log_add_callback_token(bool (*callback) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap)) {
+   return log_add_callback_token_filtered(callback, false);
+}
+bool log_add_callback_filtered(bool (*callback)(logpriority_t, const char *, const char *, va_list), bool respect_filters) {
+   return log_add_callback_token_filtered(callback, respect_filters) != NULL;
+}
 bool log_add_callback(bool (*callback) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap)) {
    return log_add_callback_token(callback) != NULL;
 }
