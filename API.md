@@ -79,7 +79,7 @@ code before `dlclose()`. Module implementations must match the loader's ABI.
 `dict2json()` returns a string to free; `json2dict()` returns a dictionary to
 free. JSON is a serialization boundary, not a reason to replace typed dictionary
 entries with strings. `Log()` uses a subsystem and priority;
-`log_add_callback_token()` provides a registration handle for explicit removal.
+`log_add_callback_token(callback, policy)` provides a registration handle for explicit removal. Every caller supplies `LOG_CALLBACK_RAW` (audit/database capture) or `LOG_CALLBACK_FILTERED` (UI/host-log streams). `log_add_callback(callback, policy)` follows the same rule.
 Serial parsing/settings operations return true on success, but device-opening
 functions return an OS descriptor or -1.
 
@@ -111,9 +111,7 @@ specific matching filter controls both verbosity and rate, as with existing
 filter precedence. On the next admitted message after a window with
 suppression, the logger adds the suppressed-message count.
 
-`LOG_AUDIT` and `LOG_CRIT` bypass the rate limiter. Rate limiting only affects logfile/console emission. All messages still reach
-registered callbacks, including the audit database and UI event consumers,
-even when verbosity filters or rate limits hide their console output. If rate tracking fills
+`LOG_AUDIT` and `LOG_CRIT` bypass the rate limiter. Rate limiting only affects logfile/console emission. Callbacks explicitly choose their delivery policy. `LOG_CALLBACK_RAW` sees every original event, while `LOG_CALLBACK_FILTERED` receives only messages admitted by the verbosity and rate filters. The audit database uses raw delivery; the client log display uses filtered delivery. If rate tracking fills
 its bounded 256-subsystem/severity table or the monotonic clock fails, logging
 fails open rather than silently discarding messages.
 
