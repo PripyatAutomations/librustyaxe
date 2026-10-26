@@ -93,3 +93,30 @@ functions return an OS descriptor or -1.
 The current library is **not documented as globally thread-safe**. Callbacks that
 touch GTK/GLib or process-global configuration should execute in the appropriate
 application context.
+
+## Logging: verbosity and rate limiting
+
+The existing `log.level` configuration accepts comma- or whitespace-separated
+`subsystem:level` rules, optionally followed by `@count/interval`:
+
+```ini
+log.level = *:info,pcm.hub:debug@1/30s,ws.media:crazy@5/s,bridge.*:debug@10/m
+```
+
+The optional suffix admits up to `count` messages per monotonic time window.
+Intervals accept seconds (`s`), minutes (`m`), or hours (`h`), such as
+`1/30s`, `10/m`, and `60/h`. Rules without `@` have no rate limit.
+Rate counters are independent for each subsystem and priority. The most
+specific matching filter controls both verbosity and rate, as with existing
+filter precedence. On the next admitted message after a window with
+suppression, the logger adds the suppressed-message count.
+
+`LOG_AUDIT` and `LOG_CRIT` bypass the rate limiter. Suppressed messages
+are not forwarded to log callbacks; verbosity-filtered messages still reach
+callbacks (including the audit database callback). If rate tracking fills
+its bounded 256-subsystem/severity table or the monotonic clock fails, logging
+fails open rather than silently discarding messages.
+
+Rate limiting is not a substitute for assigning appropriate severities:
+frequent polling belongs at `LOG_CRAZY`, periodic diagnostics at
+`LOG_DEBUG`, and meaningful transitions at `LOG_INFO`.
