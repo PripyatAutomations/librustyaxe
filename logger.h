@@ -40,6 +40,7 @@ struct log_callback {
    enum LogPriority prio;
    const char *msg;
    bool (*callback)(logpriority_t priority, const char *subsys, const char *fmt, va_list ap);
+   bool respect_filters; /* false: raw audit/storage; true: display verbosity and rate limits */
    struct log_callback *next;
 };
 
@@ -61,6 +62,11 @@ extern int update_timestamp(void);
 extern enum LogPriority log_priority_from_str(const char *priority);
 extern const char *log_priority_to_str(logpriority_t priority);
 extern void logger_end(void);
+
+/* Opt-in delivery policy: raw callbacks see all events; filtered callbacks only
+ * see events admitted to console/logfile by verbosity and rate limits. */
+extern struct log_callback *log_add_callback_token_filtered(bool (*callback)(logpriority_t, const char *, const char *, va_list), bool respect_filters);
+extern bool log_add_callback_filtered(bool (*callback)(logpriority_t, const char *, const char *, va_list), bool respect_filters);
 
 // Token registrations must be removed before their owner module is unloaded.
 extern struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap));
