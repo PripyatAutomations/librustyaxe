@@ -424,7 +424,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (log_callbacks) {
       struct log_callback *lp = log_callbacks;
       while (lp) {
-         if (lp->callback && (!lp->respect_filters || allowed)) {
+         if (lp->callback && (!lp->policy == LOG_CALLBACK_RAW || allowed)) {
             va_list cb_ap;
             va_copy(cb_ap, ap_c1);
             lp->callback(priority, subsys, fmt, cb_ap);
@@ -507,7 +507,9 @@ bool log_remove_callback(struct log_callback *log_callback) {
    return false;                // callback not found
 }
 
-struct log_callback *log_add_callback_token_filtered(bool (*log_va_cb) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap), bool respect_filters) {
+struct log_callback *log_add_callback_token(bool (*log_va_cb)(logpriority_t, const char *, const char *, va_list),
+   enum log_callback_policy policy) {
+   if (policy != LOG_CALLBACK_RAW && policy != LOG_CALLBACK_FILTERED) return NULL;
    struct log_callback *newcb = malloc(sizeof(struct log_callback));
 
    if (!newcb) {
@@ -517,7 +519,7 @@ struct log_callback *log_add_callback_token_filtered(bool (*log_va_cb) (logprior
    }
    memset(newcb, 0, sizeof(struct log_callback));
    newcb->callback = log_va_cb;
-   newcb->respect_filters = respect_filters;
+   newcb->policy = policy;
 
    if (log_callbacks) {
       // find the end
@@ -541,12 +543,7 @@ struct log_callback *log_add_callback_token_filtered(bool (*log_va_cb) (logprior
    return newcb;
 }
 
-struct log_callback *log_add_callback_token(bool (*callback) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap)) {
-   return log_add_callback_token_filtered(callback, false);
-}
-bool log_add_callback_filtered(bool (*callback)(logpriority_t, const char *, const char *, va_list), bool respect_filters) {
-   return log_add_callback_token_filtered(callback, respect_filters) != NULL;
-}
-bool log_add_callback(bool (*callback) (logpriority_t priority, const char *subsys, const char *fmt, va_list ap)) {
-   return log_add_callback_token(callback) != NULL;
+bool log_add_callback(bool (*callback)(logpriority_t, const char *, const char *, va_list),
+   enum log_callback_policy policy) {
+   return log_add_callback_token(callback, policy) != NULL;
 }
