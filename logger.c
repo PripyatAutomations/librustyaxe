@@ -400,7 +400,7 @@ int update_timestamp(void) {
 void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    char msgbuf[16385];
    char ts_log_msg[1025];
-   char log_msg[769];
+   char log_msg[16640];
    va_list ap, ap_c1;
 
    if (!subsys || !fmt) {
