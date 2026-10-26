@@ -16,6 +16,7 @@
 // own event-loop thread without making librustyaxe depend on GLib.
 //
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -172,6 +173,35 @@ bool event_profile_summary(event_profile_summary_t *summary) {
 }
 #endif
 
+/* Dynamically grow profiling reports so one Log() call owns each dump. */
+static bool profile_report_append(char **text, size_t *used, size_t *capacity, const char *format, ...) {
+   va_list args, measure;
+   va_start(args, format);
+   va_copy(measure, args);
+   int needed = vsnprintf(NULL, 0, format, measure);
+   va_end(measure);
+   if (needed < 0 || (size_t)needed > SIZE_MAX - *used - 1) {
+      va_end(args);
+      return false;
+   }
+   size_t required = *used + (size_t)needed + 1;
+   if (required > *capacity) {
+      size_t grown = *capacity ? *capacity : 512;
+      while (grown < required) {
+         if (grown > SIZE_MAX / 2) { grown = required; break; }
+         grown *= 2;
+      }
+      char *replacement = realloc(*text, grown);
+      if (!replacement) { va_end(args); return false; }
+      *text = replacement;
+      *capacity = grown;
+   }
+   vsnprintf(*text + *used, *capacity - *used, format, args);
+   *used += (size_t)needed;
+   va_end(args);
+   return true;
+}
+
 void event_profile_dump(void) {
 #ifdef USE_PROFILING
    const time_t current = time(NULL);
@@ -223,22 +253,22 @@ void event_profile_dump(void) {
       qsort(rows, used, sizeof(*rows), event_profile_compare);
    }
    char *uptime = time_t2dhms(elapsed);
-   char report[16384];
-   size_t offset = 0;
-   int n = snprintf(report, sizeof(report), "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown");
-   if (n > 0) offset = (size_t)n < sizeof(report) ? (size_t)n : sizeof(report) - 1;
+   char *report = NULL;
+   size_t report_len = 0, report_capacity = 0;
+   bool report_ok = profile_report_append(&report, &report_len, &report_capacity,
+      "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown");
    free(uptime);
    size_t limit = used < 32 ? used : 32;
 
    for (size_t i = 0 ; i < limit ; i++) {
-      n = snprintf(report + offset, sizeof(report) - offset, "\n%s n=%llu bytes=%llu in=%llu avg=%.1fus max=%lluus def=%llu/%llu avg=%.1fus max=%lluus wait=%.1f/%.0fus", rows[i].event, (
+      report_ok = report_ok && profile_report_append(&report, &report_len, &report_capacity, "\n%s n=%llu bytes=%llu in=%llu avg=%.1fus max=%lluus def=%llu/%llu avg=%.1fus max=%lluus wait=%.1f/%.0fus", rows[i].event, (
          unsigned long long)rows[i].count, (unsigned long long)rows[i].bytes, (unsigned long long)rows[i].inline_calls, rows[i].inline_calls ? (double)rows[i].
          inline_us / rows[i].inline_calls : 0.0, (unsigned long long)rows[i].inline_max_us, (unsigned long long)rows[i].completed, (unsigned long long)rows[i].
          queued, rows[i].completed ? (double)rows[i].deferred_us / rows[i].completed : 0.0, (unsigned long long)rows[i].deferred_max_us, rows[i].completed ? (
             double)rows[i].queue_wait_us / rows[i].completed : 0.0, (double)rows[i].queue_wait_max_us);
-      if (n > 0) offset += (size_t)n < sizeof(report) - offset ? (size_t)n : sizeof(report) - offset - 1;
    }
-   Log(LOG_INFO, "profile", "%s", report);
+   if (report_ok) Log(LOG_INFO, "profile", "%s", report ? report : "");
+   free(report);
 
    for (size_t i = 0 ; i < used ; i++) {
       free(rows[i].event);
