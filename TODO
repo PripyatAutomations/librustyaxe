@@ -20,7 +20,8 @@
 [logger]
 * Add support for masking out messages such as '-*.noisy'
 
-? Add support for rate limiting messages by subsys major (first dot)
+* Rate limiting: implemented configurable per subsystem/severity with log.level rules, e.g. pcm.hub:debug@1/30s
+* Consider optional major-subsystem aggregation (first dot) and per-callsite/message buckets
 
 [Porting]
 minimal inet_ntop() for non-posix
