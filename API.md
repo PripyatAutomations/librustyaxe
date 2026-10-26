@@ -111,9 +111,9 @@ specific matching filter controls both verbosity and rate, as with existing
 filter precedence. On the next admitted message after a window with
 suppression, the logger adds the suppressed-message count.
 
-`LOG_AUDIT` and `LOG_CRIT` bypass the rate limiter. Suppressed messages
-are not forwarded to log callbacks; verbosity-filtered messages still reach
-callbacks (including the audit database callback). If rate tracking fills
+`LOG_AUDIT` and `LOG_CRIT` bypass the rate limiter. Rate limiting only affects logfile/console emission. All messages still reach
+registered callbacks, including the audit database and UI event consumers,
+even when verbosity filters or rate limits hide their console output. If rate tracking fills
 its bounded 256-subsystem/severity table or the monotonic clock fails, logging
 fails open rather than silently discarding messages.
 
