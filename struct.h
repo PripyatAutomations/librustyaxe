@@ -155,8 +155,10 @@ struct rr_media_flow {
 
 /* IRC state is library-owned; transport stays with the client. */
 typedef struct rustyirc_connection irc_conn_t;
+struct rr_transport;
 
 struct rrconn {
+   struct rr_transport *native_transport; /* Borrowed server-side transport. */
 #ifdef USE_RUSTYIRC
    irc_conn_t *irc_conn;
 #endif
