@@ -1,4 +1,5 @@
 #include <librustyaxe/transport.mongoose.h>
+#include "build_config.h"
 #ifdef USE_MONGOOSE
 #include <ext/libmongoose/mongoose.h>
 #include <stdlib.h>
