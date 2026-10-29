@@ -215,7 +215,7 @@ static bool rr_grid_valid(const char *grid) {
       bool letter = ((i / 2) % 2 == 0);
 
       if (letter) {
-         unsigned limit = i < 2 ? 18 : i < 6 ? 24 : 24;
+         unsigned limit = i < 2 ? 18 : 24;
 
          if (c < 'A' || c >= 'A' + limit) {
             return false;
