@@ -73,11 +73,19 @@ typedef struct rr_transport_driver {
    /* Returns the hash of the authenticated TLS peer SPKI, not an advertised
     * or self-reported identity. Exactly 32 raw SHA-256 bytes. */
    bool (*peer_spki_sha256)(void *driver, uint8_t output[32]);
+   /* Optional manual event-loop driver. A negative result is an error,
+    * zero means no events, positive is the number of dispatched events.
+    * Drivers integrated into GLib/GSource (or another reactor) do not
+    * implement poll: readiness callbacks already deliver events.
+    * A manager-backed driver must poll its manager exactly once per turn,
+    * not separately for each connection.
+    */
+   int (*poll)(void *driver, int timeout_ms);
    /* Begin closing; driver emits CLOSE after its final I/O callback. */
    void (*close)(void *driver);
 } rr_transport_driver_t;
 
-#define RR_TRANSPORT_ABI_VERSION 2u
+#define RR_TRANSPORT_ABI_VERSION 3u
 
 rr_transport_t *rr_transport_new(const rr_transport_driver_t *ops,
    void *driver, rr_transport_callback_t callback, void *context);
@@ -86,6 +94,8 @@ enum rr_transport_state rr_transport_state(const rr_transport_t *transport);
 int rr_transport_send_message(rr_transport_t *transport, const void *data, size_t len);
 int rr_transport_send_binary_message(rr_transport_t *transport, const void *data, size_t len);
 size_t rr_transport_queued_bytes(rr_transport_t *transport);
+/* Optional for manually driven adapters; reactor-backed adapters return UNSUPPORTED. */
+int rr_transport_poll(rr_transport_t *transport, int timeout_ms);
 int rr_transport_send_datagram(rr_transport_t *transport, const void *data, size_t len);
 int rr_transport_open_stream(rr_transport_t *transport, uint64_t *stream_id);
 int rr_transport_send_stream(rr_transport_t *transport, uint64_t stream_id,
