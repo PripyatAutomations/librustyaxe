@@ -1,5 +1,5 @@
-CFLAGS +=$(call pkgconfig, --cflags tinfo)
-LDFLAGS +=$(call pkgconfig, --libs tinfo)
+CFLAGS +=$(call pkgconfig, --cflags tinfo glib-2.0 gio-2.0)
+LDFLAGS +=$(call pkgconfig, --libs tinfo glib-2.0 gio-2.0)
 
 librustyaxe ?= ../librustyaxe.so
 # !ls *.c|sed 's/.c$/.o/g'|sed 's/^/librustyaxe_objs += /g'
@@ -28,6 +28,7 @@ librustyaxe_objs += runtime-globals.o
 librustyaxe_objs += ringbuffer.o
 librustyaxe_objs += socks.o
 librustyaxe_objs += subproc.o
+librustyaxe_objs += reactor.glib.o
 librustyaxe_objs += transport.o
 librustyaxe_objs += termkey.o
 librustyaxe_objs += tui.o
