@@ -20,7 +20,9 @@ enum rr_transport_capability {
    RR_TRANSPORT_TLS_AUTHENTICATED = 1u << 3,
    RR_TRANSPORT_PEER_SPKI         = 1u << 4,
    RR_TRANSPORT_MULTIPLEX         = 1u << 5,
-   RR_TRANSPORT_BINARY_MESSAGES  = 1u << 6
+   RR_TRANSPORT_BINARY_MESSAGES  = 1u << 6,
+   /* TLS encryption is active; does not imply verified peer identity. */
+   RR_TRANSPORT_TLS_ENCRYPTED    = 1u << 7
 };
 
 enum rr_transport_state {
