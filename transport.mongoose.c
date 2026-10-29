@@ -49,7 +49,7 @@ static void closing(void *ctx) {
 }
 static const rr_transport_driver_t mongoose_ops = {
    .abi_version = RR_TRANSPORT_ABI_VERSION,
-   .capabilities = RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES,
+   .capabilities = RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES | RR_TRANSPORT_TLS_ENCRYPTED,
    .connection_capabilities = capabilities,
    .send_message = send_text, .send_binary_message = send_binary,
    .queued_bytes = queued, .close = closing
