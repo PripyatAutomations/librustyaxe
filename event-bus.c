@@ -180,25 +180,37 @@ static bool profile_report_append(char **text, size_t *used, size_t *capacity, c
    va_copy(measure, args);
    int needed = vsnprintf(NULL, 0, format, measure);
    va_end(measure);
+
    if (needed < 0 || (size_t)needed > SIZE_MAX - *used - 1) {
       va_end(args);
+
       return false;
    }
    size_t required = *used + (size_t)needed + 1;
+
    if (required > *capacity) {
       size_t grown = *capacity ? *capacity : 512;
       while (grown < required) {
-         if (grown > SIZE_MAX / 2) { grown = required; break; }
+         if (grown > SIZE_MAX / 2) {
+            grown = required;
+            break;
+         }
          grown *= 2;
       }
       char *replacement = realloc(*text, grown);
-      if (!replacement) { va_end(args); return false; }
+
+      if (!replacement) {
+         va_end(args);
+
+         return false;
+      }
       *text = replacement;
       *capacity = grown;
    }
    vsnprintf(*text + *used, *capacity - *used, format, args);
    *used += (size_t)needed;
    va_end(args);
+
    return true;
 }
 
@@ -255,19 +267,24 @@ void event_profile_dump(void) {
    char *uptime = time_t2dhms(elapsed);
    char *report = NULL;
    size_t report_len = 0, report_capacity = 0;
-   bool report_ok = profile_report_append(&report, &report_len, &report_capacity,
-      "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown");
+   bool report_ok = profile_report_append(&report, &report_len, &report_capacity, "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown")
+   ;
    free(uptime);
    size_t limit = used < 32 ? used : 32;
 
    for (size_t i = 0 ; i < limit ; i++) {
-      report_ok = report_ok && profile_report_append(&report, &report_len, &report_capacity, "\n%s n=%llu bytes=%llu in=%llu avg=%.1fus max=%lluus def=%llu/%llu avg=%.1fus max=%lluus wait=%.1f/%.0fus", rows[i].event, (
-         unsigned long long)rows[i].count, (unsigned long long)rows[i].bytes, (unsigned long long)rows[i].inline_calls, rows[i].inline_calls ? (double)rows[i].
-         inline_us / rows[i].inline_calls : 0.0, (unsigned long long)rows[i].inline_max_us, (unsigned long long)rows[i].completed, (unsigned long long)rows[i].
-         queued, rows[i].completed ? (double)rows[i].deferred_us / rows[i].completed : 0.0, (unsigned long long)rows[i].deferred_max_us, rows[i].completed ? (
-            double)rows[i].queue_wait_us / rows[i].completed : 0.0, (double)rows[i].queue_wait_max_us);
+      report_ok = report_ok
+         && profile_report_append(&report, &report_len, &report_capacity,
+         "\n%s n=%llu bytes=%llu in=%llu avg=%.1fus max=%lluus def=%llu/%llu avg=%.1fus max=%lluus wait=%.1f/%.0fus", rows[i].event, (unsigned long long)rows[i]
+         .count, (unsigned long long)rows[i].bytes, (unsigned long long)rows[i].inline_calls, rows[i].inline_calls ? (double)rows[i].inline_us / rows[i].
+         inline_calls : 0.0, (unsigned long long)rows[i].inline_max_us, (unsigned long long)rows[i].completed, (unsigned long long)rows[i].queued, rows[i].
+         completed ? (double)rows[i].deferred_us / rows[i].completed : 0.0, (unsigned long long)rows[i].deferred_max_us, rows[i].completed ? (double)rows[i].
+         queue_wait_us / rows[i].completed : 0.0, (double)rows[i].queue_wait_max_us);
    }
-   if (report_ok) Log(LOG_INFO, "profile", "%s", report ? report : "");
+
+   if (report_ok) {
+      Log(LOG_INFO, "profile", "%s", report ? report : "");
+   }
    free(report);
 
    for (size_t i = 0 ; i < used ; i++) {

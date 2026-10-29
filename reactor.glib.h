@@ -1,13 +1,17 @@
+//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//
+// Do not pay money for this, except donations to the project, if you wish to.
+// The software is not for sale. It is freely available, always.
+//
+// Licensed under MIT license, if built without mongoose or GPL if built with.
 #ifndef RR_LIBRUSTYAXE_REACTOR_GLIB_H
 #define RR_LIBRUSTYAXE_REACTOR_GLIB_H
 #include <glib.h>
 #include <stdbool.h>
-/* Platform adapter for fd readiness; rr_transport itself stays portable.
- * The caller owns the file descriptor. Callback false removes the watch. */
+/* Platform adapter for fd readiness; rr_transport itself stays portable. The caller owns the file descriptor. Callback false removes the watch. */
 typedef struct rr_reactor_watch rr_reactor_watch_t;
 typedef bool (*rr_reactor_ready_fn)(int fd, GIOCondition events, void *context);
-rr_reactor_watch_t *rr_reactor_watch_fd(GMainContext *loop, int fd,
-   GIOCondition interests, rr_reactor_ready_fn callback, void *context);
+rr_reactor_watch_t *rr_reactor_watch_fd(GMainContext *loop, int fd, GIOCondition interests, rr_reactor_ready_fn callback, void *context);
 void rr_reactor_watch_cancel(rr_reactor_watch_t *watch);
 void rr_reactor_dispatch_ready(GMainContext *loop);
 #endif

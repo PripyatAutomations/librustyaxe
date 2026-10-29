@@ -36,7 +36,9 @@ struct log_priority {
 };
 typedef enum LogPriority logpriority_t;
 
-enum log_callback_policy { LOG_CALLBACK_RAW = 0, LOG_CALLBACK_FILTERED = 1 };
+enum log_callback_policy {
+   LOG_CALLBACK_RAW = 0, LOG_CALLBACK_FILTERED = 1
+};
 
 struct log_callback {
    enum LogPriority prio;
@@ -65,15 +67,10 @@ extern enum LogPriority log_priority_from_str(const char *priority);
 extern const char *log_priority_to_str(logpriority_t priority);
 extern void logger_end(void);
 
-/* Every subscriber explicitly selects raw delivery or output-filtered delivery.
- * Filtered callbacks respect verbosity and rate limiting; raw callbacks
- * receive original events regardless of console/logfile settings. */
-extern struct log_callback *log_add_callback_token(
-   bool (*callback)(logpriority_t, const char *, const char *, va_list),
-   enum log_callback_policy policy);
-extern bool log_add_callback(
-   bool (*callback)(logpriority_t, const char *, const char *, va_list),
-   enum log_callback_policy policy);
+/* Every subscriber explicitly selects raw delivery or output-filtered delivery. Filtered callbacks respect verbosity and rate limiting; raw callbacks receive
+ * original events regardless of console/logfile settings. */
+extern struct log_callback *log_add_callback_token(bool (*callback) (logpriority_t, const char *, const char *, va_list), enum log_callback_policy policy);
+extern bool log_add_callback(bool (*callback) (logpriority_t, const char *, const char *, va_list), enum log_callback_policy policy);
 extern bool log_remove_callback(struct log_callback *log_callback);
 
 // Filters

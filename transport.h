@@ -1,7 +1,12 @@
+//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//
+// Do not pay money for this, except donations to the project, if you wish to.
+// The software is not for sale. It is freely available, always.
+//
+// Licensed under MIT license, if built without mongoose or GPL if built with.
 #ifndef RR_TRANSPORT_H
 #define RR_TRANSPORT_H
-/* Reusable transport ABI: no GLib, Mongoose or POSIX types in this interface.
- * Drivers may target MCU sockets, WebSocket, QUIC or WebTransport. */
+/* Reusable transport ABI: no GLib, Mongoose or POSIX types in this interface. Drivers may target MCU sockets, WebSocket, QUIC or WebTransport. */
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -15,14 +20,14 @@ typedef struct rr_transport_channel rr_transport_channel_t;
 
 enum rr_transport_capability {
    RR_TRANSPORT_RELIABLE_MESSAGES = 1u << 0,
-   RR_TRANSPORT_ORDERED_STREAMS   = 1u << 1,
-   RR_TRANSPORT_DATAGRAMS         = 1u << 2,
+   RR_TRANSPORT_ORDERED_STREAMS = 1u << 1,
+   RR_TRANSPORT_DATAGRAMS = 1u << 2,
    RR_TRANSPORT_TLS_AUTHENTICATED = 1u << 3,
-   RR_TRANSPORT_PEER_SPKI         = 1u << 4,
-   RR_TRANSPORT_MULTIPLEX         = 1u << 5,
-   RR_TRANSPORT_BINARY_MESSAGES  = 1u << 6,
+   RR_TRANSPORT_PEER_SPKI = 1u << 4,
+   RR_TRANSPORT_MULTIPLEX = 1u << 5,
+   RR_TRANSPORT_BINARY_MESSAGES = 1u << 6,
    /* TLS encryption is active; does not imply verified peer identity. */
-   RR_TRANSPORT_TLS_ENCRYPTED    = 1u << 7
+   RR_TRANSPORT_TLS_ENCRYPTED = 1u << 7
 };
 
 enum rr_transport_state {
@@ -52,17 +57,14 @@ enum rr_transport_status {
    RR_TRANSPORT_IO_ERROR = -5
 };
 
-/* Borrowed data and peer identity are valid only during their callback.
- * A driver must not fire callbacks after close has completed. */
-typedef void (*rr_transport_callback_t)(rr_transport_t *transport,
-   enum rr_transport_event event, rr_transport_channel_t *channel,
-   const uint8_t *data, size_t len, void *context);
+/* Borrowed data and peer identity are valid only during their callback. A driver must not fire callbacks after close has completed. */
+typedef void (*rr_transport_callback_t)(rr_transport_t *transport, enum rr_transport_event event, rr_transport_channel_t *channel, const uint8_t *data, size_t
+   len, void *context);
 
 typedef struct rr_transport_driver {
    uint32_t abi_version;
    uint32_t capabilities;
-   /* Drivers with route-specific authentication may narrow capabilities
-    * after establishment; static capabilities are the upper bound. */
+   /* Drivers with route-specific authentication may narrow capabilities after establishment; static capabilities are the upper bound. */
    uint32_t (*connection_capabilities)(void *driver);
    /* driver-owned connection context is handed in at creation */
    int (*send_message)(void *driver, const uint8_t *data, size_t len);
@@ -70,17 +72,12 @@ typedef struct rr_transport_driver {
    size_t (*queued_bytes)(void *driver);
    int (*send_datagram)(void *driver, const uint8_t *data, size_t len);
    int (*open_stream)(void *driver, uint64_t *stream_id);
-   int (*send_stream)(void *driver, uint64_t stream_id,
-                      const uint8_t *data, size_t len, bool fin);
-   /* Returns the hash of the authenticated TLS peer SPKI, not an advertised
-    * or self-reported identity. Exactly 32 raw SHA-256 bytes. */
+   int (*send_stream)(void *driver, uint64_t stream_id, const uint8_t *data, size_t len, bool fin);
+   /* Returns the hash of the authenticated TLS peer SPKI, not an advertised or self-reported identity. Exactly 32 raw SHA-256 bytes. */
    bool (*peer_spki_sha256)(void *driver, uint8_t output[32]);
-   /* Optional manual event-loop driver. A negative result is an error,
-    * zero means no events, positive is the number of dispatched events.
-    * Drivers integrated into GLib/GSource (or another reactor) do not
-    * implement poll: readiness callbacks already deliver events.
-    * A manager-backed driver must poll its manager exactly once per turn,
-    * not separately for each connection.
+   /* Optional manual event-loop driver. A negative result is an error, zero means no events, positive is the number of dispatched events. Drivers integrated
+    * into GLib/GSource (or another reactor) do not implement poll: readiness callbacks already deliver events. A manager-backed driver must poll its manager
+    * exactly once per turn, not separately for each connection.
     */
    int (*poll)(void *driver, int timeout_ms);
    /* Begin closing; driver emits CLOSE after its final I/O callback. */
@@ -89,8 +86,7 @@ typedef struct rr_transport_driver {
 
 #define RR_TRANSPORT_ABI_VERSION 3u
 
-rr_transport_t *rr_transport_new(const rr_transport_driver_t *ops,
-   void *driver, rr_transport_callback_t callback, void *context);
+rr_transport_t *rr_transport_new(const rr_transport_driver_t *ops, void *driver, rr_transport_callback_t callback, void *context);
 uint32_t rr_transport_capabilities(const rr_transport_t *transport);
 enum rr_transport_state rr_transport_state(const rr_transport_t *transport);
 int rr_transport_send_message(rr_transport_t *transport, const void *data, size_t len);
@@ -100,15 +96,12 @@ size_t rr_transport_queued_bytes(rr_transport_t *transport);
 int rr_transport_poll(rr_transport_t *transport, int timeout_ms);
 int rr_transport_send_datagram(rr_transport_t *transport, const void *data, size_t len);
 int rr_transport_open_stream(rr_transport_t *transport, uint64_t *stream_id);
-int rr_transport_send_stream(rr_transport_t *transport, uint64_t stream_id,
-   const void *data, size_t len, bool fin);
+int rr_transport_send_stream(rr_transport_t *transport, uint64_t stream_id, const void *data, size_t len, bool fin);
 bool rr_transport_peer_spki_sha256(rr_transport_t *transport, uint8_t output[32]);
 /* Called by driver on its event loop. Events are not dispatched across threads. */
-void rr_transport_emit(rr_transport_t *transport, enum rr_transport_event event,
-   rr_transport_channel_t *channel, const void *data, size_t len);
+void rr_transport_emit(rr_transport_t *transport, enum rr_transport_event event, rr_transport_channel_t *channel, const void *data, size_t len);
 void rr_transport_close(rr_transport_t *transport);
-/* Free only after CLOSE. If still live, starts close and retains ownership
- * until the caller receives CLOSE and calls free again. */
+/* Free only after CLOSE. If still live, starts close and retains ownership until the caller receives CLOSE and calls free again. */
 void rr_transport_free(rr_transport_t *transport);
 void *rr_transport_driver_context(rr_transport_t *transport);
 

@@ -115,66 +115,93 @@ struct log_rate_slot {
 static struct log_rate_slot log_rate_slots[LOG_RATE_SLOTS];
 
 /* Fixed monotonic windows, keyed by subsystem and severity. No per-call allocation. */
-static bool log_rate_allowed(const char *subsys, logpriority_t level,
-      unsigned count, unsigned seconds, unsigned *skipped) {
+static bool log_rate_allowed(const char *subsys, logpriority_t level, unsigned count, unsigned seconds, unsigned *skipped) {
    *skipped = 0;
-   if (!count || level <= LOG_AUDIT) return true;
+
+   if (!count || level <= LOG_AUDIT) {
+      return true;
+   }
    struct timespec ts;
-   if (clock_gettime(CLOCK_MONOTONIC, &ts)) return true;
+
+   if (clock_gettime(CLOCK_MONOTONIC, &ts)) {
+      return true;
+   }
    struct log_rate_slot *slot = NULL;
-   for (unsigned i = 0; i < LOG_RATE_SLOTS; ++i) {
-      if (log_rate_slots[i].used && log_rate_slots[i].priority == level &&
-          !strcmp(log_rate_slots[i].subsys, subsys)) {
+
+   for (unsigned i = 0 ; i < LOG_RATE_SLOTS ; ++i) {
+      if (log_rate_slots[i].used && log_rate_slots[i].priority == level && !strcmp(log_rate_slots[i].subsys, subsys)) {
          slot = &log_rate_slots[i];
          break;
       }
    }
+
    if (!slot) {
-      for (unsigned i = 0; i < LOG_RATE_SLOTS; ++i)
-         if (!log_rate_slots[i].used) { slot = &log_rate_slots[i]; break; }
-      if (!slot) return true; /* capacity exhausted: fail open */
+      for (unsigned i = 0 ; i < LOG_RATE_SLOTS ; ++i) {
+         if (!log_rate_slots[i].used) {
+            slot = &log_rate_slots[i];
+            break;
+         }
+      }
+
+      if (!slot) {
+         return true;           /* capacity exhausted: fail open */
+      }
       memset(slot, 0, sizeof(*slot));
       slot->used = true;
       slot->priority = level;
       snprintf(slot->subsys, sizeof(slot->subsys), "%s", subsys);
       slot->window_start = ts.tv_sec;
    }
-   if (ts.tv_sec - slot->window_start >= (time_t)seconds ||
-       ts.tv_sec < slot->window_start) {
+
+   if (ts.tv_sec - slot->window_start >= (time_t) seconds || ts.tv_sec < slot->window_start) {
       *skipped = slot->suppressed;
       slot->emitted = slot->suppressed = 0;
       slot->window_start = ts.tv_sec;
    }
+
    if (slot->emitted >= count) {
-      if (slot->suppressed < UINT32_MAX) ++slot->suppressed;
+      if (slot->suppressed < UINT32_MAX) {
+         ++slot->suppressed;
+      }
+
       return false;
    }
    ++slot->emitted;
+
    return true;
 }
 
 static bool log_rate_parse(const char *str, unsigned *count, unsigned *seconds) {
-   if (!str || !*str) return false;
+   if (!str || !*str) {
+      return false;
+   }
    char *end;
    errno = 0;
    unsigned long n = strtoul(str, &end, 10);
-   if (errno || !n || n > 1000000 || *end != '/') return false;
+
+   if (errno || !n || n > 1000000 || *end != '/') {
+      return false;
+   }
    str = end + 1;
    unsigned long duration = 1;
+
    if (*str >= '0' && *str <= '9') {
       duration = strtoul(str, &end, 10);
       str = end;
    }
    unsigned long factor = !strcmp(str, "s") ? 1 : !strcmp(str, "m") ? 60 : !strcmp(str, "h") ? 3600 : 0;
-   if (!factor || !duration || duration > 86400 / factor) return false;
+
+   if (!factor || !duration || duration > 86400 / factor) {
+      return false;
+   }
    *count = (unsigned)n;
    *seconds = (unsigned)(duration * factor);
+
    return true;
 }
 
 
-static bool log_add_filter_rate(const char *pattern, logpriority_t level,
-      unsigned count, unsigned seconds) {
+static bool log_add_filter_rate(const char *pattern, logpriority_t level, unsigned count, unsigned seconds) {
    struct log_filter *f = malloc(sizeof(*f));
 
    if (f == NULL) {
@@ -256,8 +283,10 @@ void load_log_filters_from_config(void) {
          char *level_str = sep + 1;
          char *rate = strchr(level_str, '@');
          unsigned count = 0, seconds = 0;
+
          if (rate) {
             *rate++ = '\0';
+
             if (!log_rate_parse(rate, &count, &seconds)) {
                fprintf(stderr, "Invalid log rate for %s: %s\n", subsys, rate);
                tok = end;
@@ -265,7 +294,11 @@ void load_log_filters_from_config(void) {
             }
          }
          logpriority_t level = log_priority_from_str(level_str);
-         if (level == LOG_NONE) { tok = end; continue; }
+
+         if (level == LOG_NONE) {
+            tok = end;
+            continue;
+         }
 
          size_t len = strlen(subsys);
 
@@ -291,13 +324,18 @@ void load_log_filters_from_config(void) {
 
 static const struct log_filter *log_matching_filter(const char *subsys) {
    const struct log_filter *best = NULL;
-   for (const struct log_filter *f = log_filters; f; f = f->next)
-      if (fnmatch(f->pattern, subsys, 0) == 0 &&
-          (!best || strlen(f->pattern) > strlen(best->pattern))) best = f;
+
+   for (const struct log_filter *f = log_filters ; f ; f = f->next) {
+      if (fnmatch(f->pattern, subsys, 0) == 0 && (!best || strlen(f->pattern) > strlen(best->pattern))) {
+         best = f;
+      }
+   }
+
    return best;
 }
 bool debug_filter(const char *subsys, logpriority_t msg_level) {
    const struct log_filter *best = log_matching_filter(subsys ? subsys : "");
+
    return msg_level > (best ? best->level : DEFAULT_LOG_LEVEL);
 }
 
@@ -402,20 +440,23 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
 
    if (!subsys || !fmt) {
       fprintf(stderr, "Invalid Log request: No subsys/fmt\n");
+
       return;
    }
    va_start(ap, fmt);
    bool allowed = !debug_filter(subsys, priority);
    unsigned suppressed = 0;
+
    if (allowed) {
       const struct log_filter *filter = log_matching_filter(subsys);
-      if (filter && !log_rate_allowed(subsys, priority,
-         filter->rate_count, filter->rate_seconds, &suppressed)) allowed = false;
+
+      if (filter && !log_rate_allowed(subsys, priority, filter->rate_count, filter->rate_seconds, &suppressed)) {
+         allowed = false;
+      }
    }
 
-   /* Audit/storage subscribers receive raw events; display subscribers
-    * receive only admitted events. Each callback owns a fresh va_list. */
-   for (struct log_callback *cb = log_callbacks; cb; cb = cb->next) {
+   /* Audit/storage subscribers receive raw events; display subscribers receive only admitted events. Each callback owns a fresh va_list. */
+   for (struct log_callback *cb = log_callbacks ; cb ; cb = cb->next) {
       if (cb->callback && (cb->policy == LOG_CALLBACK_RAW || allowed)) {
          va_list args;
          va_copy(args, ap);
@@ -426,46 +467,66 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
 
    if (!allowed) {
       va_end(ap);
+
       return;
    }
-   if (cfg_log_show_ts) update_timestamp();
 
-   /* Format exactly once without a fixed buffer ceiling. Do not consume
-    * the original arguments while determining the required allocation. */
+   if (cfg_log_show_ts) {
+      update_timestamp();
+   }
+
+   /* Format exactly once without a fixed buffer ceiling. Do not consume the original arguments while determining the required allocation. */
    va_list sizing;
    va_copy(sizing, ap);
    int length = vsnprintf(NULL, 0, fmt, sizing);
    va_end(sizing);
+
    if (length < 0 || (size_t)length == SIZE_MAX) {
       va_end(ap);
+
       return;
    }
    char *message = malloc((size_t)length + 1);
+
    if (!message) {
       fprintf(stderr, "Log: out of memory formatting %s message\n", subsys);
       va_end(ap);
+
       return;
    }
    vsnprintf(message, (size_t)length + 1, fmt, ap);
    va_end(ap);
 
-   /* Output the prefix, message and suppression summary separately. This
-    * avoids allocating another copy or truncating at the output stage. */
+   /* Output the prefix, message and suppression summary separately. This avoids allocating another copy or truncating at the output stage. */
    const char *level = log_priority_to_str(priority);
-   FILE *destinations[2] = {logfp, NULL};
-   if (!tui_mode_enabled && (!logfp || log_stdout) && logfp != stdout)
+   FILE *destinations[2] = {
+      logfp, NULL
+   };
+
+   if (!tui_mode_enabled && (!logfp || log_stdout) && logfp != stdout) {
       destinations[1] = stdout;
-   for (unsigned i = 0; i < 2; i++) {
+   }
+
+   for (unsigned i = 0 ; i < 2 ; i++) {
       FILE *stream = destinations[i];
-      if (!stream) continue;
-      if (cfg_log_show_ts) fprintf(stream, "[%s] ", latest_timestamp);
+
+      if (!stream) {
+         continue;
+      }
+
+      if (cfg_log_show_ts) {
+         fprintf(stream, "[%s] ", latest_timestamp);
+      }
       fprintf(stream, "<%s@%s> ", subsys, level);
       fputs(message, stream);
-      if (suppressed)
+
+      if (suppressed) {
          fprintf(stream, " [rate limit: %u earlier messages suppressed]", suppressed);
+      }
       fputc('\n', stream);
       fflush(stream);
    }
+
    free(message);
 }
 
@@ -488,9 +549,10 @@ bool log_remove_callback(struct log_callback *log_callback) {
    return false;                // callback not found
 }
 
-struct log_callback *log_add_callback_token(bool (*log_va_cb)(logpriority_t, const char *, const char *, va_list),
-   enum log_callback_policy policy) {
-   if (policy != LOG_CALLBACK_RAW && policy != LOG_CALLBACK_FILTERED) return NULL;
+struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t, const char *, const char *, va_list), enum log_callback_policy policy) {
+   if (policy != LOG_CALLBACK_RAW && policy != LOG_CALLBACK_FILTERED) {
+      return NULL;
+   }
    struct log_callback *newcb = malloc(sizeof(struct log_callback));
 
    if (!newcb) {
@@ -524,7 +586,6 @@ struct log_callback *log_add_callback_token(bool (*log_va_cb)(logpriority_t, con
    return newcb;
 }
 
-bool log_add_callback(bool (*callback)(logpriority_t, const char *, const char *, va_list),
-   enum log_callback_policy policy) {
+bool log_add_callback(bool (*callback) (logpriority_t, const char *, const char *, va_list), enum log_callback_policy policy) {
    return log_add_callback_token(callback, policy) != NULL;
 }
