@@ -11,10 +11,14 @@ struct mongoose_transport {
 };
 static uint32_t capabilities(void *ctx) {
    struct mongoose_transport *m = ctx;
-   (void)m;
-   /* is_tls means encrypted, not that the remote identity was verified.
-    * Do not advertise authenticated identity until a driver can prove it. */
-   return RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES;
+   /* A successful WS upgrade on a TLS socket establishes encryption.
+    * is_tls alone never proves the identity of the remote peer. */
+   uint32_t flags = RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES;
+   if (m && m->socket && m->socket->is_tls && m->socket->is_websocket &&
+       !m->socket->is_closing) {
+      flags |= RR_TRANSPORT_TLS_ENCRYPTED;
+   }
+   return flags;
 }
 static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
    struct mongoose_transport *m = ctx;
