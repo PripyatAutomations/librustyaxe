@@ -30,6 +30,7 @@ librustyaxe_objs += socks.o
 librustyaxe_objs += subproc.o
 librustyaxe_objs += reactor.glib.o
 librustyaxe_objs += transport.o
+librustyaxe_objs += transport.mongoose.o
 librustyaxe_objs += termkey.o
 librustyaxe_objs += tui.o
 librustyaxe_objs += tui.driver-csi.o
