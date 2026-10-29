@@ -10,9 +10,10 @@ struct mongoose_transport {
 };
 static uint32_t capabilities(void *ctx) {
    struct mongoose_transport *m = ctx;
-   uint32_t flags = RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES;
-   if (m->socket && m->socket->is_tls) flags |= RR_TRANSPORT_TLS_AUTHENTICATED;
-   return flags;
+   (void)m;
+   /* is_tls means encrypted, not that the remote identity was verified.
+    * Do not advertise authenticated identity until a driver can prove it. */
+   return RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES;
 }
 static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
    struct mongoose_transport *m = ctx;
@@ -43,8 +44,7 @@ static void closing(void *ctx) {
 }
 static const rr_transport_driver_t mongoose_ops = {
    .abi_version = RR_TRANSPORT_ABI_VERSION,
-   .capabilities = RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES |
-      RR_TRANSPORT_TLS_AUTHENTICATED,
+   .capabilities = RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES,
    .connection_capabilities = capabilities,
    .send_message = send_text, .send_binary_message = send_binary,
    .queued_bytes = queued, .close = closing
