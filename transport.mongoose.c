@@ -44,7 +44,14 @@ static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
       return RR_TRANSPORT_BACKPRESSURE;
    }
 
-   return mg_ws_send(c, data, len, opcode) == len + overhead ? RR_TRANSPORT_OK : RR_TRANSPORT_IO_ERROR;
+   /* Mongoose versions differ in how mg_ws_send reports queued bytes.
+    * Verify the actual buffer growth instead of interpreting its return
+    * value as the size of this frame. In particular, preexisting queued
+    * frames must not turn a successful send into a false failure. */
+   size_t before = c->send.len;
+   (void)mg_ws_send(c, data, len, opcode);
+   return c->send.len >= before && c->send.len - before == len + overhead
+      ? RR_TRANSPORT_OK : RR_TRANSPORT_IO_ERROR;
 }
 static int send_text(void *ctx, const uint8_t *data, size_t len) {
    return send_frame(ctx, data, len, WEBSOCKET_OP_TEXT);
