@@ -46,6 +46,9 @@ static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
    size_t overhead = 2 + (len < 126 ? 0 : len <= 65535 ? 2 : 8) + (c->is_client ? 4 : 0);
 
    if (c->send.len > SIZE_MAX - len - overhead) {
+      Log(LOG_WARN, "transport.mongoose",
+          "WebSocket frame size overflow: socket=%p queued=%zu payload=%zu overhead=%zu limit=%zu",
+          (void *)c, c->send.len, len, overhead, (size_t)SIZE_MAX);
       return RR_TRANSPORT_BACKPRESSURE;
    }
 
