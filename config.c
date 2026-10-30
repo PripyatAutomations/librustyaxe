@@ -1367,6 +1367,19 @@ static bool cfg_save_values(dict *d, const char *path, bool complete) {
          i++;
          continue;
       }
+      if (strncmp(entries[i].key, "theme:", 6) == 0) {
+         const char *name = entries[i].key + 6;
+         const char *dot = strchr(name, '.');
+         if (!dot) { i++; continue; }
+         size_t length = (size_t)(dot - entries[i].key) + 1;
+         fprintf(fp, "\n[theme:%.*s]\n", (int)(dot - name), name);
+         const char *group = entries[i].key;
+         while (i < entry_count && !strncmp(entries[i].key, group, length)) {
+            cfg_write_wrapped(fp, entries[i].key + length, entries[i].value);
+            i++;
+         }
+         continue;
+      }
       size_t section_len = (size_t)(colon - entries[i].key);
       const char *section_name = entries[i].key;
 
