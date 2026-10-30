@@ -796,7 +796,7 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             Log(LOG_CRIT, "cfg", "Failed to store key %s at %s:%d", key, path, line);
             errors++;
          }
-      } else if (strncasecmp(this_section, "server:", 7) == 0) {
+      } else if (strncasecmp(this_section, "server:", 7) == 0 || strncasecmp(this_section, "theme:", 6) == 0) {
          key = NULL;
          val = NULL;
          char *eq = strchr(skip, '=');
@@ -809,8 +809,9 @@ static dict *cfg_load_depth(const char *path, unsigned depth) {
             while (*val == ' ' || *val == '\t') {
                val++;
             }
-            strlcpy(fullkey, "server:", sizeof(fullkey));
-            strlcat(fullkey, this_section + 7, sizeof(fullkey));
+            bool theme = strncasecmp(this_section, "theme:", 6) == 0;
+            strlcpy(fullkey, theme ? "theme:" : "server:", sizeof(fullkey));
+            strlcat(fullkey, this_section + (theme ? 6 : 7), sizeof(fullkey));
             strlcat(fullkey, ".", sizeof(fullkey));
             strlcat(fullkey, key, sizeof(fullkey));
             dict_add(newcfg, fullkey, val);
