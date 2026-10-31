@@ -122,10 +122,14 @@ static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const c
          }
       }
 
+      /* Scheduling is advisory: a denied priority request must not disable
+       * audio, recording or the receiver. Diagnose it and run normally.
+       * Explicitly reject unknown names, but let OS permission failures fall
+       * back to inherited policy (normally SCHED_OTHER). */
       if (ra_sched_apply_profile(0, profile) < 0) {
-         dprintf(STDERR_FILENO, "subproc: scheduling profile %s failed: %s\n",
-            profile ? profile : "normal", strerror(errno));
-         _exit(126);
+         int scheduling_errno = errno;
+         dprintf(STDERR_FILENO, "subproc: scheduling profile '%s' denied: %s; continuing with inherited scheduler\n",
+            profile ? profile : "normal", strerror(scheduling_errno));
       }
       execv(path, (char *const *)argv);
       dprintf(STDERR_FILENO, "subproc: exec %s failed: %s\n", path, strerror(errno));
