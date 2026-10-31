@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <librustyaxe/subproc.h>
+#include <librustyaxe/scheduler.h>
 
 /* Standalone subprocess transport helpers used by request/response children. */
 static void subproc_reset(subproc_t *process) {
@@ -121,6 +122,11 @@ static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const c
          }
       }
 
+      if (ra_sched_apply_profile(0, profile) < 0) {
+         dprintf(STDERR_FILENO, "subproc: scheduling profile %s failed: %s\n",
+            profile ? profile : "normal", strerror(errno));
+         _exit(126);
+      }
       execv(path, (char *const *)argv);
       dprintf(STDERR_FILENO, "subproc: exec %s failed: %s\n", path, strerror(errno));
       _exit(127);
@@ -151,7 +157,13 @@ static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const c
 
 bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
    size_t close_count) {
-   return subproc_spawn_fds_impl(process, path, argv, mappings, mapping_count, close_fds, close_count, false);
+   return subproc_spawn_fds_impl(process, path, argv, mappings, mapping_count, close_fds, close_count, false, NULL);
+}
+bool subproc_spawn_fds_profile(subproc_t *process, const char *path, const char *const argv[],
+   const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
+   size_t close_count, const char *profile) {
+   return subproc_spawn_fds_impl(process, path, argv, mappings, mapping_count,
+      close_fds, close_count, false, profile);
 }
 
 static bool subproc_spawn_pipes(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr, bool group) {
@@ -221,7 +233,7 @@ static bool subproc_spawn_pipes(subproc_t *process, const char *path, const char
       }
    }
 
-   if (!prepared || !subproc_spawn_fds_impl(process, path, argv, mappings, 3, close_fds, 6, group)) {
+   if (!prepared || !subproc_spawn_fds_impl(process, path, argv, mappings, 3, close_fds, 6, group, NULL)) {
       for (size_t i = 0 ; i < 6 ; i++) {
          if (close_fds[i] >= 0) {
             close(close_fds[i]);
