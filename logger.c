@@ -46,7 +46,7 @@ static struct log_callback *log_callbacks = NULL;
 static ra_log_queue_t *worker_log_queue;
 static _Atomic bool worker_logging_enabled;
 static pthread_t logger_owner;
-static bool logger_owner_valid;
+static _Atomic bool logger_owner_valid;
 static guint logger_drain_source;
 static uint64_t logger_drops_reported;
 static gboolean logger_drain_tick(gpointer unused) {
@@ -493,14 +493,16 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       return;
    }
    va_start(ap, fmt);
-   if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
-       logger_owner_valid && !pthread_equal(pthread_self(), logger_owner)) {
-      /* Bounded worker formatting and submission; no callbacks or I/O.
-       * A dedicated RT event-ring will replace formatting on hard RT paths. */
-      char message[1024];
-      vsnprintf(message, sizeof(message), fmt, ap);
+   if (atomic_load_explicit(&logger_owner_valid, memory_order_acquire) &&
+       !pthread_equal(pthread_self(), logger_owner)) {
+      /* Once async logging has been initialized, never let workers enter
+       * the synchronous logger during teardown. */
+      if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) {
+         char message[1024];
+         vsnprintf(message, sizeof(message), fmt, ap);
+         ra_log_queue_push(worker_log_queue, priority, subsys, message);
+      }
       va_end(ap);
-      ra_log_queue_push(worker_log_queue, priority, subsys, message);
       return;
    }
    bool allowed = !debug_filter(subsys, priority);
