@@ -20,6 +20,7 @@ librustyaxe_objs += irc.format.o
 librustyaxe_objs += json.o
 librustyaxe_objs += list.o
 librustyaxe_objs += logger.o
+librustyaxe_objs += log-queue.o
 librustyaxe_objs += maidenhead.o
 librustyaxe_objs += module.o
 librustyaxe_objs += mongoose.o
