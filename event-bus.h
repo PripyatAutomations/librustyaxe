@@ -149,6 +149,28 @@ extern rr_event_token_t event_on_binary_token_dispatch(const char *event, event_
  */
 extern void event_off_token(rr_event_token_t token);
 
+
+/*
+ * Owned cross-domain event envelope. Never embeds rrconn_t or a borrowed
+ * pointer: sender is a stable identity and payload is copied byte-for-byte.
+ * Applications may use JSON/CBOR or other versioned formats in payload.
+ */
+typedef struct rr_event_message {
+   const char *name;
+   const char *sender;
+   const void *payload;
+   size_t length;
+   unsigned flags;
+} rr_event_message_t;
+
+typedef void (*rr_event_message_cb_t)(const rr_event_message_t *message, void *user);
+/* A message listener uses the same dispatch trampoline as legacy events.
+ * Pending callbacks must be drained before unloading their owning module. */
+extern rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t cb,
+                                                void *user, event_dispatch_t dispatch,
+                                                void *dispatch_user);
+extern void event_emit_message(const rr_event_message_t *message);
+
 /*
  * Emit events.
  */
