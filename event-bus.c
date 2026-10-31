@@ -337,10 +337,96 @@ struct rr_event_token {
    void *user;
    uint64_t generation;
    bool active;
+   bool message;
    struct rr_event_token *next;
 };
 
 static struct rr_event_token *event_tokens = NULL;
+
+typedef struct owned_message_listener {
+   rr_event_token_t token;
+   rr_event_message_cb_t cb;
+   void *user;
+   event_dispatch_t dispatch;
+   void *dispatch_user;
+   struct owned_message_listener *next;
+} owned_message_listener_t;
+
+static owned_message_listener_t *message_listeners;
+
+typedef struct {
+   rr_event_message_cb_t cb;
+   void *user;
+   char *name, *sender;
+   unsigned char *payload;
+   size_t length;
+   unsigned flags;
+} pending_message_t;
+
+static void deliver_message(void *opaque) {
+   pending_message_t *p = opaque;
+   const rr_event_message_t m = {p->name, p->sender, p->payload, p->length, p->flags};
+   p->cb(&m, p->user);
+   free(p->name);
+   free(p->sender);
+   free(p->payload);
+   free(p);
+}
+rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t cb,
+                                        void *user, event_dispatch_t dispatch,
+                                        void *dispatch_user) {
+   if (!name || !cb) return NULL;
+   pthread_mutex_lock(&event_lock);
+   if (!event_store) { pthread_mutex_unlock(&event_lock); return NULL; }
+   struct rr_event_token *token = xcalloc(1, sizeof(*token));
+   token->event = xstrdup(name);
+   token->active = true;
+   token->message = true;
+   token->user = user;
+   token->next = event_tokens;
+   event_tokens = token;
+   owned_message_listener_t *listener = xcalloc(1, sizeof(*listener));
+   *listener = (owned_message_listener_t){token, cb, user, dispatch, dispatch_user, message_listeners};
+   message_listeners = listener;
+   pthread_mutex_unlock(&event_lock);
+   return token;
+}
+void event_emit_message(const rr_event_message_t *message) {
+   if (!message || !message->name || (!message->payload && message->length)) return;
+   typedef struct {
+      rr_event_message_cb_t cb;
+      void *user;
+      event_dispatch_t dispatch;
+      void *dispatch_user;
+   } target_t;
+   target_t *targets = NULL;
+   size_t count = 0;
+   pthread_mutex_lock(&event_lock);
+   for (owned_message_listener_t *l = message_listeners; l; l = l->next) {
+      if (!strcmp(l->token->event, message->name)) {
+         targets = xrealloc(targets, (count + 1) * sizeof(*targets));
+         targets[count++] = (target_t){l->cb, l->user, l->dispatch, l->dispatch_user};
+      }
+   }
+   pthread_mutex_unlock(&event_lock);
+   for (size_t i = 0; i < count; i++) {
+      pending_message_t *p = xcalloc(1, sizeof(*p));
+      p->cb = targets[i].cb;
+      p->user = targets[i].user;
+      p->name = xstrdup(message->name);
+      p->sender = xstrdup(message->sender ? message->sender : "");
+      p->length = message->length;
+      p->flags = message->flags;
+      if (p->length) {
+         p->payload = xmalloc(p->length);
+         memcpy(p->payload, message->payload, p->length);
+      }
+      if (targets[i].dispatch) targets[i].dispatch(deliver_message, p, targets[i].dispatch_user);
+      else deliver_message(p);
+   }
+   free(targets);
+}
+
 
 /*
  * Look up an event entry.
@@ -759,6 +845,21 @@ void event_off_token(rr_event_token_t token_handle) {
 
    pthread_mutex_lock(&event_lock);
 
+   if (token->message) {
+      owned_message_listener_t **cursor = &message_listeners;
+      while (*cursor) {
+         if ((*cursor)->token == token) {
+            owned_message_listener_t *old = *cursor;
+            *cursor = old->next;
+            free(old);
+            break;
+         }
+         cursor = &(*cursor)->next;
+      }
+      token->active = false;
+      pthread_mutex_unlock(&event_lock);
+      return;
+   }
    if (event_store) {
       event_entry_t *entry = event_lookup_locked(token->event);
 
@@ -1211,6 +1312,12 @@ void event_shutdown(void) {
       if (type == VAL_PTR) {
          event_entry_free(val.p);
       }
+   }
+   while (message_listeners) {
+      owned_message_listener_t *next = message_listeners->next;
+      message_listeners->token->active = false;
+      free(message_listeners);
+      message_listeners = next;
    }
    dict_free(event_store);
    event_store = NULL;
