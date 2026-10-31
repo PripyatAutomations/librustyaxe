@@ -14,3 +14,20 @@
 - For each audio graph identify capture/device callback, resampler, codec, recorder and network threads. Promote only the audited bounded-latency callback thread, not arbitrary GStreamer worker processes.
 - Move logging drain to an owning thread without changing audit callback ordering; measure queue saturation and dispatch latency before making it the default path.
 - Provide startup error handshakes for subprocess exec/profile problems and clear diagnostics.
+
+## Experimental worker logging integration
+
+Set `log.async-workers=true` in the application configuration to enable
+bounded logging from non-owner threads. `logger_init()` records its caller
+as owner and installs a 20 ms GLib default-context drain (up to 128 records
+per tick). The owner still calls the existing `Log()` directly; workers
+enqueue fixed-size formatted messages and never invoke callbacks or write
+files. Drops are counted and periodically reported by the owning thread.
+
+**Not production default yet:** all worker producer threads must be joined
+before `logger_end()`. The application's GLib default context must be
+driven by the same thread that called `logger_init()`. This first stage
+formats bounded messages on workers and is not safe for hard real-time
+callbacks: use a fixed binary event ring there. Overflow truncates messages;
+overload discards entries rather than blocking producers. Worker timestamps
+are assigned at drain time, not at submission time.
