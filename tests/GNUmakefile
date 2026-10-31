@@ -21,7 +21,7 @@ GLOBAL_OBJECT = $(TEST_BUILD_DIR)/test_globals.o
 TARGETS = $(addprefix $(TEST_BUILD_DIR)/,$(TEST_SOURCES:.c=))
 TEST_NAMES = $(TEST_SOURCES:.c=)
 
-all: $(TARGETS)
+all: $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue
 
 # Preserve the convenient `make test_dict` style without placing the
 # executable in the source directory.
@@ -47,8 +47,11 @@ $(TEST_BUILD_DIR):
 $(TEST_BUILD_DIR)/%.o: %.c | $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
+$(TEST_BUILD_DIR)/test_log_queue: log-queue.c ../log-queue.c
+	$(CC) $(CFLAGS) $(INCLUDES) -pthread -o $@ $^
+
 check: all
-	@fail=0; for t in $(TARGETS); do ./$$t || fail=1; done; \
+	@fail=0; for t in $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue; do ./$$t || fail=1; done; \
 	$(MAKE) clean; \
 	exit $$fail
 
