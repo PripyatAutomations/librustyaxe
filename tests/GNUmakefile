@@ -47,7 +47,7 @@ $(TEST_BUILD_DIR):
 $(TEST_BUILD_DIR)/%.o: %.c | $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-$(TEST_BUILD_DIR)/test_log_queue: log-queue.c ../log-queue.c
+$(TEST_BUILD_DIR)/test_log_queue: log-queue.c ../log-queue.c | $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -pthread -o $@ $^
 
 check: all
