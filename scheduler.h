@@ -24,4 +24,8 @@ int ra_sched_apply(pid_t pid, const ra_sched_options_t *options);
 int ra_sched_drop_rt(pid_t pid, int nice_value);
 /* Query one task's policy and priority; nice is only read when supported. */
 int ra_sched_query(pid_t pid, ra_sched_options_t *options);
+/* Named worker profiles: normal, background, interactive, realtime-audio.
+ * Null/empty name selects normal. No global privilege changes. */
+int ra_sched_apply_profile(pid_t pid, const char *name);
+const char *ra_sched_class_name(ra_sched_class_t policy);
 #endif
