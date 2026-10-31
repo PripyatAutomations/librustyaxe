@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <fnmatch.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <glib.h>
 #include <librustyaxe/log-queue.h>
 #include <librustyaxe/core.h>
@@ -40,16 +41,17 @@ static bool cfg_log_show_ts = false;
 char latest_timestamp[64];      // Current printed timestamp
 
 static struct log_callback *log_callbacks = NULL;
-/* Opt-in worker delivery: the owning GLib thread alone calls subscribers.
- * Callers must stop worker producers before logger_end(). */
+/* The queue allocation is intentionally retained until process exit.
+ * Workers can race logger_end() without ever touching freed storage. */
 static ra_log_queue_t *worker_log_queue;
+static _Atomic bool worker_logging_enabled;
 static pthread_t logger_owner;
 static bool logger_owner_valid;
 static guint logger_drain_source;
 static uint64_t logger_drops_reported;
 static gboolean logger_drain_tick(gpointer unused) {
    (void)unused;
-   if (!worker_log_queue) return G_SOURCE_REMOVE;
+   if (!atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) return G_SOURCE_REMOVE;
    ra_log_queue_drain(worker_log_queue, 128);
    uint64_t dropped = ra_log_queue_dropped(worker_log_queue);
    if (dropped != logger_drops_reported) {
@@ -403,14 +405,15 @@ void logger_init(const char *logfile, bool tui_mode) {
       }
    }
 
-   /* Explicitly opt in until all applications' main-context ownership and
-    * shutdown ordering are audited. */
-   if (cfg_get_bool("log.async-workers", false) && !worker_log_queue) {
-      worker_log_queue = ra_log_queue_new(1024);
-      if (worker_log_queue) {
+   /* Default to asynchronous worker logging. A queue is deliberately
+    * retained across logger_end/reinitialization to avoid worker UAF. */
+   if (cfg_get_bool("log.async-workers", true)) {
+      if (!worker_log_queue) worker_log_queue = ra_log_queue_new(1024);
+      if (worker_log_queue && !atomic_load(&worker_logging_enabled)) {
          logger_owner = pthread_self();
          logger_owner_valid = true;
-         logger_drops_reported = 0;
+         logger_drops_reported = ra_log_queue_dropped(worker_log_queue);
+         atomic_store_explicit(&worker_logging_enabled, true, memory_order_release);
          logger_drain_source = g_timeout_add(20, logger_drain_tick, NULL);
       }
    }
@@ -490,8 +493,8 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       return;
    }
    va_start(ap, fmt);
-   if (worker_log_queue && logger_owner_valid &&
-       !pthread_equal(pthread_self(), logger_owner)) {
+   if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
+       logger_owner_valid && !pthread_equal(pthread_self(), logger_owner)) {
       /* Bounded worker formatting and submission; no callbacks or I/O.
        * A dedicated RT event-ring will replace formatting on hard RT paths. */
       char message[1024];
