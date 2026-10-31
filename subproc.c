@@ -55,7 +55,7 @@ void subproc_close(subproc_t *process) {
 }
 
 static bool subproc_spawn_fds_impl(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const
-   int *close_fds, size_t close_count, bool group) {
+   int *close_fds, size_t close_count, bool group, const char *profile) {
    if (!process || process->pid > 0 || !path || !*path || !argv || !argv[0] || (mapping_count && !mappings) || (close_count && !close_fds)
       || mapping_count > SIZE_MAX / sizeof(int)) {
       return false;
