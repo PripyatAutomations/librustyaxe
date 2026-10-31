@@ -73,7 +73,7 @@ int main(void) {
       "; .include missing-semicolon.cfg\n"
       "[general]\n"
       "quoted=\"/* not a comment */\"\n"
-      "inline=before/* remove */after\n" ".include extra.cfg\n" "[general]\nlast=three\n" "[general-extra]\nshould-not-be-general=bad\n" "[general]\nend=ok\n");
+      "inline=before/* remove */after\n" ".include extra.cfg\n" "[general]\nlast=three\n" "[general-extra]\nshould-not-be-general=bad\n" "[general]\nend=ok\n" "[typed-test]\nrun=yes\n");
    CHECK(cfg_add_callback(NULL, "typed-test", typed_callback));
    dict *loaded = cfg_load(mainpath);
    CHECK(loaded != NULL);
