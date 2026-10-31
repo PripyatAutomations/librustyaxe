@@ -66,3 +66,33 @@ int ra_sched_query(pid_t pid, ra_sched_options_t *options) {
    options->set_nice = true;
    return 0;
 }
+
+const char *ra_sched_class_name(ra_sched_class_t policy) {
+   switch (policy) {
+      case RA_SCHED_NORMAL: return "normal";
+      case RA_SCHED_BATCH: return "batch";
+      case RA_SCHED_IDLE: return "idle";
+      case RA_SCHED_FIFO: return "fifo";
+      case RA_SCHED_RR: return "rr";
+      default: return "unknown";
+   }
+}
+int ra_sched_apply_profile(pid_t pid, const char *name) {
+   if (!name || !*name || !strcmp(name, "normal")) {
+      ra_sched_options_t p = {.policy = RA_SCHED_NORMAL};
+      return ra_sched_apply(pid, &p);
+   }
+   ra_sched_options_t p = {0};
+   if (!strcmp(name, "background")) {
+      p.policy = RA_SCHED_BATCH; p.set_nice = true; p.nice = 5;
+   } else if (!strcmp(name, "idle")) {
+      p.policy = RA_SCHED_IDLE; p.set_nice = true; p.nice = 10;
+   } else if (!strcmp(name, "interactive")) {
+      p.policy = RA_SCHED_NORMAL; p.set_nice = true; p.nice = -2;
+   } else if (!strcmp(name, "realtime-audio")) {
+      p.policy = RA_SCHED_RR; p.priority = 10;
+   } else {
+      errno = EINVAL; return -1;
+   }
+   return ra_sched_apply(pid, &p);
+}
