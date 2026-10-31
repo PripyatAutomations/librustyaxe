@@ -431,15 +431,14 @@ void logger_set_show_timestamp(bool enabled) {
 
 void logger_end(void) {
    if (worker_log_queue) {
-      /* The application must join all producers before logger_end. */
+      atomic_store_explicit(&worker_logging_enabled, false, memory_order_release);
       if (logger_drain_source) {
          g_source_remove(logger_drain_source);
          logger_drain_source = 0;
       }
       ra_log_queue_drain(worker_log_queue, SIZE_MAX);
-      logger_owner_valid = false;
-      ra_log_queue_free(worker_log_queue);
-      worker_log_queue = NULL;
+      /* A late producer could have observed the enabled flag. Preserve the
+       * allocated queue until process exit, avoiding a use-after-free. */
    }
    if (logfp && (logfp != stdout && logfp != stderr)) {
       fclose(logfp);
@@ -493,10 +492,11 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       return;
    }
    va_start(ap, fmt);
-   if (atomic_load_explicit(&logger_owner_valid, memory_order_acquire) &&
-       !pthread_equal(pthread_self(), logger_owner)) {
-      /* Once async logging has been initialized, never let workers enter
-       * the synchronous logger during teardown. */
+   struct timespec submitted_time;
+   bool delivering = ra_log_queue_delivery_time(&submitted_time);
+   /* Every ordinary Log() call queues, regardless of its originating thread.
+    * Only the queue drain invokes callbacks and performs I/O. */
+   if (!delivering && atomic_load_explicit(&logger_owner_valid, memory_order_acquire)) {
       if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) {
          char message[1024];
          vsnprintf(message, sizeof(message), fmt, ap);
@@ -532,8 +532,15 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       return;
    }
 
+   char queued_timestamp[64] = "";
    if (cfg_log_show_ts) {
-      update_timestamp();
+      if (delivering) {
+         struct tm tm;
+         if (localtime_r(&submitted_time.tv_sec, &tm))
+            strftime(queued_timestamp, sizeof(queued_timestamp), "%Y/%m/%d %H:%M:%S", &tm);
+      } else {
+         update_timestamp();
+      }
    }
 
    /* Format exactly once without a fixed buffer ceiling. Do not consume the original arguments while determining the required allocation. */
@@ -576,7 +583,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       }
 
       if (cfg_log_show_ts) {
-         fprintf(stream, "[%s] ", latest_timestamp);
+         fprintf(stream, "[%s] ", delivering ? queued_timestamp : latest_timestamp);
       }
       fprintf(stream, "<%s@%s> ", subsys, level);
       fputs(message, stream);
