@@ -38,6 +38,9 @@ $(TEST_BUILD_DIR)/test_%: $(TEST_BUILD_DIR)/test_%.o $(GLOBAL_OBJECT)
 $(TEST_BUILD_DIR)/test_runtime_globals: $(TEST_BUILD_DIR)/test_runtime_globals.o
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $< $(LIBS)
 
+# Threaded message delivery test uses pthreads.
+$(TEST_BUILD_DIR)/test_event_messages: LIBS += -pthread
+
 # maidenhead test needs libm for fabs()
 $(TEST_BUILD_DIR)/test_maidenhead: LIBS += -lm
 
