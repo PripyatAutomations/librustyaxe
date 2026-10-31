@@ -20,6 +20,9 @@
 #include <time.h>
 #include <errno.h>
 #include <fnmatch.h>
+#include <pthread.h>
+#include <glib.h>
+#include <librustyaxe/log-queue.h>
 #include <librustyaxe/core.h>
 #include <librrprotocol/rrprotocol.h>
 
@@ -37,6 +40,27 @@ static bool cfg_log_show_ts = false;
 char latest_timestamp[64];      // Current printed timestamp
 
 static struct log_callback *log_callbacks = NULL;
+/* Opt-in worker delivery: the owning GLib thread alone calls subscribers.
+ * Callers must stop worker producers before logger_end(). */
+static ra_log_queue_t *worker_log_queue;
+static pthread_t logger_owner;
+static bool logger_owner_valid;
+static guint logger_drain_source;
+static uint64_t logger_drops_reported;
+static gboolean logger_drain_tick(gpointer unused) {
+   (void)unused;
+   if (!worker_log_queue) return G_SOURCE_REMOVE;
+   ra_log_queue_drain(worker_log_queue, 128);
+   uint64_t dropped = ra_log_queue_dropped(worker_log_queue);
+   if (dropped != logger_drops_reported) {
+      uint64_t delta = dropped - logger_drops_reported;
+      logger_drops_reported = dropped;
+      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu)",
+          (unsigned long long)delta, (unsigned long long)dropped);
+   }
+   return G_SOURCE_CONTINUE;
+}
+
 
 /* String constants we use more than a few times */
 const char s_prio_none[] = " NONE";
@@ -379,6 +403,17 @@ void logger_init(const char *logfile, bool tui_mode) {
       }
    }
 
+   /* Explicitly opt in until all applications' main-context ownership and
+    * shutdown ordering are audited. */
+   if (cfg_get_bool("log.async-workers", false) && !worker_log_queue) {
+      worker_log_queue = ra_log_queue_new(1024);
+      if (worker_log_queue) {
+         logger_owner = pthread_self();
+         logger_owner_valid = true;
+         logger_drops_reported = 0;
+         logger_drain_source = g_timeout_add(20, logger_drain_tick, NULL);
+      }
+   }
    // Load fine-grained log_filters from config
    load_log_filters_from_config();
    /* Log filters remain available for explicit diagnostics only. */
@@ -392,6 +427,17 @@ void logger_set_show_timestamp(bool enabled) {
 }
 
 void logger_end(void) {
+   if (worker_log_queue) {
+      /* The application must join all producers before logger_end. */
+      if (logger_drain_source) {
+         g_source_remove(logger_drain_source);
+         logger_drain_source = 0;
+      }
+      ra_log_queue_drain(worker_log_queue, SIZE_MAX);
+      logger_owner_valid = false;
+      ra_log_queue_free(worker_log_queue);
+      worker_log_queue = NULL;
+   }
    if (logfp && (logfp != stdout && logfp != stderr)) {
       fclose(logfp);
    }
@@ -444,6 +490,16 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       return;
    }
    va_start(ap, fmt);
+   if (worker_log_queue && logger_owner_valid &&
+       !pthread_equal(pthread_self(), logger_owner)) {
+      /* Bounded worker formatting and submission; no callbacks or I/O.
+       * A dedicated RT event-ring will replace formatting on hard RT paths. */
+      char message[1024];
+      vsnprintf(message, sizeof(message), fmt, ap);
+      va_end(ap);
+      ra_log_queue_push(worker_log_queue, priority, subsys, message);
+      return;
+   }
    bool allowed = !debug_filter(subsys, priority);
    unsigned suppressed = 0;
 
