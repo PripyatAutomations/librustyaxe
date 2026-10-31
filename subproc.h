@@ -38,6 +38,12 @@ typedef struct subproc_fd {
  * Lifecycle and exec failure semantics are the same as subproc_spawn(). */
 bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
    size_t close_count);
+/* Set scheduling policy inside the child, before exec. NULL selects normal
+ * SCHED_OTHER to prevent accidental inherited realtime policy. Invalid or
+ * unauthorized explicit profiles make the child exit 126. */
+bool subproc_spawn_fds_profile(subproc_t *process, const char *path, const char *const argv[],
+   const subproc_fd_t *mappings, size_t mapping_count, const int *close_fds,
+   size_t close_count, const char *profile);
 /* timeout_ms waits for initial output: 0 probes, -1 waits indefinitely. Like fgets(), the helper must produce complete lines and capacity may split them. */
 bool subproc_read_line(subproc_t *process, char *line, size_t length, int timeout_ms);
 /* Adds one newline and flushes. The host owns its SIGPIPE handling policy. */
