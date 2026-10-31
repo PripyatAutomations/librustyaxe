@@ -26,6 +26,7 @@ librustyaxe_objs += mongoose.o
 librustyaxe_objs += posix.o
 librustyaxe_objs += runtime-globals.o
 librustyaxe_objs += ringbuffer.o
+librustyaxe_objs += scheduler.o
 librustyaxe_objs += socks.o
 librustyaxe_objs += subproc.o
 librustyaxe_objs += reactor.glib.o
