@@ -4,11 +4,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 typedef struct {
    logpriority_t level;
+   struct timespec submitted;
    char subsystem[64];
    char message[1024];
 } ra_log_record_t;
+static _Thread_local bool delivery_active;
+static _Thread_local struct timespec delivery_timestamp;
+bool ra_log_queue_delivery_time(struct timespec *timestamp) {
+   if (!timestamp || !delivery_active) return false;
+   *timestamp = delivery_timestamp;
+   return true;
+}
 struct ra_log_queue {
    pthread_mutex_t lock;
    size_t capacity, head, tail, length;
@@ -43,6 +52,7 @@ bool ra_log_queue_push(ra_log_queue_t *q, logpriority_t level,
    }
    ra_log_record_t *r = &q->records[q->tail];
    r->level = level;
+   clock_gettime(CLOCK_REALTIME, &r->submitted);
    snprintf(r->subsystem, sizeof(r->subsystem), "%s", subsys);
    snprintf(r->message, sizeof(r->message), "%s", message);
    q->tail = (q->tail + 1) % q->capacity;
@@ -64,7 +74,10 @@ size_t ra_log_queue_drain(ra_log_queue_t *q, size_t max_records) {
       q->head = (q->head + 1) % q->capacity;
       q->length--;
       pthread_mutex_unlock(&q->lock);
+      delivery_timestamp = item.submitted;
+      delivery_active = true;
       Log(item.level, item.subsystem, "%s", item.message);
+      delivery_active = false;
       n++;
    }
    return n;
