@@ -9,7 +9,7 @@
 #define __librustyaxe_tui_h
 
 #define TUI_STRING_LEN 1024
-#define LOG_LINES 300
+#define LOG_LINES 500
 #define STATUS_LINES 1
 #define STATUS_LEN 256
 #define TUI_MAX_WINDOWS 32
