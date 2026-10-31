@@ -31,3 +31,25 @@ formats bounded messages on workers and is not safe for hard real-time
 callbacks: use a fixed binary event ring there. Overflow truncates messages;
 overload discards entries rather than blocking producers. Worker timestamps
 are assigned at drain time, not at submission time.
+
+## Default asynchronous delivery (next iteration)
+
+`log.async-workers` now defaults to true: both main-thread and worker
+`Log()` calls enqueue before any callback or file I/O. The GLib owning
+context drains records (max 128 per 20 ms); delivery is marked thread-locally
+to avoid recursive queueing. The queue records realtime timestamps at
+submission, which are used for standard file/console timestamps at drain.
+
+A compatibility limitation remains: subscriber callback signatures still
+only carry severity/subsystem/message, not the original timestamp. A future
+timestamp-aware callback API should carry the record time and monotonic time
+for GUI and audit consumers, rather than assigning drain time.
+
+On shutdown, queuing is disabled, pending events are drained before callbacks
+are released, and the bounded queue allocation is intentionally retained to
+avoid use-after-free from in-flight submissions. After logger_end, late
+producer logs are discarded rather than invoking callbacks. Callbacks can
+still safely use synchronous nested Log calls while being drained.
+
+The producer uses vsnprintf and a try-lock; do not call it from hard RT
+audio callbacks. A fixed binary RT event ring remains planned.
