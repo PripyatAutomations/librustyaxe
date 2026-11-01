@@ -524,7 +524,9 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
       }
    }
 
-   /* Audit/storage subscribers receive raw events; display subscribers receive only admitted events. Each callback owns a fresh va_list. */
+   /* LOG_CRAZY is file/console-only: do not invoke any registered
+    * callbacks, including RAW listeners, for high-volume trace traffic. */
+   if (priority != LOG_CRAZY)
    for (struct log_callback *cb = log_callbacks ; cb ; cb = cb->next) {
       if (cb->callback && (cb->policy == LOG_CALLBACK_RAW || allowed)) {
          va_list args;
