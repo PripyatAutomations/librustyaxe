@@ -401,6 +401,39 @@ bool event_domain_unregister(const char *name) {
    pthread_mutex_unlock(&event_lock);
    return true;
 }
+rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb,
+   void *user, const char *domain) {
+   if (!event || !cb || !domain) return NULL;
+   event_dispatch_t dispatcher = NULL;
+   void *dispatcher_user = NULL;
+   pthread_mutex_lock(&event_lock);
+   for (event_domain_t *d = event_domains; d; d = d->next) {
+      if (!strcmp(d->name, domain)) {
+         dispatcher = d->dispatch;
+         dispatcher_user = d->user;
+         break;
+      }
+   }
+   pthread_mutex_unlock(&event_lock);
+   if (!dispatcher) return NULL;
+   rr_event_token_t token = event_on_token_dispatch(event, cb, user,
+                                                    dispatcher, dispatcher_user);
+   if (!token) return NULL;
+   /* Mark exactly this registered listener as a cross-domain delivery. */
+   pthread_mutex_lock(&event_lock);
+   event_entry_t *entry = event_get_locked(event);
+   if (entry) {
+      for (size_t i = 0; i < entry->listener_count; ++i) {
+         event_listener_t *l = &entry->listeners[i];
+         if (l->cb == cb && l->user == user &&
+             l->dispatch == dispatcher && l->dispatch_user == dispatcher_user)
+            l->domain_delivery = true;
+      }
+   }
+   pthread_mutex_unlock(&event_lock);
+   return token;
+}
+
 rr_event_token_t event_on_message_domain_token(const char *name,
    rr_event_message_cb_t cb, void *user, const char *domain) {
    if (!name || !cb || !domain) return NULL;
@@ -663,7 +696,7 @@ static void event_fire_listener(const event_listener_t *listener, const char *ev
    queued->user = listener->user;
    queued->event = xstrdup(event);
    queued->data = data ? xstrdup(data) : NULL;
-   queued->cptr = cptr;
+   queued->cptr = listener->domain_delivery ? NULL : cptr;
 #ifdef USE_PROFILING
    queued->queued_us = event_profile_clock_us();
 #endif
