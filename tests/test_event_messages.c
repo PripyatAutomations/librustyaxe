@@ -65,14 +65,10 @@ int main(void) {
    assert(token);
    event_emit_message(&msg);
    event_off_token(token);
-   pthread_mutex_lock(&lock);
-   assert(queued_fn);
-   event_dispatch_fn_t cancelled = queued_fn;
-   void *cancelled_arg = queued_arg;
-   queued_fn = NULL;
-   queued_arg = NULL;
-   pthread_mutex_unlock(&lock);
-   cancelled(cancelled_arg);
+   /* Drain on the registered receiver thread, not on the emitter thread.
+    * An unexpectedly delivered callback will still fail the count check. */
+   assert(!pthread_create(&worker, NULL, consume, NULL));
+   pthread_join(worker, NULL);
    assert(received == 1);
    assert(event_domain_unregister("gtk"));
    event_emit_message(&msg);
