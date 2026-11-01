@@ -21,7 +21,7 @@ bool ra_log_queue_delivery_time(struct timespec *timestamp) {
 struct ra_log_queue {
    pthread_mutex_t lock;
    size_t capacity, head, tail, length;
-   _Atomic uint64_t dropped;
+   _Atomic uint64_t dropped, contention_dropped, full_dropped;
    ra_log_record_t records[];
 };
 ra_log_queue_t *ra_log_queue_new(size_t capacity) {
@@ -42,10 +42,12 @@ bool ra_log_queue_push(ra_log_queue_t *q, logpriority_t level,
                        const char *subsys, const char *message) {
    if (!q || !subsys || !message) return false;
    if (pthread_mutex_trylock(&q->lock)) {
+      atomic_fetch_add_explicit(&q->contention_dropped, 1, memory_order_relaxed);
       atomic_fetch_add_explicit(&q->dropped, 1, memory_order_relaxed);
       return false;
    }
    if (q->length == q->capacity) {
+      atomic_fetch_add_explicit(&q->full_dropped, 1, memory_order_relaxed);
       atomic_fetch_add_explicit(&q->dropped, 1, memory_order_relaxed);
       pthread_mutex_unlock(&q->lock);
       return false;
@@ -84,4 +86,11 @@ size_t ra_log_queue_drain(ra_log_queue_t *q, size_t max_records) {
 }
 uint64_t ra_log_queue_dropped(const ra_log_queue_t *q) {
    return q ? atomic_load_explicit(&q->dropped, memory_order_relaxed) : 0;
+}
+
+uint64_t ra_log_queue_contention_dropped(const ra_log_queue_t *q) {
+   return q ? atomic_load_explicit(&q->contention_dropped, memory_order_relaxed) : 0;
+}
+uint64_t ra_log_queue_full_dropped(const ra_log_queue_t *q) {
+   return q ? atomic_load_explicit(&q->full_dropped, memory_order_relaxed) : 0;
 }
