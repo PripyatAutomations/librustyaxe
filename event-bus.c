@@ -401,6 +401,8 @@ bool event_domain_unregister(const char *name) {
    pthread_mutex_unlock(&event_lock);
    return true;
 }
+static event_entry_t *event_get_or_create_locked(const char *event);
+
 rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb,
    void *user, const char *domain) {
    if (!event || !cb || !domain) return NULL;
