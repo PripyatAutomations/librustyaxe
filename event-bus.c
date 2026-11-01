@@ -338,10 +338,12 @@ struct rr_event_token {
    uint64_t generation;
    bool active;
    bool message;
+   unsigned executing;
    struct rr_event_token *next;
 };
 
 static struct rr_event_token *event_tokens = NULL;
+static pthread_cond_t event_idle_cond = PTHREAD_COND_INITIALIZER;
 
 typedef struct owned_message_listener {
    rr_event_token_t token;
@@ -442,8 +444,15 @@ static void deliver_message(void *opaque) {
     * required before unloading callbacks already executing. */
    pthread_mutex_lock(&event_lock);
    bool active = p->token && p->token->active;
+   if (active) p->token->executing++;
    pthread_mutex_unlock(&event_lock);
-   if (active) p->cb(&m, p->user);
+   if (active) {
+      p->cb(&m, p->user);
+      pthread_mutex_lock(&event_lock);
+      if (--p->token->executing == 0)
+         pthread_cond_broadcast(&event_idle_cond);
+      pthread_mutex_unlock(&event_lock);
+   }
    free(p->name);
    free(p->sender);
    free(p->payload);
@@ -983,6 +992,18 @@ void event_off_token(rr_event_token_t token_handle) {
       }
    }
    token->active = false;
+   pthread_mutex_unlock(&event_lock);
+}
+
+/* Wait for a cancelled message listener's callbacks already running.
+ * Never call from inside that listener: it would deadlock. */
+void event_message_token_drain(rr_event_token_t token) {
+   if (!token) return;
+   pthread_mutex_lock(&event_lock);
+   if (token->message) {
+      while (token->executing)
+         pthread_cond_wait(&event_idle_cond, &event_lock);
+   }
    pthread_mutex_unlock(&event_lock);
 }
 
