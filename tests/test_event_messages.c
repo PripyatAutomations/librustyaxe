@@ -60,6 +60,20 @@ int main(void) {
    assert(received == 1);
    assert(!event_domain_unregister("gtk"));
    event_off_token(token);
+   /* Emit while registered, then unsubscribe before draining the queue. */
+   token = event_on_message_domain_token("test.cross-domain", cb, NULL, "gtk");
+   assert(token);
+   event_emit_message(&msg);
+   event_off_token(token);
+   pthread_mutex_lock(&lock);
+   assert(queued_fn);
+   event_dispatch_fn_t cancelled = queued_fn;
+   void *cancelled_arg = queued_arg;
+   queued_fn = NULL;
+   queued_arg = NULL;
+   pthread_mutex_unlock(&lock);
+   cancelled(cancelled_arg);
+   assert(received == 1);
    assert(event_domain_unregister("gtk"));
    event_emit_message(&msg);
    assert(received == 1);
