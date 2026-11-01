@@ -345,6 +345,7 @@ static struct rr_event_token *event_tokens = NULL;
 
 typedef struct owned_message_listener {
    rr_event_token_t token;
+   char *domain;
    rr_event_message_cb_t cb;
    void *user;
    event_dispatch_t dispatch;
@@ -387,7 +388,7 @@ bool event_domain_unregister(const char *name) {
    event_domain_t *d = *cursor;
    /* Active listeners snapshot dispatch pointers, so don't invalidate them. */
    for (owned_message_listener_t *l = message_listeners; l; l = l->next) {
-      if (l->dispatch == d->dispatch && l->dispatch_user == d->user) {
+      if (l->domain && !strcmp(l->domain, d->name)) {
          pthread_mutex_unlock(&event_lock);
          return false;
       }
@@ -400,21 +401,28 @@ bool event_domain_unregister(const char *name) {
 }
 rr_event_token_t event_on_message_domain_token(const char *name,
    rr_event_message_cb_t cb, void *user, const char *domain) {
-   if (!domain) return NULL;
+   if (!name || !cb || !domain) return NULL;
    pthread_mutex_lock(&event_lock);
-   event_dispatch_t dispatch = NULL;
-   void *dispatch_user = NULL;
-   for (event_domain_t *d = event_domains; d; d = d->next) {
-      if (!strcmp(d->name, domain)) {
-         dispatch = d->dispatch;
-         dispatch_user = d->user;
-         break;
-      }
+   event_domain_t *d = event_domains;
+   while (d && strcmp(d->name, domain)) d = d->next;
+   if (!d || !event_store) {
+      pthread_mutex_unlock(&event_lock);
+      return NULL;
    }
+   struct rr_event_token *token = xcalloc(1, sizeof(*token));
+   token->event = xstrdup(name);
+   token->active = true;
+   token->message = true;
+   token->user = user;
+   token->next = event_tokens;
+   event_tokens = token;
+   owned_message_listener_t *listener = xcalloc(1, sizeof(*listener));
+   *listener = (owned_message_listener_t){token, xstrdup(domain), cb, user,
+      d->dispatch, d->user, message_listeners};
+   message_listeners = listener;
    pthread_mutex_unlock(&event_lock);
-   return dispatch ? event_on_message_token(name, cb, user, dispatch, dispatch_user) : NULL;
+   return token;
 }
-
 
 typedef struct {
    rr_event_message_cb_t cb;
@@ -913,6 +921,7 @@ void event_off_token(rr_event_token_t token_handle) {
          if ((*cursor)->token == token) {
             owned_message_listener_t *old = *cursor;
             *cursor = old->next;
+            free(old->domain);
             free(old);
             break;
          }
@@ -1384,6 +1393,7 @@ void event_shutdown(void) {
    while (message_listeners) {
       owned_message_listener_t *next = message_listeners->next;
       message_listeners->token->active = false;
+      free(message_listeners->domain);
       free(message_listeners);
       message_listeners = next;
    }
