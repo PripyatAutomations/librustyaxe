@@ -43,7 +43,10 @@ static void *consume(void *unused) {
 }
 int main(void) {
    event_init();
-   rr_event_token_t token = event_on_message_token("test.cross-domain", cb, NULL, enqueue, NULL);
+   assert(event_domain_register("gtk", enqueue, NULL));
+   assert(!event_domain_register("gtk", enqueue, NULL));
+   rr_event_token_t token = event_on_message_domain_token("test.cross-domain", cb, NULL, "gtk");
+   assert(!event_on_message_domain_token("test.cross-domain", cb, NULL, "unknown"));
    assert(token);
    char sender[] = "node.123/connection.456/7";
    char bytes[] = {'a', 0, 'b', 'c'};
@@ -55,7 +58,9 @@ int main(void) {
    memset(bytes, 'X', sizeof(bytes));
    pthread_join(worker, NULL);
    assert(received == 1);
+   assert(!event_domain_unregister("gtk"));
    event_off_token(token);
+   assert(event_domain_unregister("gtk"));
    event_emit_message(&msg);
    assert(received == 1);
    event_shutdown();
