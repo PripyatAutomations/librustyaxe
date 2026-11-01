@@ -18,4 +18,6 @@ size_t ra_log_queue_drain(ra_log_queue_t *queue, size_t max_records);
 /* Captured at submission; valid only while the owning drain invokes Log(). */
 bool ra_log_queue_delivery_time(struct timespec *timestamp);
 uint64_t ra_log_queue_dropped(const ra_log_queue_t *queue);
+uint64_t ra_log_queue_contention_dropped(const ra_log_queue_t *queue);
+uint64_t ra_log_queue_full_dropped(const ra_log_queue_t *queue);
 #endif
