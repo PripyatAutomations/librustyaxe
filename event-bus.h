@@ -54,6 +54,7 @@ typedef struct event_listener {
 
    event_dispatch_t dispatch;
    void *dispatch_user;
+   bool domain_delivery; /* cross-domain: connection pointer must not escape */
 } event_listener_t;
 
 typedef struct event_binary_listener {
@@ -179,6 +180,11 @@ extern void event_message_token_drain(rr_event_token_t token);
  * a domain or unloading modules containing message callbacks. */
 extern bool event_domain_register(const char *name, event_dispatch_t dispatch, void *user);
 extern bool event_domain_unregister(const char *name);
+/* Subscribe to an existing text event in a named execution domain.
+ * Data is copied; rrconn_t * is always NULL on the receiving thread. */
+extern rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb,
+                                               void *user, const char *domain);
+
 extern rr_event_token_t event_on_message_domain_token(const char *event,
    rr_event_message_cb_t cb, void *user, const char *domain);
 
