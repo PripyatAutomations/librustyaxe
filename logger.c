@@ -130,6 +130,9 @@ struct log_filter {
 };
 
 static struct log_filter *log_filters = NULL;
+/* Producers inspect severity filters; rehash/configuration may replace them. */
+static pthread_rwlock_t log_filters_lock = PTHREAD_RWLOCK_INITIALIZER;
+static _Atomic unsigned log_raw_subscribers;
 #define LOG_RATE_SLOTS 256
 struct log_rate_slot {
    char subsys[128];
@@ -244,8 +247,10 @@ static bool log_add_filter_rate(const char *pattern, logpriority_t level, unsign
    f->level = level;
    f->rate_count = count;
    f->rate_seconds = seconds;
+   pthread_rwlock_wrlock(&log_filters_lock);
    f->next = log_filters;
    log_filters = f;
+   pthread_rwlock_unlock(&log_filters_lock);
 
    return true;
 }
@@ -255,6 +260,7 @@ bool log_add_filter(const char *pattern, logpriority_t level) {
 }
 
 void log_clear_filters(void) {
+   pthread_rwlock_wrlock(&log_filters_lock);
    struct log_filter *f = log_filters;
    while (f) {
       struct log_filter *next = f->next;
@@ -264,6 +270,7 @@ void log_clear_filters(void) {
    }
    log_filters = NULL;
    memset(log_rate_slots, 0, sizeof(log_rate_slots));
+   pthread_rwlock_unlock(&log_filters_lock);
 }
 
 void load_log_filters_from_config(void) {
@@ -360,9 +367,11 @@ static const struct log_filter *log_matching_filter(const char *subsys) {
    return best;
 }
 bool debug_filter(const char *subsys, logpriority_t msg_level) {
+   pthread_rwlock_rdlock(&log_filters_lock);
    const struct log_filter *best = log_matching_filter(subsys ? subsys : "");
-
-   return msg_level > (best ? best->level : DEFAULT_LOG_LEVEL);
+   bool filtered = msg_level > (best ? best->level : DEFAULT_LOG_LEVEL);
+   pthread_rwlock_unlock(&log_filters_lock);
+   return filtered;
 }
 
 // Dump all log_filters
@@ -453,6 +462,7 @@ void logger_end(void) {
       lp = next;
    }
    log_callbacks = NULL;
+   atomic_store_explicit(&log_raw_subscribers, 0, memory_order_release);
 
    // free all log_filters
    log_clear_filters();
@@ -497,7 +507,9 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    /* Every ordinary Log() call queues, regardless of its originating thread.
     * Only the queue drain invokes callbacks and performs I/O. */
    if (!delivering && atomic_load_explicit(&logger_owner_valid, memory_order_acquire)) {
-      if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) {
+      if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
+          (!debug_filter(subsys, priority) ||
+           atomic_load_explicit(&log_raw_subscribers, memory_order_acquire))) {
          char message[1024];
          vsnprintf(message, sizeof(message), fmt, ap);
          ra_log_queue_push(worker_log_queue, priority, subsys, message);
@@ -509,11 +521,11 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    unsigned suppressed = 0;
 
    if (allowed) {
+      pthread_rwlock_rdlock(&log_filters_lock);
       const struct log_filter *filter = log_matching_filter(subsys);
-
-      if (filter && !log_rate_allowed(subsys, priority, filter->rate_count, filter->rate_seconds, &suppressed)) {
+      if (filter && !log_rate_allowed(subsys, priority, filter->rate_count, filter->rate_seconds, &suppressed))
          allowed = false;
-      }
+      pthread_rwlock_unlock(&log_filters_lock);
    }
 
    /* Audit/storage subscribers receive raw events; display subscribers receive only admitted events. Each callback owns a fresh va_list. */
@@ -607,6 +619,8 @@ bool log_remove_callback(struct log_callback *log_callback) {
          } else {
             log_callbacks = i->next;
          }
+         if (i->policy == LOG_CALLBACK_RAW)
+            atomic_fetch_sub_explicit(&log_raw_subscribers, 1, memory_order_release);
          free(i);
 
          return true;           // signal success
@@ -651,6 +665,8 @@ struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t, co
       log_callbacks = newcb;
    }
 
+   if (policy == LOG_CALLBACK_RAW)
+      atomic_fetch_add_explicit(&log_raw_subscribers, 1, memory_order_release);
    return newcb;
 }
 
