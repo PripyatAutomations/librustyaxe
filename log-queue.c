@@ -94,3 +94,11 @@ uint64_t ra_log_queue_contention_dropped(const ra_log_queue_t *q) {
 uint64_t ra_log_queue_full_dropped(const ra_log_queue_t *q) {
    return q ? atomic_load_explicit(&q->full_dropped, memory_order_relaxed) : 0;
 }
+
+size_t ra_log_queue_depth(ra_log_queue_t *q) {
+   if (!q) return 0;
+   pthread_mutex_lock(&q->lock);
+   size_t n = q->length;
+   pthread_mutex_unlock(&q->lock);
+   return n;
+}
