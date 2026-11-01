@@ -426,6 +426,7 @@ rr_event_token_t event_on_message_domain_token(const char *name,
 
 typedef struct {
    rr_event_message_cb_t cb;
+   rr_event_token_t token;
    void *user;
    char *name, *sender;
    unsigned char *payload;
@@ -436,7 +437,13 @@ typedef struct {
 static void deliver_message(void *opaque) {
    pending_message_t *p = opaque;
    const rr_event_message_t m = {p->name, p->sender, p->payload, p->length, p->flags};
-   p->cb(&m, p->user);
+   /* A queued event may outlive its subscription. Verify under the registry
+    * lock before invoking module code; draining the target loop is still
+    * required before unloading callbacks already executing. */
+   pthread_mutex_lock(&event_lock);
+   bool active = p->token && p->token->active;
+   pthread_mutex_unlock(&event_lock);
+   if (active) p->cb(&m, p->user);
    free(p->name);
    free(p->sender);
    free(p->payload);
@@ -468,6 +475,7 @@ void event_emit_message(const rr_event_message_t *message) {
       void *user;
       event_dispatch_t dispatch;
       void *dispatch_user;
+      rr_event_token_t token;
    } target_t;
    target_t *targets = NULL;
    size_t count = 0;
@@ -475,13 +483,14 @@ void event_emit_message(const rr_event_message_t *message) {
    for (owned_message_listener_t *l = message_listeners; l; l = l->next) {
       if (!strcmp(l->token->event, message->name)) {
          targets = xrealloc(targets, (count + 1) * sizeof(*targets));
-         targets[count++] = (target_t){l->cb, l->user, l->dispatch, l->dispatch_user};
+         targets[count++] = (target_t){l->cb, l->user, l->dispatch, l->dispatch_user, l->token};
       }
    }
    pthread_mutex_unlock(&event_lock);
    for (size_t i = 0; i < count; i++) {
       pending_message_t *p = xcalloc(1, sizeof(*p));
       p->cb = targets[i].cb;
+      p->token = targets[i].token;
       p->user = targets[i].user;
       p->name = xstrdup(message->name);
       p->sender = xstrdup(message->sender ? message->sender : "");
