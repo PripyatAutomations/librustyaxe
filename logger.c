@@ -57,8 +57,10 @@ static gboolean logger_drain_tick(gpointer unused) {
    if (dropped != logger_drops_reported) {
       uint64_t delta = dropped - logger_drops_reported;
       logger_drops_reported = dropped;
-      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu)",
-          (unsigned long long)delta, (unsigned long long)dropped);
+      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu; contention=%llu full=%llu)",
+          (unsigned long long)delta, (unsigned long long)dropped,
+          (unsigned long long)ra_log_queue_contention_dropped(worker_log_queue),
+          (unsigned long long)ra_log_queue_full_dropped(worker_log_queue));
    }
    return G_SOURCE_CONTINUE;
 }
