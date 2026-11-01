@@ -354,6 +354,68 @@ typedef struct owned_message_listener {
 
 static owned_message_listener_t *message_listeners;
 
+typedef struct event_domain {
+   char *name;
+   event_dispatch_t dispatch;
+   void *user;
+   struct event_domain *next;
+} event_domain_t;
+static event_domain_t *event_domains;
+
+bool event_domain_register(const char *name, event_dispatch_t dispatch, void *user) {
+   if (!name || !*name || !dispatch) return false;
+   pthread_mutex_lock(&event_lock);
+   if (!event_store) { pthread_mutex_unlock(&event_lock); return false; }
+   for (event_domain_t *d = event_domains; d; d = d->next) {
+      if (!strcmp(d->name, name)) { pthread_mutex_unlock(&event_lock); return false; }
+   }
+   event_domain_t *d = xcalloc(1, sizeof(*d));
+   d->name = xstrdup(name);
+   d->dispatch = dispatch;
+   d->user = user;
+   d->next = event_domains;
+   event_domains = d;
+   pthread_mutex_unlock(&event_lock);
+   return true;
+}
+bool event_domain_unregister(const char *name) {
+   if (!name) return false;
+   pthread_mutex_lock(&event_lock);
+   event_domain_t **cursor = &event_domains;
+   while (*cursor && strcmp((*cursor)->name, name)) cursor = &(*cursor)->next;
+   if (!*cursor) { pthread_mutex_unlock(&event_lock); return false; }
+   event_domain_t *d = *cursor;
+   /* Active listeners snapshot dispatch pointers, so don't invalidate them. */
+   for (owned_message_listener_t *l = message_listeners; l; l = l->next) {
+      if (l->dispatch == d->dispatch && l->dispatch_user == d->user) {
+         pthread_mutex_unlock(&event_lock);
+         return false;
+      }
+   }
+   *cursor = d->next;
+   free(d->name);
+   free(d);
+   pthread_mutex_unlock(&event_lock);
+   return true;
+}
+rr_event_token_t event_on_message_domain_token(const char *name,
+   rr_event_message_cb_t cb, void *user, const char *domain) {
+   if (!domain) return NULL;
+   pthread_mutex_lock(&event_lock);
+   event_dispatch_t dispatch = NULL;
+   void *dispatch_user = NULL;
+   for (event_domain_t *d = event_domains; d; d = d->next) {
+      if (!strcmp(d->name, domain)) {
+         dispatch = d->dispatch;
+         dispatch_user = d->user;
+         break;
+      }
+   }
+   pthread_mutex_unlock(&event_lock);
+   return dispatch ? event_on_message_token(name, cb, user, dispatch, dispatch_user) : NULL;
+}
+
+
 typedef struct {
    rr_event_message_cb_t cb;
    void *user;
@@ -1312,6 +1374,12 @@ void event_shutdown(void) {
       if (type == VAL_PTR) {
          event_entry_free(val.p);
       }
+   }
+   while (event_domains) {
+      event_domain_t *next = event_domains->next;
+      free(event_domains->name);
+      free(event_domains);
+      event_domains = next;
    }
    while (message_listeners) {
       owned_message_listener_t *next = message_listeners->next;
