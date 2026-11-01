@@ -421,7 +421,7 @@ rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb,
    if (!token) return NULL;
    /* Mark exactly this registered listener as a cross-domain delivery. */
    pthread_mutex_lock(&event_lock);
-   event_entry_t *entry = event_get_locked(event);
+   event_entry_t *entry = event_get_or_create_locked(event);
    if (entry) {
       for (size_t i = 0; i < entry->listener_count; ++i) {
          event_listener_t *l = &entry->listeners[i];
