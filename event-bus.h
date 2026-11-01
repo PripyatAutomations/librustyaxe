@@ -170,6 +170,9 @@ extern rr_event_token_t event_on_message_token(const char *name, rr_event_messag
                                                 void *user, event_dispatch_t dispatch,
                                                 void *dispatch_user);
 extern void event_emit_message(const rr_event_message_t *message);
+/* After event_off_token(), wait for callbacks already running. Do not call
+ * from the callback itself or from a dispatcher it needs to make progress. */
+extern void event_message_token_drain(rr_event_token_t token);
 
 /* Named execution domains. The host supplies a dispatcher for each loop.
  * Register domains before listeners; drain queued work before unregistering
