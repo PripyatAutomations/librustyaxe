@@ -171,6 +171,16 @@ extern rr_event_token_t event_on_message_token(const char *name, rr_event_messag
                                                 void *dispatch_user);
 extern void event_emit_message(const rr_event_message_t *message);
 
+/* Named execution domains. The host supplies a dispatcher for each loop.
+ * Register domains before listeners; drain queued work before unregistering
+ * a domain or unloading modules containing message callbacks. */
+extern bool event_domain_register(const char *name, event_dispatch_t dispatch, void *user);
+extern bool event_domain_unregister(const char *name);
+extern rr_event_token_t event_on_message_domain_token(const char *event,
+   rr_event_message_cb_t cb, void *user, const char *domain);
+
+
+
 /*
  * Emit events.
  */
