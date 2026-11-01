@@ -52,7 +52,13 @@ static uint64_t logger_drops_reported;
 static gboolean logger_drain_tick(gpointer unused) {
    (void)unused;
    if (!atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) return G_SOURCE_REMOVE;
-   ra_log_queue_drain(worker_log_queue, 512);
+   gint64 started = g_get_monotonic_time();
+   size_t backlog = ra_log_queue_depth(worker_log_queue);
+   size_t processed = ra_log_queue_drain(worker_log_queue, 512);
+   gint64 drain_us = g_get_monotonic_time() - started;
+   if (drain_us > 40000)
+      Log(LOG_WARN, "logger", "Slow worker log drain: %zu records in %lldus; backlog-before=%zu backlog-after=%zu",
+          processed, (long long)drain_us, backlog, ra_log_queue_depth(worker_log_queue));
    uint64_t dropped = ra_log_queue_dropped(worker_log_queue);
    if (dropped != logger_drops_reported) {
       uint64_t delta = dropped - logger_drops_reported;
