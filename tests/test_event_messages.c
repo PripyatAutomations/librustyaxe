@@ -60,11 +60,13 @@ int main(void) {
    assert(received == 1);
    assert(!event_domain_unregister("gtk"));
    event_off_token(token);
+   event_message_token_drain(token);
    /* Emit while registered, then unsubscribe before draining the queue. */
    token = event_on_message_domain_token("test.cross-domain", cb, NULL, "gtk");
    assert(token);
    event_emit_message(&msg);
    event_off_token(token);
+   event_message_token_drain(token);
    /* Drain on the registered receiver thread, not on the emitter thread.
     * An unexpectedly delivered callback will still fail the count check. */
    assert(!pthread_create(&worker, NULL, consume, NULL));
