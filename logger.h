@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <glib.h>
 #include <librustyaxe/config.h>
 
 enum LogPriority {
@@ -58,6 +59,8 @@ extern FILE *logfp;
 extern int log_level;
 extern void Log(logpriority_t priority, const char *subsys, const char *fmt, ...);
 void logger_init(const char *logfile, bool tui_mode);
+/* Migrate the worker log drain to a specific GLib context; NULL selects default. */
+void logger_set_drain_context(GMainContext *context);
 /* Override the configured timestamp policy for embedded/subprocess logs. */
 void logger_set_show_timestamp(bool enabled);
 extern void hash_to_hex(char *dest, const uint8_t *hash, size_t len);
