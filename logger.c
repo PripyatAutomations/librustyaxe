@@ -52,7 +52,7 @@ static uint64_t logger_drops_reported;
 static gboolean logger_drain_tick(gpointer unused) {
    (void)unused;
    if (!atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) return G_SOURCE_REMOVE;
-   ra_log_queue_drain(worker_log_queue, 128);
+   ra_log_queue_drain(worker_log_queue, 512);
    uint64_t dropped = ra_log_queue_dropped(worker_log_queue);
    if (dropped != logger_drops_reported) {
       uint64_t delta = dropped - logger_drops_reported;
@@ -410,13 +410,13 @@ void logger_init(const char *logfile, bool tui_mode) {
    /* Default to asynchronous worker logging. A queue is deliberately
     * retained across logger_end/reinitialization to avoid worker UAF. */
    if (cfg_get_bool("log.async-workers", true)) {
-      if (!worker_log_queue) worker_log_queue = ra_log_queue_new(1024);
+      if (!worker_log_queue) worker_log_queue = ra_log_queue_new(8192);
       if (worker_log_queue && !atomic_load(&worker_logging_enabled)) {
          logger_owner = pthread_self();
          logger_owner_valid = true;
          logger_drops_reported = ra_log_queue_dropped(worker_log_queue);
          atomic_store_explicit(&worker_logging_enabled, true, memory_order_release);
-         logger_drain_source = g_timeout_add(20, logger_drain_tick, NULL);
+         logger_drain_source = g_timeout_add(10, logger_drain_tick, NULL);
       }
    }
    // Load fine-grained log_filters from config
