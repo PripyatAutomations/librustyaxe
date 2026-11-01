@@ -463,7 +463,7 @@ rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t 
    token->next = event_tokens;
    event_tokens = token;
    owned_message_listener_t *listener = xcalloc(1, sizeof(*listener));
-   *listener = (owned_message_listener_t){token, cb, user, dispatch, dispatch_user, message_listeners};
+   *listener = (owned_message_listener_t){token, NULL, cb, user, dispatch, dispatch_user, message_listeners};
    message_listeners = listener;
    pthread_mutex_unlock(&event_lock);
    return token;
