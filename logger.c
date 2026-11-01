@@ -47,7 +47,22 @@ static ra_log_queue_t *worker_log_queue;
 static _Atomic bool worker_logging_enabled;
 static pthread_t logger_owner;
 static _Atomic bool logger_owner_valid;
-static guint logger_drain_source;
+static gboolean logger_drain_tick(gpointer unused);
+static GSource *logger_drain_source_ref;
+/* Call from the logger owner thread when switching the GLib delivery loop. */
+void logger_set_drain_context(GMainContext *context) {
+   if (logger_drain_source_ref) {
+      g_source_destroy(logger_drain_source_ref);
+      g_source_unref(logger_drain_source_ref);
+      logger_drain_source_ref = NULL;
+   }
+   if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) {
+      GSource *source = g_timeout_source_new(10);
+      g_source_set_callback(source, logger_drain_tick, NULL, NULL);
+      g_source_attach(source, context);
+      logger_drain_source_ref = source;
+   }
+}
 static uint64_t logger_drops_reported;
 static gboolean logger_drain_tick(gpointer unused) {
    (void)unused;
@@ -431,7 +446,7 @@ void logger_init(const char *logfile, bool tui_mode) {
          logger_owner_valid = true;
          logger_drops_reported = ra_log_queue_dropped(worker_log_queue);
          atomic_store_explicit(&worker_logging_enabled, true, memory_order_release);
-         logger_drain_source = g_timeout_add(10, logger_drain_tick, NULL);
+         logger_set_drain_context(NULL);
       }
    }
    // Load fine-grained log_filters from config
@@ -449,9 +464,10 @@ void logger_set_show_timestamp(bool enabled) {
 void logger_end(void) {
    if (worker_log_queue) {
       atomic_store_explicit(&worker_logging_enabled, false, memory_order_release);
-      if (logger_drain_source) {
-         g_source_remove(logger_drain_source);
-         logger_drain_source = 0;
+      if (logger_drain_source_ref) {
+         g_source_destroy(logger_drain_source_ref);
+         g_source_unref(logger_drain_source_ref);
+         logger_drain_source_ref = NULL;
       }
       ra_log_queue_drain(worker_log_queue, SIZE_MAX);
       /* A late producer could have observed the enabled flag. Preserve the
