@@ -185,6 +185,9 @@ extern bool event_domain_unregister(const char *name);
 extern rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb,
                                                void *user, const char *domain);
 
+extern rr_event_token_t event_on_binary_domain_token(const char *event, event_binary_cb_t cb,
+   void *user, const char *domain);
+
 extern rr_event_token_t event_on_message_domain_token(const char *event,
    rr_event_message_cb_t cb, void *user, const char *domain);
 
