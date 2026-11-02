@@ -436,6 +436,23 @@ rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb,
    return token;
 }
 
+rr_event_token_t event_on_binary_domain_token(const char *event, event_binary_cb_t cb,
+   void *user, const char *domain) {
+   if (!event || !cb || !domain) return NULL;
+   event_dispatch_t dispatch = NULL;
+   void *dispatch_user = NULL;
+   pthread_mutex_lock(&event_lock);
+   for (event_domain_t *d = event_domains; d; d = d->next) {
+      if (!strcmp(d->name, domain)) {
+         dispatch = d->dispatch;
+         dispatch_user = d->user;
+         break;
+      }
+   }
+   pthread_mutex_unlock(&event_lock);
+   return dispatch ? event_on_binary_token_dispatch(event, cb, user, dispatch, dispatch_user) : NULL;
+}
+
 rr_event_token_t event_on_message_domain_token(const char *name,
    rr_event_message_cb_t cb, void *user, const char *domain) {
    if (!name || !cb || !domain) return NULL;
