@@ -46,7 +46,7 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (strcmp(subsys, "profile")) {
       return;
    }
-   char message[256];
+   char message[8192];
    va_list ap;
    va_start(ap, fmt);
    vsnprintf(message, sizeof(message), fmt, ap);
@@ -55,14 +55,17 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (!strncmp(message, "Event dispatch counts (cumulative, uptime=", 40)) {
       snprintf(header, sizeof(header), "%s", message);
       dumps++;
+      /* The profiler now emits a single multiline report, not one Log()
+       * callback per row. Check the owned snapshot before mutating listeners. */
+      if (strstr(message, "\nprofile.remove n=1 ")) {
+         removed_row_logged = true;
+      }
 
       if (remove_listener) {
          // The pending profile rows must survive removal of dictionary keys.
          event_off("profile.remove", NULL, NULL);
          remove_listener = false;
       }
-   } else if (!strcmp(message, "  profile.remove: 1")) {
-      removed_row_logged = true;
    }
 
    if (forward_logs) {
