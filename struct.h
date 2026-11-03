@@ -8,6 +8,7 @@
 #define __librustyaxe_struct_h
 
 #include <sys/types.h>
+#include <stdint.h>
 #include <time.h>
 
 // XXX:ASAP Move these to build time config file
