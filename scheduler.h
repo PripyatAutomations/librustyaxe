@@ -1,5 +1,10 @@
-/* Portable policy wrapper: Linux/POSIX scheduling, explicit opt-in.
- * RT operations require OS permission. Apply in the target thread/process. */
+//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//
+// Do not pay money for this, except donations to the project, if you wish to.
+// The software is not for sale. It is freely available, always.
+//
+// Licensed under MIT license, if built without mongoose or GPL if built with.
+/* Portable policy wrapper: Linux/POSIX scheduling, explicit opt-in. RT operations require OS permission. Apply in the target thread/process. */
 #ifndef RUSTYAXE_SCHEDULER_H
 #define RUSTYAXE_SCHEDULER_H
 #include <stdbool.h>
@@ -13,19 +18,17 @@ typedef enum {
 } ra_sched_class_t;
 typedef struct {
    ra_sched_class_t policy;
-   int priority;  /* FIFO/RR OS priority; zero for other policies */
-   int nice;      /* process nice value; -20..19 */
-   bool set_nice; /* nice is process/thread implementation-dependent */
+   int priority;                /* FIFO/RR OS priority; zero for other policies */
+   int nice;                    /* process nice value; -20..19 */
+   bool set_nice;               /* nice is process/thread implementation-dependent */
 } ra_sched_options_t;
-/* pid=0 selects the calling task; use native TID for Linux threads.
- * Changes are applied to the selected task, never its entire process group. */
+/* pid=0 selects the calling task; use native TID for Linux threads. Changes are applied to the selected task, never its entire process group. */
 int ra_sched_apply(pid_t pid, const ra_sched_options_t *options);
 /* Force managed worker to non-RT policy before optional niceness change. */
 int ra_sched_drop_rt(pid_t pid, int nice_value);
 /* Query one task's policy and priority; nice is only read when supported. */
 int ra_sched_query(pid_t pid, ra_sched_options_t *options);
-/* Named worker profiles: normal, background, interactive, realtime-audio.
- * Null/empty name selects normal. No global privilege changes. */
+/* Named worker profiles: normal, background, interactive, realtime-audio. Null/empty name selects normal. No global privilege changes. */
 int ra_sched_apply_profile(pid_t pid, const char *name);
 const char *ra_sched_class_name(ra_sched_class_t policy);
 #endif

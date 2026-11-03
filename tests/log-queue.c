@@ -4,7 +4,9 @@
 /* Stub the delivery sink to verify ordering without a logger runtime. */
 static unsigned received;
 void Log(logpriority_t level, const char *subsys, const char *fmt, ...) {
-   (void)level; (void)subsys; (void)fmt;
+   (void)level;
+   (void)subsys;
+   (void)fmt;
    received++;
 }
 int main(void) {
@@ -20,5 +22,6 @@ int main(void) {
    assert(received == 2);
    assert(ra_log_queue_drain(q, 10) == 0);
    ra_log_queue_free(q);
+
    return 0;
 }

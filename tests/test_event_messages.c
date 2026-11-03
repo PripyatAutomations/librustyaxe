@@ -19,13 +19,18 @@ static void cb(const rr_event_message_t *m, void *user) {
    assert(m->length == 4 && !memcmp(m->payload, "a\0bc", 4));
    received++;
 }
-static void legacy_cb(const char *event, const char *data, rrconn_t *cptr,
-                      void *user) {
-   (void)event; (void)data; (void)cptr; (void)user;
+static void legacy_cb(const char *event, const char *data, rrconn_t *cptr, void *user) {
+   (void)event;
+   (void)data;
+   (void)cptr;
+   (void)user;
 }
-static void binary_cb(const char *event, const void *data, size_t length,
-                      rrconn_t *cptr, void *user) {
-   (void)event; (void)data; (void)length; (void)cptr; (void)user;
+static void binary_cb(const char *event, const void *data, size_t length, rrconn_t *cptr, void *user) {
+   (void)event;
+   (void)data;
+   (void)length;
+   (void)cptr;
+   (void)user;
 }
 static void enqueue(event_dispatch_fn_t fn, void *arg, void *user) {
    (void)user;
@@ -40,23 +45,24 @@ static void *consume(void *unused) {
    (void)unused;
    receiver_thread = pthread_self();
    pthread_mutex_lock(&lock);
-   while (!queued_fn) pthread_cond_wait(&ready, &lock);
+   while (!queued_fn) {
+      pthread_cond_wait(&ready, &lock);
+   }
    event_dispatch_fn_t fn = queued_fn;
    void *arg = queued_arg;
    queued_fn = NULL;
    queued_arg = NULL;
    pthread_mutex_unlock(&lock);
    fn(arg);
+
    return NULL;
 }
 int main(void) {
    event_init();
    assert(event_domain_register("gtk", enqueue, NULL));
    assert(!event_domain_register("gtk", enqueue, NULL));
-   rr_event_token_t legacy = event_on_domain_token(
-      "test.legacy", legacy_cb, NULL, "gtk");
-   rr_event_token_t binary = event_on_binary_domain_token(
-      "test.binary", binary_cb, NULL, "gtk");
+   rr_event_token_t legacy = event_on_domain_token("test.legacy", legacy_cb, NULL, "gtk");
+   rr_event_token_t binary = event_on_binary_domain_token("test.binary", binary_cb, NULL, "gtk");
    assert(legacy && binary);
    assert(!event_domain_unregister("gtk"));
    event_off_token(legacy);
@@ -66,8 +72,12 @@ int main(void) {
    assert(!event_on_message_domain_token("test.cross-domain", cb, NULL, "unknown"));
    assert(token);
    char sender[] = "node.123/connection.456/7";
-   char bytes[] = {'a', 0, 'b', 'c'};
-   rr_event_message_t msg = {"test.cross-domain", sender, bytes, sizeof(bytes), 0};
+   char bytes[] = {
+      'a', 0, 'b', 'c'
+   };
+   rr_event_message_t msg = {
+      "test.cross-domain", sender, bytes, sizeof(bytes), 0
+   };
    pthread_t worker;
    assert(!pthread_create(&worker, NULL, consume, NULL));
    event_emit_message(&msg);
@@ -84,8 +94,7 @@ int main(void) {
    event_emit_message(&msg);
    event_off_token(token);
    event_message_token_drain(token);
-   /* Drain on the registered receiver thread, not on the emitter thread.
-    * An unexpectedly delivered callback will still fail the count check. */
+   /* Drain on the registered receiver thread, not on the emitter thread. An unexpectedly delivered callback will still fail the count check. */
    assert(!pthread_create(&worker, NULL, consume, NULL));
    pthread_join(worker, NULL);
    assert(received == 1);
@@ -93,5 +102,6 @@ int main(void) {
    event_emit_message(&msg);
    assert(received == 1);
    event_shutdown();
+
    return 0;
 }

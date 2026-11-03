@@ -41,8 +41,7 @@ static bool cfg_log_show_ts = false;
 char latest_timestamp[64];      // Current printed timestamp
 
 static struct log_callback *log_callbacks = NULL;
-/* The queue allocation is intentionally retained until process exit.
- * Workers can race logger_end() without ever touching freed storage. */
+/* The queue allocation is intentionally retained until process exit. Workers can race logger_end() without ever touching freed storage. */
 static ra_log_queue_t *worker_log_queue;
 static _Atomic bool worker_logging_enabled;
 static pthread_t logger_owner;
@@ -56,6 +55,7 @@ void logger_set_drain_context(GMainContext *context) {
       g_source_unref(logger_drain_source_ref);
       logger_drain_source_ref = NULL;
    }
+
    if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) {
       GSource *source = g_timeout_source_new(10);
       g_source_set_callback(source, logger_drain_tick, NULL, NULL);
@@ -63,26 +63,32 @@ void logger_set_drain_context(GMainContext *context) {
       logger_drain_source_ref = source;
    }
 }
+
 static uint64_t logger_drops_reported;
 static gboolean logger_drain_tick(gpointer unused) {
    (void)unused;
-   if (!atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) return G_SOURCE_REMOVE;
+
+   if (!atomic_load_explicit(&worker_logging_enabled, memory_order_acquire)) {
+      return G_SOURCE_REMOVE;
+   }
    gint64 started = g_get_monotonic_time();
    size_t backlog = ra_log_queue_depth(worker_log_queue);
    size_t processed = ra_log_queue_drain(worker_log_queue, 512);
    gint64 drain_us = g_get_monotonic_time() - started;
-   if (drain_us > 40000)
-      Log(LOG_WARN, "logger", "Slow worker log drain: %zu records in %lldus; backlog-before=%zu backlog-after=%zu",
-          processed, (long long)drain_us, backlog, ra_log_queue_depth(worker_log_queue));
+
+   if (drain_us > 40000) {
+      Log(LOG_WARN, "logger", "Slow worker log drain: %zu records in %lldus; backlog-before=%zu backlog-after=%zu", processed, (long long)drain_us, backlog,
+         ra_log_queue_depth(worker_log_queue));
+   }
    uint64_t dropped = ra_log_queue_dropped(worker_log_queue);
+
    if (dropped != logger_drops_reported) {
       uint64_t delta = dropped - logger_drops_reported;
       logger_drops_reported = dropped;
-      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu; contention=%llu full=%llu)",
-          (unsigned long long)delta, (unsigned long long)dropped,
-          (unsigned long long)ra_log_queue_contention_dropped(worker_log_queue),
-          (unsigned long long)ra_log_queue_full_dropped(worker_log_queue));
+      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu; contention=%llu full=%llu)", (unsigned long long)delta, (unsigned long long)
+         dropped, (unsigned long long)ra_log_queue_contention_dropped(worker_log_queue), (unsigned long long)ra_log_queue_full_dropped(worker_log_queue));
    }
+
    return G_SOURCE_CONTINUE;
 }
 
@@ -394,6 +400,7 @@ bool debug_filter(const char *subsys, logpriority_t msg_level) {
    const struct log_filter *best = log_matching_filter(subsys ? subsys : "");
    bool filtered = msg_level > (best ? best->level : DEFAULT_LOG_LEVEL);
    pthread_rwlock_unlock(&log_filters_lock);
+
    return filtered;
 }
 
@@ -437,10 +444,12 @@ void logger_init(const char *logfile, bool tui_mode) {
       }
    }
 
-   /* Default to asynchronous worker logging. A queue is deliberately
-    * retained across logger_end/reinitialization to avoid worker UAF. */
+   /* Default to asynchronous worker logging. A queue is deliberately retained across logger_end/reinitialization to avoid worker UAF. */
    if (cfg_get_bool("log.async-workers", true)) {
-      if (!worker_log_queue) worker_log_queue = ra_log_queue_new(8192);
+      if (!worker_log_queue) {
+         worker_log_queue = ra_log_queue_new(8192);
+      }
+
       if (worker_log_queue && !atomic_load(&worker_logging_enabled)) {
          logger_owner = pthread_self();
          logger_owner_valid = true;
@@ -464,15 +473,16 @@ void logger_set_show_timestamp(bool enabled) {
 void logger_end(void) {
    if (worker_log_queue) {
       atomic_store_explicit(&worker_logging_enabled, false, memory_order_release);
+
       if (logger_drain_source_ref) {
          g_source_destroy(logger_drain_source_ref);
          g_source_unref(logger_drain_source_ref);
          logger_drain_source_ref = NULL;
       }
       ra_log_queue_drain(worker_log_queue, SIZE_MAX);
-      /* A late producer could have observed the enabled flag. Preserve the
-       * allocated queue until process exit, avoiding a use-after-free. */
+      /* A late producer could have observed the enabled flag. Preserve the allocated queue until process exit, avoiding a use-after-free. */
    }
+
    if (logfp && (logfp != stdout && logfp != stderr)) {
       fclose(logfp);
    }
@@ -528,17 +538,17 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    va_start(ap, fmt);
    struct timespec submitted_time;
    bool delivering = ra_log_queue_delivery_time(&submitted_time);
-   /* Every ordinary Log() call queues, regardless of its originating thread.
-    * Only the queue drain invokes callbacks and performs I/O. */
+
+   /* Every ordinary Log() call queues, regardless of its originating thread. Only the queue drain invokes callbacks and performs I/O. */
    if (!delivering && atomic_load_explicit(&logger_owner_valid, memory_order_acquire)) {
       if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
-          (!debug_filter(subsys, priority) ||
-           atomic_load_explicit(&log_raw_subscribers, memory_order_acquire))) {
+         (!debug_filter(subsys, priority) || atomic_load_explicit(&log_raw_subscribers, memory_order_acquire))) {
          char message[1024];
          vsnprintf(message, sizeof(message), fmt, ap);
          ra_log_queue_push(worker_log_queue, priority, subsys, message);
       }
       va_end(ap);
+
       return;
    }
    bool allowed = !debug_filter(subsys, priority);
@@ -547,20 +557,22 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (allowed) {
       pthread_rwlock_rdlock(&log_filters_lock);
       const struct log_filter *filter = log_matching_filter(subsys);
-      if (filter && !log_rate_allowed(subsys, priority, filter->rate_count, filter->rate_seconds, &suppressed))
+
+      if (filter && !log_rate_allowed(subsys, priority, filter->rate_count, filter->rate_seconds, &suppressed)) {
          allowed = false;
+      }
       pthread_rwlock_unlock(&log_filters_lock);
    }
 
-   /* LOG_CRAZY is file/console-only: do not invoke any registered
-    * callbacks, including RAW listeners, for high-volume trace traffic. */
-   if (priority != LOG_CRAZY)
-   for (struct log_callback *cb = log_callbacks ; cb ; cb = cb->next) {
-      if (cb->callback && (cb->policy == LOG_CALLBACK_RAW || allowed)) {
-         va_list args;
-         va_copy(args, ap);
-         cb->callback(priority, subsys, fmt, args);
-         va_end(args);
+   /* LOG_CRAZY is file/console-only: do not invoke any registered callbacks, including RAW listeners, for high-volume trace traffic. */
+   if (priority != LOG_CRAZY) {
+      for (struct log_callback *cb = log_callbacks ; cb ; cb = cb->next) {
+         if (cb->callback && (cb->policy == LOG_CALLBACK_RAW || allowed)) {
+            va_list args;
+            va_copy(args, ap);
+            cb->callback(priority, subsys, fmt, args);
+            va_end(args);
+         }
       }
    }
 
@@ -571,11 +583,14 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    }
 
    char queued_timestamp[64] = "";
+
    if (cfg_log_show_ts) {
       if (delivering) {
          struct tm tm;
-         if (localtime_r(&submitted_time.tv_sec, &tm))
+
+         if (localtime_r(&submitted_time.tv_sec, &tm)) {
             strftime(queued_timestamp, sizeof(queued_timestamp), "%Y/%m/%d %H:%M:%S", &tm);
+         }
       } else {
          update_timestamp();
       }
@@ -645,8 +660,10 @@ bool log_remove_callback(struct log_callback *log_callback) {
          } else {
             log_callbacks = i->next;
          }
-         if (i->policy == LOG_CALLBACK_RAW)
+
+         if (i->policy == LOG_CALLBACK_RAW) {
             atomic_fetch_sub_explicit(&log_raw_subscribers, 1, memory_order_release);
+         }
          free(i);
 
          return true;           // signal success
@@ -691,8 +708,10 @@ struct log_callback *log_add_callback_token(bool (*log_va_cb) (logpriority_t, co
       log_callbacks = newcb;
    }
 
-   if (policy == LOG_CALLBACK_RAW)
+   if (policy == LOG_CALLBACK_RAW) {
       atomic_fetch_add_explicit(&log_raw_subscribers, 1, memory_order_release);
+   }
+
    return newcb;
 }
 

@@ -267,8 +267,8 @@ void event_profile_dump(void) {
    char *uptime = time_t2dhms(elapsed);
    char *report = NULL;
    size_t report_len = 0, report_capacity = 0;
-   bool report_ok = profile_report_append(&report, &report_len, &report_capacity, "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown")
-   ;
+   bool report_ok =
+      profile_report_append(&report, &report_len, &report_capacity, "Event dispatch counts (cumulative, uptime=%s):", uptime ? uptime : "unknown");
    free(uptime);
    size_t limit = used < 32 ? used : 32;
 
@@ -366,12 +366,25 @@ typedef struct event_domain {
 static event_domain_t *event_domains;
 
 bool event_domain_register(const char *name, event_dispatch_t dispatch, void *user) {
-   if (!name || !*name || !dispatch) return false;
-   pthread_mutex_lock(&event_lock);
-   if (!event_store) { pthread_mutex_unlock(&event_lock); return false; }
-   for (event_domain_t *d = event_domains; d; d = d->next) {
-      if (!strcmp(d->name, name)) { pthread_mutex_unlock(&event_lock); return false; }
+   if (!name || !*name || !dispatch) {
+      return false;
    }
+   pthread_mutex_lock(&event_lock);
+
+   if (!event_store) {
+      pthread_mutex_unlock(&event_lock);
+
+      return false;
+   }
+
+   for (event_domain_t *d = event_domains ; d ; d = d->next) {
+      if (!strcmp(d->name, name)) {
+         pthread_mutex_unlock(&event_lock);
+
+         return false;
+      }
+   }
+
    event_domain_t *d = xcalloc(1, sizeof(*d));
    d->name = xstrdup(name);
    d->dispatch = dispatch;
@@ -379,45 +392,61 @@ bool event_domain_register(const char *name, event_dispatch_t dispatch, void *us
    d->next = event_domains;
    event_domains = d;
    pthread_mutex_unlock(&event_lock);
+
    return true;
 }
 bool event_domain_unregister(const char *name) {
-   if (!name) return false;
+   if (!name) {
+      return false;
+   }
    pthread_mutex_lock(&event_lock);
    event_domain_t **cursor = &event_domains;
-   while (*cursor && strcmp((*cursor)->name, name)) cursor = &(*cursor)->next;
-   if (!*cursor) { pthread_mutex_unlock(&event_lock); return false; }
+   while (*cursor && strcmp((*cursor)->name, name)) {
+      cursor = &(*cursor)->next;
+   }
+
+   if (!*cursor) {
+      pthread_mutex_unlock(&event_lock);
+
+      return false;
+   }
    event_domain_t *d = *cursor;
-   /* Every listener snapshots the dispatcher, so the domain cannot disappear
-    * while either message or ordinary event listeners still use it. */
-   for (owned_message_listener_t *l = message_listeners; l; l = l->next) {
+
+   /* Every listener snapshots the dispatcher, so the domain cannot disappear while either message or ordinary event listeners still use it. */
+   for (owned_message_listener_t *l = message_listeners ; l ; l = l->next) {
       if (l->domain && !strcmp(l->domain, d->name)) {
          pthread_mutex_unlock(&event_lock);
+
          return false;
       }
    }
+
    int position = 0;
    const char *event = NULL;
    dict_value_t value;
    val_type_t type;
-   while (event_store &&
-          (position = dict_enumerate_typed(event_store, position, &event,
-                                           &value, &type)) >= 0) {
-      if (type != VAL_PTR || !value.p) continue;
+   while (event_store && (position = dict_enumerate_typed(event_store, position, &event, &value, &type)) >= 0) {
+      if (type != VAL_PTR || !value.p) {
+         continue;
+      }
       event_entry_t *entry = value.p;
-      for (size_t i = 0; i < entry->listener_count; ++i) {
+
+      for (size_t i = 0 ; i < entry->listener_count ; ++i) {
          event_listener_t *listener = &entry->listeners[i];
-         if (listener->dispatch == d->dispatch &&
-             listener->dispatch_user == d->user) {
+
+         if (listener->dispatch == d->dispatch && listener->dispatch_user == d->user) {
             pthread_mutex_unlock(&event_lock);
+
             return false;
          }
       }
-      for (size_t i = 0; i < entry->binary_listener_count; ++i) {
+
+      for (size_t i = 0 ; i < entry->binary_listener_count ; ++i) {
          event_binary_listener_t *listener = &entry->binary_listeners[i];
-         if (listener->dispatch == d->dispatch &&
-             listener->dispatch_user == d->user) {
+
+         if (listener->dispatch == d->dispatch && listener->dispatch_user == d->user) {
             pthread_mutex_unlock(&event_lock);
+
             return false;
          }
       }
@@ -426,68 +455,90 @@ bool event_domain_unregister(const char *name) {
    free(d->name);
    free(d);
    pthread_mutex_unlock(&event_lock);
+
    return true;
 }
+
 static event_entry_t *event_get_or_create_locked(const char *event);
 
-rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb,
-   void *user, const char *domain) {
-   if (!event || !cb || !domain) return NULL;
+rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb, void *user, const char *domain) {
+   if (!event || !cb || !domain) {
+      return NULL;
+   }
    event_dispatch_t dispatcher = NULL;
    void *dispatcher_user = NULL;
    pthread_mutex_lock(&event_lock);
-   for (event_domain_t *d = event_domains; d; d = d->next) {
+
+   for (event_domain_t *d = event_domains ; d ; d = d->next) {
       if (!strcmp(d->name, domain)) {
          dispatcher = d->dispatch;
          dispatcher_user = d->user;
          break;
       }
    }
+
    pthread_mutex_unlock(&event_lock);
-   if (!dispatcher) return NULL;
-   rr_event_token_t token = event_on_token_dispatch(event, cb, user,
-                                                    dispatcher, dispatcher_user);
-   if (!token) return NULL;
+
+   if (!dispatcher) {
+      return NULL;
+   }
+   rr_event_token_t token = event_on_token_dispatch(event, cb, user, dispatcher, dispatcher_user);
+
+   if (!token) {
+      return NULL;
+   }
    /* Mark exactly this registered listener as a cross-domain delivery. */
    pthread_mutex_lock(&event_lock);
    event_entry_t *entry = event_get_or_create_locked(event);
+
    if (entry) {
-      for (size_t i = 0; i < entry->listener_count; ++i) {
+      for (size_t i = 0 ; i < entry->listener_count ; ++i) {
          event_listener_t *l = &entry->listeners[i];
-         if (l->cb == cb && l->user == user &&
-             l->dispatch == dispatcher && l->dispatch_user == dispatcher_user)
+
+         if (l->cb == cb && l->user == user && l->dispatch == dispatcher && l->dispatch_user == dispatcher_user) {
             l->domain_delivery = true;
+         }
       }
    }
    pthread_mutex_unlock(&event_lock);
+
    return token;
 }
 
-rr_event_token_t event_on_binary_domain_token(const char *event, event_binary_cb_t cb,
-   void *user, const char *domain) {
-   if (!event || !cb || !domain) return NULL;
+rr_event_token_t event_on_binary_domain_token(const char *event, event_binary_cb_t cb, void *user, const char *domain) {
+   if (!event || !cb || !domain) {
+      return NULL;
+   }
    event_dispatch_t dispatch = NULL;
    void *dispatch_user = NULL;
    pthread_mutex_lock(&event_lock);
-   for (event_domain_t *d = event_domains; d; d = d->next) {
+
+   for (event_domain_t *d = event_domains ; d ; d = d->next) {
       if (!strcmp(d->name, domain)) {
          dispatch = d->dispatch;
          dispatch_user = d->user;
          break;
       }
    }
+
    pthread_mutex_unlock(&event_lock);
+
    return dispatch ? event_on_binary_token_dispatch(event, cb, user, dispatch, dispatch_user) : NULL;
 }
 
-rr_event_token_t event_on_message_domain_token(const char *name,
-   rr_event_message_cb_t cb, void *user, const char *domain) {
-   if (!name || !cb || !domain) return NULL;
+rr_event_token_t event_on_message_domain_token(const char *name, rr_event_message_cb_t cb, void *user, const char *domain) {
+   if (!name || !cb || !domain) {
+      return NULL;
+   }
    pthread_mutex_lock(&event_lock);
    event_domain_t *d = event_domains;
-   while (d && strcmp(d->name, domain)) d = d->next;
+   while (d && strcmp(d->name, domain)) {
+      d = d->next;
+   }
+
    if (!d || !event_store) {
       pthread_mutex_unlock(&event_lock);
+
       return NULL;
    }
    struct rr_event_token *token = xcalloc(1, sizeof(*token));
@@ -498,10 +549,12 @@ rr_event_token_t event_on_message_domain_token(const char *name,
    token->next = event_tokens;
    event_tokens = token;
    owned_message_listener_t *listener = xcalloc(1, sizeof(*listener));
-   *listener = (owned_message_listener_t){token, xstrdup(domain), cb, user,
-      d->dispatch, d->user, message_listeners};
+   *listener = (owned_message_listener_t) {
+      token, xstrdup(domain), cb, user, d->dispatch, d->user, message_listeners
+   };
    message_listeners = listener;
    pthread_mutex_unlock(&event_lock);
+
    return token;
 }
 
@@ -517,19 +570,26 @@ typedef struct {
 
 static void deliver_message(void *opaque) {
    pending_message_t *p = opaque;
-   const rr_event_message_t m = {p->name, p->sender, p->payload, p->length, p->flags};
-   /* A queued event may outlive its subscription. Verify under the registry
-    * lock before invoking module code; draining the target loop is still
-    * required before unloading callbacks already executing. */
+   const rr_event_message_t m = {
+      p->name, p->sender, p->payload, p->length, p->flags
+   };
+   /* A queued event may outlive its subscription. Verify under the registry lock before invoking module code; draining the target loop is still required before
+    * unloading callbacks already executing. */
    pthread_mutex_lock(&event_lock);
    bool active = p->token && p->token->active;
-   if (active) p->token->executing++;
+
+   if (active) {
+      p->token->executing++;
+   }
    pthread_mutex_unlock(&event_lock);
+
    if (active) {
       p->cb(&m, p->user);
       pthread_mutex_lock(&event_lock);
-      if (--p->token->executing == 0)
+
+      if (--p->token->executing == 0) {
          pthread_cond_broadcast(&event_idle_cond);
+      }
       pthread_mutex_unlock(&event_lock);
    }
    free(p->name);
@@ -537,12 +597,17 @@ static void deliver_message(void *opaque) {
    free(p->payload);
    free(p);
 }
-rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t cb,
-                                        void *user, event_dispatch_t dispatch,
-                                        void *dispatch_user) {
-   if (!name || !cb) return NULL;
+rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user) {
+   if (!name || !cb) {
+      return NULL;
+   }
    pthread_mutex_lock(&event_lock);
-   if (!event_store) { pthread_mutex_unlock(&event_lock); return NULL; }
+
+   if (!event_store) {
+      pthread_mutex_unlock(&event_lock);
+
+      return NULL;
+   }
    struct rr_event_token *token = xcalloc(1, sizeof(*token));
    token->event = xstrdup(name);
    token->active = true;
@@ -551,13 +616,18 @@ rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t 
    token->next = event_tokens;
    event_tokens = token;
    owned_message_listener_t *listener = xcalloc(1, sizeof(*listener));
-   *listener = (owned_message_listener_t){token, NULL, cb, user, dispatch, dispatch_user, message_listeners};
+   *listener = (owned_message_listener_t) {
+      token, NULL, cb, user, dispatch, dispatch_user, message_listeners
+   };
    message_listeners = listener;
    pthread_mutex_unlock(&event_lock);
+
    return token;
 }
 void event_emit_message(const rr_event_message_t *message) {
-   if (!message || !message->name || (!message->payload && message->length)) return;
+   if (!message || !message->name || (!message->payload && message->length)) {
+      return;
+   }
    typedef struct {
       rr_event_message_cb_t cb;
       void *user;
@@ -568,14 +638,19 @@ void event_emit_message(const rr_event_message_t *message) {
    target_t *targets = NULL;
    size_t count = 0;
    pthread_mutex_lock(&event_lock);
-   for (owned_message_listener_t *l = message_listeners; l; l = l->next) {
+
+   for (owned_message_listener_t *l = message_listeners ; l ; l = l->next) {
       if (!strcmp(l->token->event, message->name)) {
          targets = xrealloc(targets, (count + 1) * sizeof(*targets));
-         targets[count++] = (target_t){l->cb, l->user, l->dispatch, l->dispatch_user, l->token};
+         targets[count++] = (target_t) {
+            l->cb, l->user, l->dispatch, l->dispatch_user, l->token
+         };
       }
    }
+
    pthread_mutex_unlock(&event_lock);
-   for (size_t i = 0; i < count; i++) {
+
+   for (size_t i = 0 ; i < count ; i++) {
       pending_message_t *p = xcalloc(1, sizeof(*p));
       p->cb = targets[i].cb;
       p->token = targets[i].token;
@@ -584,13 +659,19 @@ void event_emit_message(const rr_event_message_t *message) {
       p->sender = xstrdup(message->sender ? message->sender : "");
       p->length = message->length;
       p->flags = message->flags;
+
       if (p->length) {
          p->payload = xmalloc(p->length);
          memcpy(p->payload, message->payload, p->length);
       }
-      if (targets[i].dispatch) targets[i].dispatch(deliver_message, p, targets[i].dispatch_user);
-      else deliver_message(p);
+
+      if (targets[i].dispatch) {
+         targets[i].dispatch(deliver_message, p, targets[i].dispatch_user);
+      } else {
+         deliver_message(p);
+      }
    }
+
    free(targets);
 }
 
@@ -1026,8 +1107,10 @@ void event_off_token(rr_event_token_t token_handle) {
       }
       token->active = false;
       pthread_mutex_unlock(&event_lock);
+
       return;
    }
+
    if (event_store) {
       event_entry_t *entry = event_lookup_locked(token->event);
 
@@ -1074,14 +1157,17 @@ void event_off_token(rr_event_token_t token_handle) {
    pthread_mutex_unlock(&event_lock);
 }
 
-/* Wait for a cancelled message listener's callbacks already running.
- * Never call from inside that listener: it would deadlock. */
+/* Wait for a cancelled message listener's callbacks already running. Never call from inside that listener: it would deadlock. */
 void event_message_token_drain(rr_event_token_t token) {
-   if (!token) return;
+   if (!token) {
+      return;
+   }
    pthread_mutex_lock(&event_lock);
+
    if (token->message) {
-      while (token->executing)
+      while (token->executing) {
          pthread_cond_wait(&event_idle_cond, &event_lock);
+      }
    }
    pthread_mutex_unlock(&event_lock);
 }

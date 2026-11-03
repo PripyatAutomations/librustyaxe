@@ -54,7 +54,7 @@ typedef struct event_listener {
 
    event_dispatch_t dispatch;
    void *dispatch_user;
-   bool domain_delivery; /* cross-domain: connection pointer must not escape */
+   bool domain_delivery;        /* cross-domain: connection pointer must not escape */
 } event_listener_t;
 
 typedef struct event_binary_listener {
@@ -152,9 +152,8 @@ extern void event_off_token(rr_event_token_t token);
 
 
 /*
- * Owned cross-domain event envelope. Never embeds rrconn_t or a borrowed
- * pointer: sender is a stable identity and payload is copied byte-for-byte.
- * Applications may use JSON/CBOR or other versioned formats in payload.
+ * Owned cross-domain event envelope. Never embeds rrconn_t or a borrowed pointer: sender is a stable identity and payload is copied byte-for-byte. Applications
+ * may use JSON/CBOR or other versioned formats in payload.
  */
 typedef struct rr_event_message {
    const char *name;
@@ -165,31 +164,22 @@ typedef struct rr_event_message {
 } rr_event_message_t;
 
 typedef void (*rr_event_message_cb_t)(const rr_event_message_t *message, void *user);
-/* A message listener uses the same dispatch trampoline as legacy events.
- * Pending callbacks must be drained before unloading their owning module. */
-extern rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t cb,
-                                                void *user, event_dispatch_t dispatch,
-                                                void *dispatch_user);
+/* A message listener uses the same dispatch trampoline as legacy events. Pending callbacks must be drained before unloading their owning module. */
+extern rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user);
 extern void event_emit_message(const rr_event_message_t *message);
-/* After event_off_token(), wait for callbacks already running. Do not call
- * from the callback itself or from a dispatcher it needs to make progress. */
+/* After event_off_token(), wait for callbacks already running. Do not call from the callback itself or from a dispatcher it needs to make progress. */
 extern void event_message_token_drain(rr_event_token_t token);
 
-/* Named execution domains. The host supplies a dispatcher for each loop.
- * Register domains before listeners; drain queued work before unregistering
- * a domain or unloading modules containing message callbacks. */
+/* Named execution domains. The host supplies a dispatcher for each loop. Register domains before listeners; drain queued work before unregistering a domain or
+ * unloading modules containing message callbacks. */
 extern bool event_domain_register(const char *name, event_dispatch_t dispatch, void *user);
 extern bool event_domain_unregister(const char *name);
-/* Subscribe to an existing text event in a named execution domain.
- * Data is copied; rrconn_t * is always NULL on the receiving thread. */
-extern rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb,
-                                               void *user, const char *domain);
+/* Subscribe to an existing text event in a named execution domain. Data is copied; rrconn_t * is always NULL on the receiving thread. */
+extern rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb, void *user, const char *domain);
 
-extern rr_event_token_t event_on_binary_domain_token(const char *event, event_binary_cb_t cb,
-   void *user, const char *domain);
+extern rr_event_token_t event_on_binary_domain_token(const char *event, event_binary_cb_t cb, void *user, const char *domain);
 
-extern rr_event_token_t event_on_message_domain_token(const char *event,
-   rr_event_message_cb_t cb, void *user, const char *domain);
+extern rr_event_token_t event_on_message_domain_token(const char *event, rr_event_message_cb_t cb, void *user, const char *domain);
 
 
 

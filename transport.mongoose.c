@@ -33,10 +33,9 @@ static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
    struct mg_connection *c = m->socket;
 
    if (!c || c->is_closing || c->is_draining || !c->is_websocket) {
-      Log(LOG_WARN, "transport.mongoose",
-          "WebSocket send blocked: socket=%p closing=%d draining=%d websocket=%d queued=%zu payload=%zu",
-          (void *)c, c ? (int)c->is_closing : -1, c ? (int)c->is_draining : -1,
-          c ? (int)c->is_websocket : -1, c ? c->send.len : 0, len);
+      Log(LOG_WARN, "transport.mongoose", "WebSocket send blocked: socket=%p closing=%d draining=%d websocket=%d queued=%zu payload=%zu", (void *)c, c ? (int)c
+         ->is_closing : -1, c ? (int)c->is_draining : -1, c ? (int)c->is_websocket : -1, c ? c->send.len : 0, len);
+
       return RR_TRANSPORT_CLOSED_ERROR;
    }
 
@@ -46,24 +45,24 @@ static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
    size_t overhead = 2 + (len < 126 ? 0 : len <= 65535 ? 2 : 8) + (c->is_client ? 4 : 0);
 
    if (c->send.len > SIZE_MAX - len - overhead) {
-      Log(LOG_WARN, "transport.mongoose",
-          "WebSocket frame size overflow: socket=%p queued=%zu payload=%zu overhead=%zu limit=%zu",
-          (void *)c, c->send.len, len, overhead, (size_t)SIZE_MAX);
+      Log(LOG_WARN, "transport.mongoose", "WebSocket frame size overflow: socket=%p queued=%zu payload=%zu overhead=%zu limit=%zu", (void *)c, c->send.len, len,
+         overhead, (size_t)SIZE_MAX);
+
       return RR_TRANSPORT_BACKPRESSURE;
    }
 
-   /* Mongoose versions differ in how mg_ws_send reports queued bytes.
-    * Verify the actual buffer growth instead of interpreting its return
-    * value as the size of this frame. In particular, preexisting queued
-    * frames must not turn a successful send into a false failure. */
+   /* Mongoose versions differ in how mg_ws_send reports queued bytes. Verify the actual buffer growth instead of interpreting its return value as the size of
+    * this frame. In particular, preexisting queued frames must not turn a successful send into a false failure. */
    size_t before = c->send.len;
    size_t result = mg_ws_send(c, data, len, opcode);
-   if (c->send.len >= before && c->send.len - before == len + overhead)
+
+   if (c->send.len >= before && c->send.len - before == len + overhead) {
       return RR_TRANSPORT_OK;
+   }
    Log(LOG_WARN, "transport.mongoose",
-       "WebSocket send did not queue frame: socket=%p return=%zu queued-before=%zu queued-after=%zu payload=%zu overhead=%zu closing=%d draining=%d websocket=%d",
-       (void *)c, result, before, c->send.len, len, overhead,
-       (int)c->is_closing, (int)c->is_draining, (int)c->is_websocket);
+      "WebSocket send did not queue frame: socket=%p return=%zu queued-before=%zu queued-after=%zu payload=%zu overhead=%zu closing=%d draining=%d websocket=%d",
+      (void *)c, result, before, c->send.len, len, overhead, (int)c->is_closing, (int)c->is_draining, (int)c->is_websocket);
+
    return RR_TRANSPORT_IO_ERROR;
 }
 static int send_text(void *ctx, const uint8_t *data, size_t len) {
