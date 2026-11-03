@@ -10,6 +10,9 @@
 #define __librustyaxe_event_bus_h
 
 #include <stddef.h>
+#include <stdbool.h>
+#include <librustyaxe/struct.h>  /* rrconn_t */
+#include <librustyaxe/dict.h>    /* dict */
 
 /*
  * Normal event callbacks.
