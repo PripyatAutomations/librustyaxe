@@ -503,7 +503,7 @@ void logger_end(void) {
 }
 
 int update_timestamp(void) {
-   struct tm *tmp;
+   struct tm local_tm;
 
    // If we've already updated this second or have gone back in time, return
    // success, to save CPU
@@ -513,10 +513,8 @@ int update_timestamp(void) {
    last_ts_update = now;
    memset(latest_timestamp, 0, sizeof(latest_timestamp));
 
-   if ((tmp = localtime(&now))) {
-      /* success, proceed */
-      if (strftime(latest_timestamp, sizeof(latest_timestamp), "%Y/%m/%d %H:%M:%S", tmp) == 0) {
-         /* handle the error */
+   if (localtime_r(&now, &local_tm)) {
+      if (strftime(latest_timestamp, sizeof(latest_timestamp), "%Y/%m/%d %H:%M:%S", &local_tm) == 0) {
          memset(latest_timestamp, 0, sizeof(latest_timestamp));
          snprintf(latest_timestamp, sizeof(latest_timestamp), "<%lu>", (unsigned long)now);
       }
