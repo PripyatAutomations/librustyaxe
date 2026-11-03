@@ -579,7 +579,10 @@ static int json_insert(json_node *root, const char *fullkey, const dict_value_t 
       return -1;
    }
 
-   char *tok = strtok(tmp, ".");
+   /* strtok() shares state across threads; JSON serialization runs on both
+    * the core and frontend threads. Keep tokenization state local. */
+   char *saveptr = NULL;
+   char *tok = strtok_r(tmp, ".", &saveptr);
    json_node *cur = root;
 
    while (tok) {
@@ -591,7 +594,7 @@ static int json_insert(json_node *root, const char *fullkey, const dict_value_t 
 
          return -1;
       }
-      tok = strtok(NULL, ".");
+      tok = strtok_r(NULL, ".", &saveptr);
    }
    free(cur->value);
    cur->value = jsonval;
