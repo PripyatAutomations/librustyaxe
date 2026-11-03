@@ -19,6 +19,14 @@ static void cb(const rr_event_message_t *m, void *user) {
    assert(m->length == 4 && !memcmp(m->payload, "a\0bc", 4));
    received++;
 }
+static void legacy_cb(const char *event, const char *data, rrconn_t *cptr,
+                      void *user) {
+   (void)event; (void)data; (void)cptr; (void)user;
+}
+static void binary_cb(const char *event, const void *data, size_t length,
+                      rrconn_t *cptr, void *user) {
+   (void)event; (void)data; (void)length; (void)cptr; (void)user;
+}
 static void enqueue(event_dispatch_fn_t fn, void *arg, void *user) {
    (void)user;
    pthread_mutex_lock(&lock);
@@ -45,6 +53,15 @@ int main(void) {
    event_init();
    assert(event_domain_register("gtk", enqueue, NULL));
    assert(!event_domain_register("gtk", enqueue, NULL));
+   rr_event_token_t legacy = event_on_domain_token(
+      "test.legacy", legacy_cb, NULL, "gtk");
+   rr_event_token_t binary = event_on_binary_domain_token(
+      "test.binary", binary_cb, NULL, "gtk");
+   assert(legacy && binary);
+   assert(!event_domain_unregister("gtk"));
+   event_off_token(legacy);
+   assert(!event_domain_unregister("gtk"));
+   event_off_token(binary);
    rr_event_token_t token = event_on_message_domain_token("test.cross-domain", cb, NULL, "gtk");
    assert(!event_on_message_domain_token("test.cross-domain", cb, NULL, "unknown"));
    assert(token);

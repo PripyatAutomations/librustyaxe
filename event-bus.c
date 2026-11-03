@@ -388,11 +388,38 @@ bool event_domain_unregister(const char *name) {
    while (*cursor && strcmp((*cursor)->name, name)) cursor = &(*cursor)->next;
    if (!*cursor) { pthread_mutex_unlock(&event_lock); return false; }
    event_domain_t *d = *cursor;
-   /* Active listeners snapshot dispatch pointers, so don't invalidate them. */
+   /* Every listener snapshots the dispatcher, so the domain cannot disappear
+    * while either message or ordinary event listeners still use it. */
    for (owned_message_listener_t *l = message_listeners; l; l = l->next) {
       if (l->domain && !strcmp(l->domain, d->name)) {
          pthread_mutex_unlock(&event_lock);
          return false;
+      }
+   }
+   int position = 0;
+   const char *event = NULL;
+   dict_value_t value;
+   val_type_t type;
+   while (event_store &&
+          (position = dict_enumerate_typed(event_store, position, &event,
+                                           &value, &type)) >= 0) {
+      if (type != VAL_PTR || !value.p) continue;
+      event_entry_t *entry = value.p;
+      for (size_t i = 0; i < entry->listener_count; ++i) {
+         event_listener_t *listener = &entry->listeners[i];
+         if (listener->dispatch == d->dispatch &&
+             listener->dispatch_user == d->user) {
+            pthread_mutex_unlock(&event_lock);
+            return false;
+         }
+      }
+      for (size_t i = 0; i < entry->binary_listener_count; ++i) {
+         event_binary_listener_t *listener = &entry->binary_listeners[i];
+         if (listener->dispatch == d->dispatch &&
+             listener->dispatch_user == d->user) {
+            pthread_mutex_unlock(&event_lock);
+            return false;
+         }
       }
    }
    *cursor = d->next;
