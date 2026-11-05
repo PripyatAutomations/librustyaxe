@@ -34,6 +34,7 @@ typedef struct tui_window {
    bool (*view_mouse)(struct tui_window *win, int row, int col,
                       int button, int action, unsigned modifiers, void *data);
    void *view_data;
+   bool view_full_height; /* Widget owns the last two terminal rows. */
 } tui_window_t;
 
 extern tui_window_t *tui_window_find(const char *title);
