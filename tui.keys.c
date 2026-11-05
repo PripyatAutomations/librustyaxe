@@ -594,6 +594,11 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
          }
       }
 
+      /* A full-height view has no command prompt. Unhandled keys must not
+       * mutate the hidden chat input, but global hotkeys above still work. */
+      if (win->view_draw && win->view_full_height)
+         continue;
+
       // --- Ctrl line editing ---
       if (!handled && (key.modifiers & TERMKEY_KEYMOD_CTRL)) {
          char insert = 0;
