@@ -571,6 +571,8 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
       /* Escape-prefixed letters are reported as Alt+Unicode by termkey. Continue the Alt-1..Alt-0 window sequence with the QWERTY home row:
        * Esc-Q selects window 11 through Esc-P selecting window 20. */
       if (!handled && key.type == TERMKEY_TYPE_UNICODE && (key.modifiers & TERMKEY_KEYMOD_ALT)) {
+         handled = tui_hotkey_dispatch(win, (unsigned)key.code.codepoint, key.modifiers);
+         if (handled) continue;
          const char *window_keys = "qwertyuiop";
          const char *match = strchr(window_keys, (int)key.code.codepoint);
 
