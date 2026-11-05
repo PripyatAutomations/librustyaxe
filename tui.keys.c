@@ -372,6 +372,16 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
       }
       int handled = 0;
 
+      /* Some terminals report Ctrl-Tab as a Unicode TAB with Ctrl,
+       * others as a special keysym. Support both encodings. */
+      if (key.type == TERMKEY_TYPE_UNICODE &&
+          key.code.codepoint == '\t' &&
+          (key.modifiers & TERMKEY_KEYMOD_CTRL) &&
+          !(key.modifiers & TERMKEY_KEYMOD_ALT) &&
+          tui_hotkey_dispatch(win, TERMKEY_SYM_TAB, key.modifiers)) {
+         tui_redraw_request();
+         continue;
+      }
       if (key.type == TERMKEY_TYPE_MOUSE) {
          TermKeyMouseEvent ev;
          int button = 0, row = 0, col = 0;
