@@ -407,6 +407,15 @@ void tui_redraw_screen(void) {
    tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
    free(topline);
 
+   /* A structured view replaces scrollback, not the status/prompt shell. */
+   if (w->view_draw) {
+      for (int r = 2; r < term_rows - 1; r++) {
+         clear_line(r);
+      }
+      w->view_draw(w, term_rows, term_cols, w->view_data);
+      printf("\\033[0m");
+      goto draw_footer;
+   }
    // --- Log area ---
    int log_area_rows = term_rows - 3;
    int total_rows = 0;
@@ -555,6 +564,7 @@ void tui_redraw_screen(void) {
       printf("\033[%d;1H", row++);
       term_clrtoeol();
    }
+draw_footer:
    // --- Bottom status line ---
    printf("\033[%d;1H", term_rows - 1);
    printf("%-*s", term_cols, status_line);
