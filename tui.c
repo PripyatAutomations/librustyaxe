@@ -413,7 +413,7 @@ void tui_redraw_screen(void) {
          clear_line(r);
       }
       w->view_draw(w, term_rows, term_cols, w->view_data);
-      printf("\\033[0m");
+      printf("\033[0m");
       goto draw_footer;
    }
    // --- Log area ---
