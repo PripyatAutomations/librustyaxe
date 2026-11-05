@@ -407,13 +407,17 @@ void tui_redraw_screen(void) {
    tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
    free(topline);
 
-   /* A structured view replaces scrollback, not the status/prompt shell. */
+   /* Structured tabs may own the full viewport below the top line. */
    if (w->view_draw) {
-      for (int r = 2; r < term_rows - 1; r++) {
+      for (int r = 2; r <= (w->view_full_height ? term_rows : term_rows - 2); r++)
          clear_line(r);
-      }
       w->view_draw(w, term_rows, term_cols, w->view_data);
-      printf("\033[0m");
+      fputs("\033[0m", stdout);
+      if (w->view_full_height) {
+         fflush(stdout);
+         tui_render_unlock();
+         return;
+      }
       goto draw_footer;
    }
    // --- Log area ---
@@ -614,6 +618,11 @@ void tui_redraw_statusline(void) {
       return;
    }
    update_term_size();
+   tui_window_t *active = tui_active_window();
+   if (active && active->view_draw && active->view_full_height) {
+      tui_render_unlock();
+      return;
+   }
    printf("\033[s\033[%d;1H%-*s\033[u", term_rows - 1, term_cols, status_line);
    tui_redraw_clock();
    fflush(stdout);
@@ -623,9 +632,9 @@ void tui_redraw_statusline(void) {
 void tui_redraw_clock(void) {
    tui_render_lock();
 
-   if (!tui_is_enabled) {
+   if (!tui_is_enabled ||
+       (tui_active_window() && tui_active_window()->view_full_height)) {
       tui_render_unlock();
-
       return;
    }
    int width = term_cols;
@@ -883,9 +892,8 @@ void tui_update_input_line(void) {
    }
    tui_window_t *win = tui_active_window();
 
-   if (!win) {
+   if (!win || (win->view_draw && win->view_full_height)) {
       tui_render_unlock();
-
       return;
    }
 
