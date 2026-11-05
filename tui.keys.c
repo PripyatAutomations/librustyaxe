@@ -372,6 +372,27 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
       }
       int handled = 0;
 
+      if (key.type == TERMKEY_TYPE_MOUSE) {
+         TermKeyMouseEvent ev;
+         int button = 0, row = 0, col = 0;
+         if (termkey_interpret_mouse(tk, &key, &ev, &button, &row, &col) == TERMKEY_RES_KEY &&
+             win->view_mouse &&
+             win->view_mouse(win, row, col, button, (int)ev, key.modifiers, win->view_data)) {
+            tui_redraw_request();
+         }
+         continue; /* Mouse input must never enter the command line. */
+      }
+      /* Structured tabs get first refusal on ordinary keys; preserve global
+       * Alt-window shortcuts so users can always leave the view. */
+      if (win->view_key && !(key.modifiers & TERMKEY_KEYMOD_ALT) &&
+          win->view_key(win,
+             key.type == TERMKEY_TYPE_UNICODE ? (unsigned)key.code.codepoint :
+             key.type == TERMKEY_TYPE_KEYSYM ? (unsigned)key.code.sym : 0,
+             key.modifiers, win->view_data)) {
+         tui_redraw_request();
+         continue;
+      }
+
       // --- compute 'c' for debug / line editing ---
       int c = 0;
 
