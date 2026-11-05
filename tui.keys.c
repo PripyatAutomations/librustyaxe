@@ -451,6 +451,10 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
 
             case TERMKEY_SYM_TAB:
             {
+               if (key.modifiers & TERMKEY_KEYMOD_CTRL) {
+                  handled = tui_hotkey_dispatch(win, TERMKEY_SYM_TAB, key.modifiers);
+                  break;
+               }
                if (!(key.modifiers & (TERMKEY_KEYMOD_CTRL | TERMKEY_KEYMOD_ALT | TERMKEY_KEYMOD_SHIFT))) {
                   handled = tui_do_completion(win);
                }
