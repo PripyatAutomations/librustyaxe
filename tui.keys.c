@@ -372,37 +372,32 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
       }
       int handled = 0;
 
-      /* Some terminals report Ctrl-Tab as a Unicode TAB with Ctrl,
-       * others as a special keysym. Support both encodings. */
+      /* Some terminals report Ctrl-Tab as a Unicode TAB with Ctrl, others as a special keysym. Support both encodings. */
       if (key.type == TERMKEY_TYPE_UNICODE &&
-          key.code.codepoint == '\t' &&
-          (key.modifiers & TERMKEY_KEYMOD_CTRL) &&
-          !(key.modifiers & TERMKEY_KEYMOD_ALT) &&
-          tui_hotkey_dispatch(win, TERMKEY_SYM_TAB, key.modifiers)) {
-         tui_redraw_request();
-         continue;
-      }
-      if (key.type == TERMKEY_TYPE_MOUSE) {
-         TermKeyMouseEvent ev;
-         int button = 0, row = 0, col = 0;
-         if (termkey_interpret_mouse(tk, &key, &ev, &button, &row, &col) == TERMKEY_RES_KEY &&
-             win->view_mouse &&
-             win->view_mouse(win, row, col, button, (int)ev, key.modifiers, win->view_data)) {
-            tui_redraw_request();
-         }
-         continue; /* Mouse input must never enter the command line. */
-      }
-      /* Structured tabs get first refusal on ordinary keys; preserve global
-       * Alt-window shortcuts so users can always leave the view. */
-      if (win->view_key && !(key.modifiers & TERMKEY_KEYMOD_ALT) &&
-          win->view_key(win,
-             key.type == TERMKEY_TYPE_UNICODE ? (unsigned)key.code.codepoint :
-             key.type == TERMKEY_TYPE_KEYSYM ? (unsigned)key.code.sym : 0,
-             key.modifiers, win->view_data)) {
+         key.code.codepoint == '\t' &&
+         (key.modifiers & TERMKEY_KEYMOD_CTRL) && !(key.modifiers & TERMKEY_KEYMOD_ALT) && tui_hotkey_dispatch(win, TERMKEY_SYM_TAB, key.modifiers)) {
          tui_redraw_request();
          continue;
       }
 
+      if (key.type == TERMKEY_TYPE_MOUSE) {
+         TermKeyMouseEvent ev;
+         int button = 0, row = 0, col = 0;
+
+         if (termkey_interpret_mouse(tk, &key, &ev, &button, &row, &col) == TERMKEY_RES_KEY &&
+            win->view_mouse && win->view_mouse(win, row, col, button, (int)ev, key.modifiers, win->view_data)) {
+            tui_redraw_request();
+         }
+         continue;              /* Mouse input must never enter the command line. */
+      }
+
+      /* Structured tabs get first refusal on ordinary keys; preserve global Alt-window shortcuts so users can always leave the view. */
+      if (win->view_key && !(key.modifiers & TERMKEY_KEYMOD_ALT) &&
+         win->view_key(win, key.type == TERMKEY_TYPE_UNICODE ? (unsigned)key.code.codepoint :
+         key.type == TERMKEY_TYPE_KEYSYM ? (unsigned)key.code.sym : 0, key.modifiers, win->view_data)) {
+         tui_redraw_request();
+         continue;
+      }
       // --- compute 'c' for debug / line editing ---
       int c = 0;
 
@@ -465,6 +460,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
                   handled = tui_hotkey_dispatch(win, TERMKEY_SYM_TAB, key.modifiers);
                   break;
                }
+
                if (!(key.modifiers & (TERMKEY_KEYMOD_CTRL | TERMKEY_KEYMOD_ALT | TERMKEY_KEYMOD_SHIFT))) {
                   handled = tui_do_completion(win);
                }
@@ -582,7 +578,10 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
        * Esc-Q selects window 11 through Esc-P selecting window 20. */
       if (!handled && key.type == TERMKEY_TYPE_UNICODE && (key.modifiers & TERMKEY_KEYMOD_ALT)) {
          handled = tui_hotkey_dispatch(win, (unsigned)key.code.codepoint, key.modifiers);
-         if (handled) continue;
+
+         if (handled) {
+            continue;
+         }
          const char *window_keys = "qwertyuiop";
          const char *match = strchr(window_keys, (int)key.code.codepoint);
 
@@ -594,10 +593,10 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
          }
       }
 
-      /* A full-height view has no command prompt. Unhandled keys must not
-       * mutate the hidden chat input, but global hotkeys above still work. */
-      if (win->view_draw && win->view_full_height)
+      /* A full-height view has no command prompt. Unhandled keys must not mutate the hidden chat input, but global hotkeys above still work. */
+      if (win->view_draw && win->view_full_height) {
          continue;
+      }
 
       // --- Ctrl line editing ---
       if (!handled && (key.modifiers & TERMKEY_KEYMOD_CTRL)) {

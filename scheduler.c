@@ -167,7 +167,7 @@ const char *ra_sched_class_name(ra_sched_class_t policy) {
 int ra_sched_apply_profile(pid_t pid, const char *name) {
    if (!name || !*name || !strcmp(name, "normal")) {
       /* Avoid a redundant sched_setscheduler() on an ordinary worker:
-      * container/LSM policy can reject even an unchanged scheduler. Only call the kernel if an inherited policy needs demotion. */
+       * container/LSM policy can reject even an unchanged scheduler. Only call the kernel if an inherited policy needs demotion. */
       int existing = sched_getscheduler(pid);
 
       if (existing < 0) {

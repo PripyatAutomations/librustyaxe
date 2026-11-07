@@ -55,8 +55,8 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    if (!strncmp(message, "Event dispatch counts (cumulative, uptime=", 40)) {
       snprintf(header, sizeof(header), "%s", message);
       dumps++;
-      /* The profiler now emits a single multiline report, not one Log()
-       * callback per row. Check the owned snapshot before mutating listeners. */
+
+      /* The profiler now emits a single multiline report, not one Log() callback per row. Check the owned snapshot before mutating listeners. */
       if (strstr(message, "\nprofile.remove n=1 ")) {
          removed_row_logged = true;
       }

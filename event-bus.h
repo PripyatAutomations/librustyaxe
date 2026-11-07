@@ -11,8 +11,8 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include <librustyaxe/struct.h>  /* rrconn_t */
-#include <librustyaxe/dict.h>    /* dict */
+#include <librustyaxe/struct.h> /* rrconn_t */
+#include <librustyaxe/dict.h>   /* dict */
 
 /*
  * Normal event callbacks.

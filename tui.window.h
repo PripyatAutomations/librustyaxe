@@ -26,15 +26,13 @@ typedef struct tui_window {
    int history_index;
    char status_line[128];
    rrconn_t *cptr;
-   /* Optional structured view. Coordinates are 1-based terminal cells.
-    * Draw only rows 2..(rows-2); the shell owns the other rows.
-    * Returning true from an event handler consumes the event. */
+   /* Optional structured view. Coordinates are 1-based terminal cells. Draw only rows 2..(rows-2); the shell owns the other rows. Returning true from an event
+    * handler consumes the event. */
    void (*view_draw)(struct tui_window *win, int rows, int cols, void *data);
    bool (*view_key)(struct tui_window *win, unsigned key, unsigned modifiers, void *data);
-   bool (*view_mouse)(struct tui_window *win, int row, int col,
-                      int button, int action, unsigned modifiers, void *data);
+   bool (*view_mouse)(struct tui_window *win, int row, int col, int button, int action, unsigned modifiers, void *data);
    void *view_data;
-   bool view_full_height; /* Widget owns the last two terminal rows. */
+   bool view_full_height;       /* Widget owns the last two terminal rows. */
 } tui_window_t;
 
 extern tui_window_t *tui_window_find(const char *title);
