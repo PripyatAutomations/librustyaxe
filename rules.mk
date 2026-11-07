@@ -1,5 +1,12 @@
-CFLAGS +=$(call pkgconfig, --cflags tinfo glib-2.0 gio-2.0)
-LDFLAGS +=$(call pkgconfig, --libs tinfo glib-2.0 gio-2.0)
+ifeq ($(OS),DARWIN)
+AXE_TERM_PKG := ncurses
+AXE_TERM_LDLIB := -lncurses
+else
+AXE_TERM_PKG := tinfo
+AXE_TERM_LDLIB := -ltinfo
+endif
+CFLAGS +=$(call pkgconfig, --cflags $(AXE_TERM_PKG) glib-2.0 gio-2.0)
+LDFLAGS +=$(call pkgconfig, --libs $(AXE_TERM_PKG) glib-2.0 gio-2.0)
 
 librustyaxe ?= ../librustyaxe.so
 # !ls *.c|sed 's/.c$/.o/g'|sed 's/^/librustyaxe_objs += /g'
@@ -68,7 +75,7 @@ ${BUILD_DIR}/librustyaxe/.timestamp:
 ${librustyaxe}: ${BUILD_DIR}/librustyaxe/.timestamp ${real_librustyaxe_objs} ${librustyaxe_headers} GNUmakefile
 	@${RM} -f $@
 	@echo "[link] $@ from $(words ${real_librustyaxe_objs}) objects"
-	@${CC} ${LIB_LDFLAGS} $(call SHARED_ID_FLAG,librustyaxe.so) -o $@ ${real_librustyaxe_objs}  -lm -ltinfo ${LDFLAGS}|| exit 2
+	@${CC} ${LIB_LDFLAGS} $(call SHARED_ID_FLAG,librustyaxe.so) -o $@ ${real_librustyaxe_objs}  -lm $(AXE_TERM_LDLIB) ${LDFLAGS}|| exit 2
 	@ln -sf librustyaxe.so librustyaxe.so.0
 
 # Every object includes build_config.h (via librustyaxe headers), so it must
