@@ -68,7 +68,7 @@ ${BUILD_DIR}/librustyaxe/.timestamp:
 ${librustyaxe}: ${BUILD_DIR}/librustyaxe/.timestamp ${real_librustyaxe_objs} ${librustyaxe_headers} GNUmakefile
 	@${RM} -f $@
 	@echo "[link] $@ from $(words ${real_librustyaxe_objs}) objects"
-	@${CC} ${LIB_LDFLAGS} -Wl,-soname,librustyaxe.so.0 -o $@ ${real_librustyaxe_objs}  -lm -ltinfo ${LDFLAGS}|| exit 2
+	@${CC} ${LIB_LDFLAGS} $(call SHARED_ID_FLAG,librustyaxe.so) -o $@ ${real_librustyaxe_objs}  -lm -ltinfo ${LDFLAGS}|| exit 2
 	@ln -sf librustyaxe.so librustyaxe.so.0
 
 # Every object includes build_config.h (via librustyaxe headers), so it must
