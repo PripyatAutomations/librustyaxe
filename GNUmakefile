@@ -37,7 +37,7 @@ PC_FILE := $(BUILD_DIR)/librustyaxe.pc
 all: $(REAL_LIB) $(PC_FILE) irc-build
 
 irc-build: $(REAL_LIB)
-	$(MAKE) -C librustyirc all VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
+	$(MAKE) -C librustyirc all BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
 
 $(BUILD_DIR)/include/librustyaxe $(BUILD_DIR)/generated/build_config.h &:
 	@mkdir -p $(BUILD_DIR)/include $(BUILD_DIR)/generated
@@ -60,7 +60,7 @@ $(PC_FILE): GNUmakefile
 	    'Libs: -L$${libdir} -lrustyaxe' 'Cflags: -I$${includedir}' 'Requires.private: glib-2.0 gio-2.0' > $@
 
 check: all
-	$(MAKE) -C librustyirc check VERSION=$(VERSION) SOVERSION=$(SOVERSION)
+	$(MAKE) -C librustyirc check BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
 	$(MAKE) -C tests check TEST_BUILD_DIR=../$(BUILD_DIR)/tests \
 	    INCLUDES="-I../$(BUILD_DIR)/include -I../$(BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))" \
 	    LIBS="-L../$(BUILD_DIR) -lrustyaxe -Wl,-rpath,$(abspath $(BUILD_DIR)) $(AXE_LDLIBS)"
@@ -72,16 +72,16 @@ install: all
 	install -d "$(DESTDIR)$(INCLUDEDIR)/librustyaxe"
 	@for h in $(PUBLIC_HEADERS); do install -m644 "$$h" "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$$h"; done
 	install -Dm644 $(PC_FILE) "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
-	$(MAKE) -C librustyirc install VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
+	$(MAKE) -C librustyirc install BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 
 uninstall:
-	$(MAKE) -C librustyirc uninstall VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
+	$(MAKE) -C librustyirc uninstall BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 	rm -f "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))" "$(DESTDIR)$(LIBDIR)/$(SONAME)" "$(DESTDIR)$(LIBDIR)/librustyaxe.so" "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
 	@for h in $(PUBLIC_HEADERS); do rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$h"; done
 	-rmdir "$(DESTDIR)$(INCLUDEDIR)/librustyaxe"
 
 clean:
-	$(MAKE) -C librustyirc clean
+	$(MAKE) -C librustyirc clean BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))"
 	rm -rf $(BUILD_DIR)
 
 # Build only the independently versioned librustyaxe Debian binaries.
