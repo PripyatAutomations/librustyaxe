@@ -12,7 +12,14 @@
 #include <errno.h>
 #include <bsd/string.h>
 #include <sys/resource.h>
-#include "build_config.h"
+/* Standalone consumers need not have RustyRig's generated board header. */
+#if defined(__has_include)
+# if __has_include("build_config.h")
+#  include "build_config.h"
+# endif
+#else
+# include "build_config.h"
+#endif
 #if     defined(USE_MONGOOSE)
 #include <ext/libmongoose/mongoose.h>
 #endif
