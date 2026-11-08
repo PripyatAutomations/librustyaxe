@@ -6,7 +6,9 @@
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #define _XOPEN_SOURCE 600
 #include <librustyaxe/core.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 #include <librustyaxe/termkey.h>
 #include <librustyaxe/termkey-internal.h>
