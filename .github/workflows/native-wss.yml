@@ -16,8 +16,8 @@ jobs:
       - name: Install native transport build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libbsd-dev libcrypt-dev libncurses-dev libssl-dev libwslay-dev
+          sudo apt-get install -y build-essential pkg-config libglib2.0-dev libbsd-dev libcrypt-dev libncurses-dev libssl-dev libwslay-dev clang-18
       - name: Compile standalone RustyAxe
-        run: make -j2 WITH_MONGOOSE=false
+        run: make -j2 CC=clang-18 WITH_MONGOOSE=false
       - name: Exercise native transport and library tests
-        run: make check WITH_MONGOOSE=false
+        run: make check CC=clang-18 WITH_MONGOOSE=false
