@@ -5,6 +5,7 @@
 #include <librustyaxe/transport.wss.h>
 #include <wslay/wslay.h>
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
