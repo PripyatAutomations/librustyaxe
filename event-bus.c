@@ -23,7 +23,9 @@
 #include <stdint.h>
 #include <time.h>
 #include <librustyaxe/core.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 #define EVENT_NOMATCH "NOMATCH"
 
