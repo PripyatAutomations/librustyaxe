@@ -50,7 +50,7 @@ $(PC_FILE): GNUmakefile
 	@mkdir -p $(BUILD_DIR)
 	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' \
 	    'Name: librustyaxe' 'Description: Shared RustyRig utility library' 'Version: $(VERSION)' \
-	    'Libs: -L${libdir} -lrustyaxe' 'Cflags: -I${includedir}' 'Requires.private: glib-2.0 gio-2.0' > $@
+	    'Libs: -L$${libdir} -lrustyaxe' 'Cflags: -I$${includedir}' 'Requires.private: glib-2.0 gio-2.0' > $@
 
 check: all
 	$(MAKE) -C tests check TEST_BUILD_DIR=../$(BUILD_DIR)/tests \
