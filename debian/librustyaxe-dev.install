@@ -1,0 +1,3 @@
+usr/include/librustyaxe/*.h
+usr/lib/*/librustyaxe.so
+usr/lib/*/pkgconfig/librustyaxe.pc
