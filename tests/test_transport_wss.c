@@ -125,6 +125,8 @@ int main(void) {
         rr_transport_poll(t,10);
         if(state.errors)break;
     }
+    fprintf(stderr,"native ws states: open=%u binary=%u errors=%u closed=%u last-state=%d\n",
+        state.open,state.binary,state.errors,state.closed,(int)rr_transport_state(t));
     assert(state.open==1 && state.binary==1 && state.errors==0 && state.closed==1);
     assert(rr_transport_state(t)==RR_TRANSPORT_CLOSED);
     rr_transport_wss_release(t);
