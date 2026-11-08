@@ -107,7 +107,7 @@ $(PC_FILE): GNUmakefile
 check: all
 	$(MAKE) -C librustyirc check BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
 	$(MAKE) -C tests check TEST_BUILD_DIR=../$(BUILD_DIR)/tests \
-	    INCLUDES="-I../$(BUILD_DIR)/include -I../$(BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))" \
+	    INCLUDES="-I../$(BUILD_DIR)/generated -I../$(BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags $(DEPS))" \
 	    LIBS="-L../$(BUILD_DIR) -lrustyaxe -Wl,-rpath,$(abspath $(BUILD_DIR)) $(AXE_LDLIBS)"
 
 install: all
