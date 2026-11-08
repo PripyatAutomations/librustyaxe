@@ -20,14 +20,15 @@
 #include <strings.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <pthread.h>
 
 #define RR_WSS_HTTP_MAX 8192
 #define RR_WSS_TX_MAX 65536
 #define RR_WSS_FRAME_MAX 65536
-enum { CONNECTING, TLS_HANDSHAKE, HTTP_SEND, HTTP_READ, WEBSOCKET, DEAD };
+enum { RESOLVING, CONNECTING, TLS_HANDSHAKE, HTTP_SEND, HTTP_READ, WEBSOCKET, DEAD };
 typedef struct native_wss {
     rr_transport_t *transport;
-    int fd, stage, hops;
+    int fd, resolver_fd, stage, hops;
     SSL_CTX *ctx;
     SSL *ssl;
     wslay_event_context_ptr ws;
@@ -60,6 +61,7 @@ static void reset_socket(native_wss_t *c) {
     if (c->ssl) { SSL_free(c->ssl); c->ssl = NULL; }
     if (c->ctx) { SSL_CTX_free(c->ctx); c->ctx = NULL; }
     if (c->fd >= 0) { close(c->fd); c->fd = -1; }
+    if (c->resolver_fd >= 0) { close(c->resolver_fd); c->resolver_fd = -1; }
     c->tx_len = c->tx_offset = c->http_len = c->rx_len = c->rx_off = 0;
 }
 static bool parse_url(native_wss_t *c, const char *url) {
@@ -113,22 +115,65 @@ static bool parse_url(native_wss_t *c, const char *url) {
     c->tls = tls;
     return true;
 }
-static int make_socket(native_wss_t *c) {
-    char port[12];
-    snprintf(port, sizeof(port), "%u", c->port);
-    struct addrinfo hint = { .ai_family = AF_UNSPEC, .ai_socktype = SOCK_STREAM };
-    struct addrinfo *list = NULL;
-    if (getaddrinfo(c->host, port, &hint, &list)) return -1;
-    int fd = -1;
-    for (struct addrinfo *a = list; a; a = a->ai_next) {
-        fd = socket(a->ai_family, a->ai_socktype | SOCK_NONBLOCK | SOCK_CLOEXEC, a->ai_protocol);
-        if (fd < 0) continue;
-        int rc = connect(fd, a->ai_addr, a->ai_addrlen);
-        if (rc == 0 || errno == EINPROGRESS) break;
-        close(fd); fd = -1;
+/* Resolving in a detached worker avoids blocking the poll/audio thread.
+ * The worker owns its task and one socketpair end, never touches native_wss.
+ * File descriptors are process-wide: transferring the integer is sufficient.
+ */
+typedef struct resolver_task {
+    char host[256], port[12];
+    int notify;
+} resolver_task_t;
+static void *resolve_worker(void *opaque) {
+    resolver_task_t *task=opaque;
+    struct addrinfo hint={.ai_family=AF_UNSPEC,.ai_socktype=SOCK_STREAM};
+    struct addrinfo *list=NULL;
+    int fd=-1;
+    if(!getaddrinfo(task->host,task->port,&hint,&list)) {
+        for(struct addrinfo *a=list;a;a=a->ai_next) {
+            fd=socket(a->ai_family,a->ai_socktype|SOCK_NONBLOCK|SOCK_CLOEXEC,a->ai_protocol);
+            if(fd<0)continue;
+            int rc=connect(fd,a->ai_addr,a->ai_addrlen);
+            if(rc==0 || errno==EINPROGRESS)break;
+            close(fd);fd=-1;
+        }
+        freeaddrinfo(list);
     }
-    freeaddrinfo(list);
-    return fd;
+    if(send(task->notify,&fd,sizeof(fd),MSG_NOSIGNAL)!=(ssize_t)sizeof(fd) && fd>=0)close(fd);
+    close(task->notify);
+    free(task);
+    return NULL;
+}
+static bool start(native_wss_t *c) {
+    int pair[2];
+    if(socketpair(AF_UNIX,SOCK_DGRAM|SOCK_CLOEXEC,0,pair)<0)return false;
+    resolver_task_t *task=calloc(1,sizeof(*task));
+    if(!task) {close(pair[0]);close(pair[1]);return false;}
+    snprintf(task->host,sizeof(task->host),"%s",c->host);
+    snprintf(task->port,sizeof(task->port),"%u",c->port);
+    task->notify=pair[1];
+    pthread_t thread;
+    if(pthread_create(&thread,NULL,resolve_worker,task)) {
+        close(pair[0]);close(pair[1]);free(task);return false;
+    }
+    pthread_detach(thread);
+    c->resolver_fd=pair[0];
+    c->stage=RESOLVING;
+    return true;
+}
+static bool resolver_ready(native_wss_t *c,int timeout_ms) {
+    struct pollfd pfd={.fd=c->resolver_fd,.events=POLLIN};
+    int ready=poll(&pfd,1,timeout_ms);
+    if(ready<=0)return false;
+    int fd=-1;
+    ssize_t n=recv(c->resolver_fd,&fd,sizeof(fd),0);
+    close(c->resolver_fd);c->resolver_fd=-1;
+    if(n!=(ssize_t)sizeof(fd) || fd<0) {
+        error(c,"WebSocket DNS resolution / TCP connection failed");
+        return false;
+    }
+    c->fd=fd;
+    c->stage=CONNECTING;
+    return true;
 }
 static bool setup_tls(native_wss_t *c) {
     c->ctx = SSL_CTX_new(TLS_client_method());
@@ -139,12 +184,6 @@ static bool setup_tls(native_wss_t *c) {
     if (!SSL_set_tlsext_host_name(c->ssl, c->host)) return false;
     if (!SSL_set1_host(c->ssl, c->host)) return false;
     SSL_set_connect_state(c->ssl);
-    return true;
-}
-static bool start(native_wss_t *c) {
-    c->fd = make_socket(c);
-    if (c->fd < 0) return false;
-    c->stage = CONNECTING;
     return true;
 }
 static int read_bytes(native_wss_t *c, void *buf, size_t len) {
@@ -360,6 +399,12 @@ static void close_transport(void *ctx) { ((native_wss_t *)ctx)->closing=true; }
 static int native_poll(void *ctx,int timeout_ms) {
     native_wss_t *c=ctx;
     if (c->dead || c->closing) { c->dead=true; goto finish; }
+    if(c->stage==RESOLVING) {
+        if(!resolver_ready(c,timeout_ms)) {
+            if(c->dead)goto finish;
+            return 0;
+        }
+    }
     struct pollfd pfd={.fd=c->fd,.events=POLLIN|POLLOUT};
     if (c->fd < 0) { error(c,"WebSocket has no socket"); goto finish; }
     int ready=poll(&pfd,1,timeout_ms);
@@ -435,6 +480,7 @@ rr_transport_t *rr_transport_wss_connect(const char *url,const rr_wss_client_opt
     native_wss_t *c=calloc(1,sizeof(*c));
     if (!c) return NULL;
     c->fd=-1;
+    c->resolver_fd=-1;
     c->allow_cross_origin=options && options->allow_cross_origin_redirect;
     const char *ua=options && options->user_agent ? options->user_agent : "RustyRig/1.0";
     if (strlen(ua)>=sizeof(c->user_agent) || strpbrk(ua,"\r\n") || !parse_url(c,url)) {
