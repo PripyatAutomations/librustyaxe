@@ -27,7 +27,7 @@ REAL_LIB := $(BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 SONAME := librustyaxe.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyaxe.pc
 
-.PHONY: all clean check install
+.PHONY: all clean distclean check install deb
 all: $(REAL_LIB) $(PC_FILE)
 
 $(BUILD_DIR)/include/librustyaxe $(BUILD_DIR)/generated/build_config.h &:
@@ -65,3 +65,14 @@ install: all
 
 clean:
 	rm -rf $(BUILD_DIR)
+
+# Build only the independently versioned librustyaxe Debian binaries.
+deb:
+	dpkg-buildpackage -b -us -uc
+
+# Return the checkout to source-distribution condition. Do not delete the
+# .deb files in the parent directory: they are intentional release outputs.
+distclean: clean
+	@if command -v dh_clean >/dev/null 2>&1; then dh_clean; fi
+	rm -rf debian/tmp debian/.debhelper debian/files debian/debhelper-build-stamp
+	rm -rf debian/librustyaxe0 debian/librustyaxe-dev
