@@ -36,3 +36,20 @@ to installed library development packages.
 its source in the RustyAxe shared library means the resulting combined binary
 must meet the selected Mongoose license (GPLv2 for Debian), even though
 RustyAxe's own source remains MIT. The Mongoose-free build remains MIT-only.
+
+## Native WebSocket client
+
+The reusable `<librustyaxe/transport.wss.h>` driver implements
+`rr_transport_t` using POSIX sockets, OpenSSL and libwslay. It supports
+`ws://` and `wss://`, verifies TLS server certificates and DNS names, and
+performs DNS resolution on a worker thread rather than the application's
+audio/event polling thread. Applications call `rr_transport_poll(t, 0)` for
+nonblocking progress, then release the transport following CLOSE.
+HTTP 307 redirects are bounded and same-origin by default.
+
+Debian build prerequisites additionally include `libssl-dev` and
+`libwslay-dev`; the pkg-config module is called `libwslay`. The
+`make check` suite includes a local test of WebSocket upgrade followed by
+a binary message in the same TCP packet.
+
+The Mongoose adapter remains optional and separate from the native client.
