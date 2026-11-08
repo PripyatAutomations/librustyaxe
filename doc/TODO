@@ -1,0 +1,26 @@
+* Add dialogs/buttons to the TUI!
+
+* Finish theme support for TUI
+
+* TUI: Prevent scrolling of the buffer when content is added, if not at the bottom
+
+*: Merge cfg_get_* and eeprom_get_* so we have just cfg_get_*
+  - we should just load the whole eeprom into the config dict at startup???
+
+*: Add memblocks, simple allocator who maintains small allocations (replace malloc,realloc,free,etc) with page tracking for release on module unload
+
+* CW-U and CW-L
+   - CW is centered on the CW dial freq; CW-L is center and width below; CW-R is center and width above
+
+[CAT]
+* Implement control over stm32 serial over usb
+
+* Merge rr_cat_cmd and CATCommandTable
+
+[logger]
+* Add support for masking out messages such as '-*.noisy'
+
+* Consider optional major-subsystem aggregation (first dot) and per-callsite/message buckets
+
+[Porting]
+minimal inet_ntop() for non-posix
