@@ -21,5 +21,6 @@ typedef struct rr_wss_client_options {
  */
 rr_transport_t *rr_transport_wss_connect(const char *url,
     const rr_wss_client_options_t *options, rr_transport_callback_t cb, void *user);
+void rr_transport_wss_traffic(rr_transport_t *transport, uint64_t *rx, uint64_t *tx);
 void rr_transport_wss_release(rr_transport_t *transport);
 #endif
