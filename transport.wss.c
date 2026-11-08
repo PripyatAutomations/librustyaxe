@@ -421,8 +421,14 @@ static int native_poll(void *ctx,int timeout_ms) {
     if (ready<0 && errno != EINTR) { error(c,"WebSocket poll failed"); goto finish; }
     if (ready<=0 && c->stage!=WEBSOCKET) return 0;
     if (ready<=0 && !(c->rx_len>c->rx_off || (c->ssl && SSL_pending(c->ssl)>0))) return 0;
-    if (pfd.revents & (POLLERR|POLLHUP|POLLNVAL)) {
-        if (c->stage != WEBSOCKET) { error(c,"WebSocket socket disconnected"); goto finish; }
+    if (pfd.revents & (POLLERR|POLLNVAL)) {
+        if (c->stage != WEBSOCKET) { error(c,"WebSocket socket error"); goto finish; }
+    }
+    /* POLLIN plus HUP may still contain a complete HTTP rejection or
+     * WebSocket message. Process the bytes before treating HUP as EOF. */
+    if ((pfd.revents & POLLHUP) && !(pfd.revents & POLLIN) &&
+        c->stage != WEBSOCKET) {
+        error(c,"WebSocket socket disconnected"); goto finish;
     }
     if (c->stage==CONNECTING && (pfd.revents & POLLOUT)) {
         int status=0; socklen_t size=sizeof(status);
