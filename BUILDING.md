@@ -17,8 +17,12 @@ a development linker symlink, public headers and pkg-config metadata.
 Supported overrides include PREFIX, LIBDIR, INCLUDEDIR, DESTDIR, CC,
 CPPFLAGS, CFLAGS and LDFLAGS.
 
-The standalone build intentionally omits bundled Mongoose code and generates
-its own minimal build_config.h. It must not require librrprotocol, because
+The standalone build automatically enables the optional Mongoose adapter when
+both `/usr/src/mongoose.c` and `/usr/include/mongoose.h` are installed by
+`mongoose-webserver-source`. Override with `WITH_MONGOOSE=false`, or set
+`MONGOOSE_SOURCE` and `MONGOOSE_INCLUDE_DIR` for custom installations. The
+installed `<librustyaxe/build_config.h>` records the compiled feature;
+consumers do not need Mongoose headers. It must not require librrprotocol, because
 librrprotocol depends on librustyaxe.
 
 RustyRig's in-tree build continues to include `librustyaxe/rules.mk`.
@@ -27,3 +31,8 @@ Both modes share the maintained object inventory in `sources.mk`.
 Next for Debian: create separate source packaging in this repository and
 verify the ABI/SONAME, clean sbuild and tests before switching RustyRig
 to installed library development packages.
+
+**Licensing:** Mongoose is GPL-2.0-only or commercial licensed. Including
+its source in the RustyAxe shared library means the resulting combined binary
+must meet the selected Mongoose license (GPLv2 for Debian), even though
+RustyAxe's own source remains MIT. The Mongoose-free build remains MIT-only.
