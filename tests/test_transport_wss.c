@@ -57,6 +57,7 @@ static void child_serve(int listenfd) {
         req[length]=0;
         if(strstr(req,"\r\n\r\n"))break;
     }
+    assert(strstr(req, "Sec-WebSocket-Protocol: rustyrig.v2\\r\\n"));
     const char *key=strstr(req,"Sec-WebSocket-Key:");
     if(!key) _exit(7);
     key+=strlen("Sec-WebSocket-Key:");
@@ -119,7 +120,8 @@ int main(void) {
     char url[100];
     snprintf(url,sizeof(url),"ws://127.0.0.1:%u/test",(unsigned)ntohs(addr.sin_port));
     struct state state={0};
-    rr_transport_t *t=rr_transport_wss_connect(url,NULL,receive_message,&state);
+    rr_wss_client_options_ex_t options = {.subprotocol = "rustyrig.v2"};
+    rr_transport_t *t=rr_transport_wss_connect_ex(url,&options,receive_message,&state);
     assert(t!=NULL);
     for(unsigned i=0;i<300 && !state.closed;i++) {
         rr_transport_poll(t,10);
