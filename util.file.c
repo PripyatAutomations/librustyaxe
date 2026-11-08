@@ -25,7 +25,9 @@
 #include <direct.h>
 #endif
 #include <librustyaxe/core.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 bool file_exists(const char *path) {
 // Support for posix hosts
