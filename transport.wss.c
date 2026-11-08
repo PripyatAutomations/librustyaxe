@@ -835,15 +835,16 @@ static int native_poll(void *ctx, int timeout_ms) {
 
          if (e != SSL_ERROR_WANT_READ && e != SSL_ERROR_WANT_WRITE) {
             long verify = SSL_get_verify_result(c->ssl);
-            char why[256];
+            /* Bound variable diagnostic text independently of the destination size. */
+             char why[768];
 
             if (verify != X509_V_OK) {
-               snprintf(why, sizeof(why), "WebSocket TLS verification failed for %s: %s (code %ld). Check trusted CA and certificate SAN", c->tls_server_name[0]
+               snprintf(why, sizeof(why), "WebSocket TLS verification failed for %.255s: %.240s (code %ld). Check trusted CA and certificate SAN", c->tls_server_name[0]
                   ? c->tls_server_name : c->host, X509_verify_cert_error_string(verify), verify);
             } else {
                unsigned long code = ERR_peek_last_error();
                const char *detail = code ? ERR_reason_error_string(code) : NULL;
-               snprintf(why, sizeof(why), "WebSocket TLS handshake failed for %s (SSL error %d%s%s)", c->host, e, detail ? ": " : "", detail ? detail : "");
+               snprintf(why, sizeof(why), "WebSocket TLS handshake failed for %.255s (SSL error %d%s%.240s)", c->host, e, detail ? ": " : "", detail ? detail : "");
             }
             error(c, why);
             goto finish;
