@@ -160,9 +160,8 @@ struct rr_transport;
 
 struct rrconn {
    struct rr_transport *native_transport; /* Borrowed server-side transport. */
-#ifdef USE_RUSTYIRC
+   /* Stable shared ABI: never depend on application-only USE_RUSTYIRC. */
    irc_conn_t *irc_conn;
-#endif
    bool active;                 // Is this slot actually used or is it
    // free-listed?
    bool authenticated;          // Is the user fully logged in?
