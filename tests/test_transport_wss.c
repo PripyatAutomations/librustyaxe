@@ -57,7 +57,7 @@ static void child_serve(int listenfd) {
         req[length]=0;
         if(strstr(req,"\r\n\r\n"))break;
     }
-    assert(strstr(req, "Sec-WebSocket-Protocol: rustyrig.v2\\r\\n"));
+    assert(strstr(req, "Sec-WebSocket-Protocol: rustyrig.v2\r\n"));
     const char *key=strstr(req,"Sec-WebSocket-Key:");
     if(!key) _exit(7);
     key+=strlen("Sec-WebSocket-Key:");
@@ -75,6 +75,7 @@ static void child_serve(int listenfd) {
     int replylen=snprintf(reply,sizeof(reply),
         "HTTP/1.1 101 Switching Protocols\r\n"
         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+        "Sec-WebSocket-Protocol: rustyrig.v2\r\n"
         "Sec-WebSocket-Accept: %s\r\n\r\n",encoded);
     if(replylen<0 || (size_t)replylen+7>sizeof(reply)) _exit(9);
     /* The native client must not discard a frame attached to HTTP upgrade. */
