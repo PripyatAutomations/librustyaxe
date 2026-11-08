@@ -12,14 +12,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <librustyaxe/dict.h>
-/* Standalone consumers need not have RustyRig's generated board header. */
-#if defined(__has_include)
-# if __has_include("build_config.h")
-#  include "build_config.h"
-# endif
-#else
-# include "build_config.h"
-#endif
+/* RustyAxe's SDK features must not come from an application's build_config.h. */
+#include <librustyaxe/build_config.h>
 
 // Maximum length of an expanded string, XXX: Move to header file
 // librustyaxe/config.h

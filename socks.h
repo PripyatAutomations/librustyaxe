@@ -8,17 +8,15 @@
 #define LIBRUSTYAXE_SOCKS_H
 #include <stdbool.h>
 #include <stdint.h>
-/* Standalone consumers need not have RustyRig's generated board header. */
-#if defined(__has_include)
-# if __has_include("build_config.h")
-#  include "build_config.h"
-# endif
-#else
-# include "build_config.h"
-#endif
+/* RustyAxe's SDK features must not come from an application's build_config.h. */
+#include <librustyaxe/build_config.h>
 #ifdef USE_MONGOOSE
-/* Do not require a private Mongoose checkout in the public SDK. */
+/* Mongoose's complete type is only needed in the private transport source. */
+#if LIBRUSTYAXE_PUBLIC_MONGOOSE_HEADERS
+#include <mongoose.h>
+#else
 struct mg_connection;
+#endif
 
 typedef struct {
    char url[1024];

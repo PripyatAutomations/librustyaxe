@@ -12,6 +12,11 @@
 #include <librustyaxe/socks.h>
 #include <librustyaxe/util.time.h>
 
+/* The optional legacy backend uses a private Mongoose header. */
+#ifdef USE_MONGOOSE
+#include <ext/libmongoose/mongoose.h>
+#endif
+
 #ifdef USE_MONGOOSE
 
 enum {
