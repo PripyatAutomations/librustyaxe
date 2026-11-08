@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_auto_build:
+	$(MAKE) all VERSION=$(DEB_VERSION_UPSTREAM)
+
+override_dh_auto_install:
+	$(MAKE) install VERSION=$(DEB_VERSION_UPSTREAM) DESTDIR=$(CURDIR)/debian/tmp
+
+override_dh_auto_clean:
+	$(MAKE) distclean
