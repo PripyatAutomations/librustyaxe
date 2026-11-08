@@ -115,7 +115,7 @@ install: all
 	ln -sfn $(notdir $(REAL_LIB)) "$(DESTDIR)$(LIBDIR)/$(SONAME)"
 	ln -sfn $(SONAME) "$(DESTDIR)$(LIBDIR)/librustyaxe.so"
 	install -d "$(DESTDIR)$(INCLUDEDIR)/librustyaxe"
-	@for h in $(PUBLIC_HEADERS); do install -m644 "$h" "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$h"; done
+	@for h in $(PUBLIC_HEADERS); do install -m644 "$$h" "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$$h"; done
 	install -m644 $(BUILD_DIR)/generated/librustyaxe/build_config.h "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/build_config.h"
 	install -Dm644 $(PC_FILE) "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
 	$(MAKE) -C librustyirc install BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
@@ -123,7 +123,7 @@ install: all
 uninstall:
 	$(MAKE) -C librustyirc uninstall BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 	rm -f "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))" "$(DESTDIR)$(LIBDIR)/$(SONAME)" "$(DESTDIR)$(LIBDIR)/librustyaxe.so" "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
-	@for h in $(PUBLIC_HEADERS); do rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$h"; done
+	@for h in $(PUBLIC_HEADERS); do rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$$h"; done
 	rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/build_config.h"
 	-rmdir "$(DESTDIR)$(INCLUDEDIR)/librustyaxe"
 
