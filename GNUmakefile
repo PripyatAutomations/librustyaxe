@@ -30,7 +30,7 @@ PC_FILE := $(BUILD_DIR)/librustyaxe.pc
 .PHONY: all clean check install
 all: $(REAL_LIB) $(PC_FILE)
 
-$(BUILD_DIR)/include/librustyaxe $(BUILD_DIR)/generated/build_config.h:
+$(BUILD_DIR)/include/librustyaxe $(BUILD_DIR)/generated/build_config.h &:
 	@mkdir -p $(BUILD_DIR)/include $(BUILD_DIR)/generated
 	@ln -sfn ../.. $(BUILD_DIR)/include/librustyaxe
 	@printf '%s\n' '/* Standalone library: no RustyRig board config. */' '#ifndef LIBRUSTYAXE_BUILD_CONFIG_H' '#define LIBRUSTYAXE_BUILD_CONFIG_H' '#endif' > $(BUILD_DIR)/generated/build_config.h
