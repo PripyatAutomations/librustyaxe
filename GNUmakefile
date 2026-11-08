@@ -18,7 +18,7 @@ OBJECTS := $(addprefix $(BUILD_DIR)/objects/,$(librustyaxe_objs))
 PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h,$(notdir $(wildcard *.h)))
 TERM_LIB := $(shell $(PKG_CONFIG) --exists tinfo && echo tinfo || echo ncurses)
 DEPS := glib-2.0 gio-2.0 $(TERM_LIB)
-ifeq ($(filter clean distclean,$(MAKECMDGOALS)),)
+ifeq ($(filter clean distclean src-deb source-deb,$(MAKECMDGOALS)),)
 ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error Missing development dependencies: $(DEPS))
 endif
