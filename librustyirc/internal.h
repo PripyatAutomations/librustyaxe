@@ -1,6 +1,6 @@
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 /* Component-private includes; never include rustyaxe/core.h (it pulls in rrprotocol). */
 #ifndef LIBRUSTYIRC_INTERNAL_H
 #define LIBRUSTYIRC_INTERNAL_H

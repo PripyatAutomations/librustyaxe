@@ -1,7 +1,7 @@
 #include "internal.h"
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
