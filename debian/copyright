@@ -6,6 +6,13 @@ Files: *
 Copyright: Pripyat Automations and the respective contributors
 License: MIT
 
+Comment: The optional Debian build incorporates /usr/src/mongoose.c from
+ mongoose-webserver-source into the shared library. That external source is
+ dual-licensed GPL-2.0-only or commercial; distributing the combined binary
+ under the GPL-2.0-only option requires compliance with GPLv2. The MIT
+ license remains applicable to RustyAxe's original source files.
+ Refer to /usr/share/doc/mongoose-webserver-source/copyright.
+
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a
  copy of this software and associated documentation files (the "Software"),
