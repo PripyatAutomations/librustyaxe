@@ -25,7 +25,9 @@
 #include <glib.h>
 #include <librustyaxe/log-queue.h>
 #include <librustyaxe/core.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 #define DEFAULT_LOG_LEVEL LOG_DEBUG
 
