@@ -42,7 +42,7 @@ typedef struct native_wss {
     size_t rx_len, rx_off;
     uint64_t rx_bytes, tx_bytes;
     uint8_t tx[RR_WSS_TX_MAX];
-    size_t tx_len, tx_offset;
+    size_t tx_len, tx_offset, ssl_retry_len;
     char reason[160];
 } native_wss_t;
 
@@ -62,7 +62,7 @@ static void reset_socket(native_wss_t *c) {
     if (c->ctx) { SSL_CTX_free(c->ctx); c->ctx = NULL; }
     if (c->fd >= 0) { close(c->fd); c->fd = -1; }
     if (c->resolver_fd >= 0) { close(c->resolver_fd); c->resolver_fd = -1; }
-    c->tx_len = c->tx_offset = c->http_len = c->rx_len = c->rx_off = 0;
+    c->tx_len = c->tx_offset = c->ssl_retry_len = c->http_len = c->rx_len = c->rx_off = 0;
 }
 static bool parse_url(native_wss_t *c, const char *url) {
     bool tls;
@@ -189,6 +189,7 @@ static bool setup_tls(native_wss_t *c) {
     if (!c->ssl || !SSL_set_fd(c->ssl, c->fd)) return false;
     if (!SSL_set_tlsext_host_name(c->ssl, c->host)) return false;
     if (!SSL_set1_host(c->ssl, c->host)) return false;
+    SSL_set_mode(c->ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_set_connect_state(c->ssl);
     return true;
 }
@@ -207,11 +208,14 @@ static int flush_tx(native_wss_t *c) {
     while (c->tx_offset < c->tx_len) {
         const uint8_t *p = c->tx + c->tx_offset;
         size_t left = c->tx_len - c->tx_offset;
-        int n = c->ssl ? SSL_write(c->ssl, p, (int)left) : (int)send(c->fd, p, left, MSG_NOSIGNAL);
-        if (n > 0) { c->tx_offset += (size_t)n; c->tx_bytes += (uint64_t)n; continue; }
+        size_t attempt = c->ssl && c->ssl_retry_len ? c->ssl_retry_len : left;
+        int n = c->ssl ? SSL_write(c->ssl, p, (int)attempt) : (int)send(c->fd, p, left, MSG_NOSIGNAL);
+        if (n > 0) { c->ssl_retry_len=0; c->tx_offset += (size_t)n; c->tx_bytes += (uint64_t)n; continue; }
         if (c->ssl) {
             int e = SSL_get_error(c->ssl, n);
-            if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE) return 0;
+            if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE) {
+                c->ssl_retry_len=attempt; return 0;
+            }
         } else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) return 0;
         return -1;
     }
