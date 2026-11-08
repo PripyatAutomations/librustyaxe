@@ -12,7 +12,11 @@
 #include <time.h>
 #include <errno.h>
 #include <librustyaxe/core.h>
+/* The parent-tree build historically exposed protocol declarations here.
+ * The standalone utility library must not depend on librrprotocol. */
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 rb_buffer_t *rb_create(int max_size, const char *name) {
    rb_buffer_t *buffer = malloc(sizeof(rb_buffer_t));
