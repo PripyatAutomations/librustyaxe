@@ -133,7 +133,13 @@ static void *resolve_worker(void *opaque) {
             fd=socket(a->ai_family,a->ai_socktype|SOCK_NONBLOCK|SOCK_CLOEXEC,a->ai_protocol);
             if(fd<0)continue;
             int rc=connect(fd,a->ai_addr,a->ai_addrlen);
-            if(rc==0 || errno==EINPROGRESS)break;
+            if(rc==0)break;
+            if(rc<0 && errno==EINPROGRESS) {
+                struct pollfd pending={.fd=fd,.events=POLLOUT};
+                int ready=poll(&pending,1,3000);
+                int status=0; socklen_t length=sizeof(status);
+                if(ready>0 && getsockopt(fd,SOL_SOCKET,SO_ERROR,&status,&length)==0 && !status)break;
+            }
             close(fd);fd=-1;
         }
         freeaddrinfo(list);
@@ -435,7 +441,7 @@ static int native_poll(void *ctx,int timeout_ms) {
     }
     if (c->stage==HTTP_SEND && flush_tx(c)<0) { error(c,"WebSocket HTTP request write failed");goto finish; }
     if (c->stage==HTTP_SEND && !c->tx_len) c->stage=HTTP_READ;
-    if (c->stage==HTTP_READ && (pfd.revents&POLLIN)) {
+    if (c->stage==HTTP_READ && ((pfd.revents&POLLIN) || (c->ssl && SSL_pending(c->ssl)>0))) {
         if (c->http_len>=RR_WSS_HTTP_MAX) { error(c,"WebSocket HTTP response too large");goto finish; }
         int n=read_bytes(c,c->http+c->http_len,RR_WSS_HTTP_MAX-c->http_len);
         if (n==-1) { error(c,"WebSocket HTTP response read failed");goto finish; }
