@@ -18,8 +18,10 @@ OBJECTS := $(addprefix $(BUILD_DIR)/objects/,$(librustyaxe_objs))
 PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h,$(notdir $(wildcard *.h)))
 TERM_LIB := $(shell $(PKG_CONFIG) --exists tinfo && echo tinfo || echo ncurses)
 DEPS := glib-2.0 gio-2.0 $(TERM_LIB)
+ifeq ($(filter clean distclean,$(MAKECMDGOALS)),)
 ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error Missing development dependencies: $(DEPS))
+endif
 endif
 AXE_CPPFLAGS := -I$(BUILD_DIR)/include -I$(BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS)) -DLIBRUSTYAXE_STANDALONE=1 -DHOST_POSIX=1
 AXE_LDLIBS := $(shell $(PKG_CONFIG) --libs $(DEPS)) -lbsd -lcrypt -ldl -lm -pthread
