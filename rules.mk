@@ -7,6 +7,9 @@ AXE_TERM_LDLIB := -ltinfo
 endif
 CFLAGS +=$(call pkgconfig, --cflags $(AXE_TERM_PKG) glib-2.0 gio-2.0)
 LDFLAGS +=$(call pkgconfig, --libs $(AXE_TERM_PKG) glib-2.0 gio-2.0)
+ifeq ($(PLATFORM),posix)
+LDFLAGS += $(shell pkg-config --libs openssl libwslay 2>/dev/null)
+endif
 
 librustyaxe ?= ../librustyaxe.so
 # Keep this inventory owned by librustyaxe, not the RustyRig parent.
