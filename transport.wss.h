@@ -9,6 +9,8 @@
 
 typedef struct rr_wss_client_options {
    const char *user_agent;    /* optional, no CR/LF allowed */
+   const char *subprotocol;   /* optional: demand exact RFC6455 protocol negotiation */
+   const char *ca_file;       /* optional PEM trust bundle (standard TLS verification remains on) */
    bool allow_cross_origin_redirect; /* default false, max eight 307 hops */
 } rr_wss_client_options_t;
 
