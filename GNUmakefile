@@ -29,7 +29,7 @@ REAL_LIB := $(BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 SONAME := librustyaxe.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyaxe.pc
 
-.PHONY: all clean distclean check install deb
+.PHONY: all clean distclean check install deb src-deb source-deb
 all: $(REAL_LIB) $(PC_FILE)
 
 $(BUILD_DIR)/include/librustyaxe $(BUILD_DIR)/generated/build_config.h &:
@@ -78,3 +78,12 @@ distclean: clean
 	@if command -v dh_clean >/dev/null 2>&1; then dh_clean; fi
 	rm -rf debian/tmp debian/.debhelper debian/files debian/debhelper-build-stamp
 	rm -rf debian/librustyaxe0 debian/librustyaxe-dev
+
+# Debian source packages are optional outputs, separate from normal builds.
+# dpkg-source's quilt format needs an upstream orig tarball. Create it from
+# committed sources (never from build/ or untracked generated artifacts).
+src-deb source-deb:
+	@test -d .git && git diff --quiet && git diff --cached --quiet || { echo "Commit tracked changes before source packaging" >&2; exit 1; }
+	@v=$$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$$//'); \
+	 git archive --format=tar --prefix="librustyaxe-$$v/" HEAD | gzip -n > "../librustyaxe_$$v.orig.tar.gz"
+	dpkg-buildpackage -S -us -uc
