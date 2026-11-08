@@ -16,7 +16,9 @@
 #include <stdio.h>
 #include <librustyaxe/maidenhead.h>
 #include <librustyaxe/core.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 #define RADIUS_EARTH 6371.0     // Earth's radius in kilometers
 
