@@ -14,7 +14,11 @@
 
 /* The optional legacy backend uses a private Mongoose header. */
 #ifdef USE_MONGOOSE
+#if defined(__has_include) && __has_include(<mongoose.h>)
+#include <mongoose.h>
+#else
 #include <ext/libmongoose/mongoose.h>
+#endif
 #endif
 
 #ifdef USE_MONGOOSE

@@ -10,13 +10,9 @@
 #include <stdint.h>
 /* RustyAxe's SDK features must not come from an application's build_config.h. */
 #include <librustyaxe/build_config.h>
-#ifdef USE_MONGOOSE
-/* Mongoose's complete type is only needed in the private transport source. */
-#if LIBRUSTYAXE_PUBLIC_MONGOOSE_HEADERS
-#include <mongoose.h>
-#else
+#if defined(USE_MONGOOSE) || LIBRUSTYAXE_HAVE_MONGOOSE
+/* Opaque legacy transport handle, never expose Mongoose's private API. */
 struct mg_connection;
-#endif
 
 typedef struct {
    char url[1024];

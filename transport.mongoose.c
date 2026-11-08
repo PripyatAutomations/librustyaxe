@@ -8,7 +8,11 @@
 #include <librustyaxe/core.h>
 #include "build_config.h"
 #ifdef USE_MONGOOSE
+#if defined(__has_include) && __has_include(<mongoose.h>)
+#include <mongoose.h>
+#else
 #include <ext/libmongoose/mongoose.h>
+#endif
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
