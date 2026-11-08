@@ -33,7 +33,7 @@ typedef struct native_wss {
     SSL *ssl;
     wslay_event_context_ptr ws;
     char url[1024], host[256], path[768], origin[384], user_agent[384];
-    char key[32];
+    char key[32], subprotocol[128], ca_file[1024];
     unsigned port;
     bool tls, allow_cross_origin, dead, closing, error_sent;
     char http[RR_WSS_HTTP_MAX + 1];
@@ -185,6 +185,7 @@ static bool resolver_ready(native_wss_t *c,int timeout_ms) {
 static bool setup_tls(native_wss_t *c) {
     c->ctx = SSL_CTX_new(TLS_client_method());
     if (!c->ctx || !SSL_CTX_set_default_verify_paths(c->ctx)) return false;
+    if (c->ca_file[0] && !SSL_CTX_load_verify_locations(c->ctx, c->ca_file, NULL)) return false;
     SSL_CTX_set_verify(c->ctx, SSL_VERIFY_PEER, NULL);
     c->ssl = SSL_new(c->ctx);
     if (!c->ssl || !SSL_set_fd(c->ssl, c->fd)) return false;
@@ -282,8 +283,9 @@ static bool begin_upgrade(native_wss_t *c) {
     int n = snprintf(request, sizeof(request),
         "GET %s HTTP/1.1\r\nHost: %s:%u\r\nUpgrade: websocket\r\n"
         "Connection: Upgrade\r\nSec-WebSocket-Version: 13\r\n"
-        "Sec-WebSocket-Key: %s\r\nUser-Agent: %s\r\n\r\n",
-        c->path, c->host, c->port, c->key, c->user_agent);
+        "Sec-WebSocket-Key: %s\r\nUser-Agent: %s\r\n%s%s%s\r\n",
+        c->path, c->host, c->port, c->key, c->user_agent,
+        c->subprotocol[0] ? "Sec-WebSocket-Protocol: " : "", c->subprotocol, c->subprotocol[0] ? "\r\n" : "");
     if (n < 0 || n >= (int)sizeof(request)) return false;
     if (!queue_bytes(c, request, (size_t)n)) return false;
     c->stage = HTTP_SEND;
@@ -329,6 +331,7 @@ static int inspect_response(native_wss_t *c) {
     if (sscanf(c->http, "HTTP/%*u.%*u %d", &status) != 1) { error(c, "Invalid HTTP upgrade response"); return -1; }
     char location[1024] = "";
     char accept[128] = "";
+    char negotiated[128] = "";
     bool upgrade = false, connection = false;
     const char *p = strstr(c->http, "\r\n");
     if (!p) { error(c, "Invalid HTTP header"); return -1; }
@@ -344,6 +347,9 @@ static int inspect_response(native_wss_t *c) {
         } else if (len > 21 && !strncasecmp(p,"Sec-WebSocket-Accept:",21)) {
             const char *v=p+21; while(v<e && isspace((unsigned char)*v))v++;
             if((size_t)(e-v)<sizeof(accept)){memcpy(accept,v,(size_t)(e-v));accept[e-v]=0;}
+        } else if (len > 23 && !strncasecmp(p,"Sec-WebSocket-Protocol:",23)) {
+            const char *v=p+23; while(v<e && isspace((unsigned char)*v))v++;
+            if ((size_t)(e-v)<sizeof(negotiated)) {memcpy(negotiated,v,(size_t)(e-v));negotiated[e-v]=0;}
         } else if (len > 8 && !strncasecmp(p,"Upgrade:",8)) {
             upgrade = true;
         } else if (len > 11 && !strncasecmp(p,"Connection:",11)) {
@@ -360,6 +366,9 @@ static int inspect_response(native_wss_t *c) {
         error(c,why); return -1;
     }
     if (!upgrade || !connection) { error(c, "Incomplete WebSocket upgrade response"); return -1; }
+    if (c->subprotocol[0] && strcmp(negotiated, c->subprotocol)) {
+        error(c, "WebSocket subprotocol negotiation failed"); return -1;
+    }
     char concat[128];
     snprintf(concat,sizeof(concat),"%s%s",c->key,"258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
     uint8_t digest[SHA_DIGEST_LENGTH];
@@ -512,10 +521,16 @@ rr_transport_t *rr_transport_wss_connect(const char *url,const rr_wss_client_opt
     c->resolver_fd=-1;
     c->allow_cross_origin=options && options->allow_cross_origin_redirect;
     const char *ua=options && options->user_agent ? options->user_agent : "RustyRig/1.0";
-    if (strlen(ua)>=sizeof(c->user_agent) || strpbrk(ua,"\r\n") || !parse_url(c,url)) {
+    const char *proto=options && options->subprotocol ? options->subprotocol : "";
+    const char *ca=options && options->ca_file ? options->ca_file : "";
+    if (strlen(ua)>=sizeof(c->user_agent) || strpbrk(ua,"\r\n") ||
+        strlen(proto)>=sizeof(c->subprotocol) || strpbrk(proto,"\r\n") ||
+        strlen(ca)>=sizeof(c->ca_file) || !parse_url(c,url)) {
         free(c);return NULL;
     }
     snprintf(c->user_agent,sizeof(c->user_agent),"%s",ua);
+    snprintf(c->subprotocol,sizeof(c->subprotocol),"%s",proto);
+    snprintf(c->ca_file,sizeof(c->ca_file),"%s",ca);
     if (!start(c)) { reset_socket(c); free(c); return NULL; }
     c->transport=rr_transport_new(&ops,c,cb,user);
     if (!c->transport) { reset_socket(c); free(c); return NULL; }
