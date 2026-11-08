@@ -448,6 +448,11 @@ rr_transport_t *rr_transport_wss_connect(const char *url,const rr_wss_client_opt
     }
     return c->transport;
 }
+void rr_transport_wss_traffic(rr_transport_t *t, uint64_t *rx, uint64_t *tx) {
+    native_wss_t *c=t ? rr_transport_driver_context(t) : NULL;
+    if (rx) *rx=c ? c->rx_bytes : 0;
+    if (tx) *tx=c ? c->tx_bytes : 0;
+}
 void rr_transport_wss_release(rr_transport_t *t) {
     if (!t || rr_transport_state(t)!=RR_TRANSPORT_CLOSED) return;
     native_wss_t *c=rr_transport_driver_context(t);
