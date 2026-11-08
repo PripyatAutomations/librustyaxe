@@ -23,7 +23,11 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <librustyaxe/core.h>
+/* The parent-tree build historically exposed protocol declarations here.
+ * The standalone utility library must not depend on librrprotocol. */
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 int rr_io_open(rr_io_context_t *ctx, rr_io_type_t type, const char *path, int port) {
    if (!ctx) {
