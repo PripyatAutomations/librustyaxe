@@ -30,6 +30,8 @@ Description: Development files for librustyaxe
 Package: librustyirc0
 Architecture: any
 Multi-Arch: same
+Breaks: librustyirc (<< 1.0.3~)
+Replaces: librustyirc (<< 1.0.3~)
 Depends: librustyaxe0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: Reusable IRC wire protocol library
  GPLv2 IRC messaging, registration, capabilities and DCC support.
