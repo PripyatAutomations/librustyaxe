@@ -30,7 +30,9 @@
 #include <libgen.h>
 #include <librustyaxe/core.h>
 #include <librustyaxe/util.file.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 // If possible, declare defcfg a weak symbol, so we can link without it
 #if defined(__GNUC__) || defined(__clang__)
