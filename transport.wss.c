@@ -37,6 +37,9 @@ typedef struct native_wss {
     bool tls, allow_cross_origin, dead, closing, error_sent;
     char http[RR_WSS_HTTP_MAX + 1];
     size_t http_len;
+    uint8_t rx[RR_WSS_HTTP_MAX];
+    size_t rx_len, rx_off;
+    uint64_t rx_bytes, tx_bytes;
     uint8_t tx[RR_WSS_TX_MAX];
     size_t tx_len, tx_offset;
     char reason[160];
@@ -57,7 +60,7 @@ static void reset_socket(native_wss_t *c) {
     if (c->ssl) { SSL_free(c->ssl); c->ssl = NULL; }
     if (c->ctx) { SSL_CTX_free(c->ctx); c->ctx = NULL; }
     if (c->fd >= 0) { close(c->fd); c->fd = -1; }
-    c->tx_len = c->tx_offset = c->http_len = 0;
+    c->tx_len = c->tx_offset = c->http_len = c->rx_len = c->rx_off = 0;
 }
 static bool parse_url(native_wss_t *c, const char *url) {
     bool tls;
@@ -146,7 +149,7 @@ static bool start(native_wss_t *c) {
 }
 static int read_bytes(native_wss_t *c, void *buf, size_t len) {
     int n = c->ssl ? SSL_read(c->ssl, buf, (int)len) : (int)recv(c->fd, buf, len, 0);
-    if (n > 0) return n;
+    if (n > 0) { c->rx_bytes += (uint64_t)n; return n; }
     if (c->ssl) {
         int e = SSL_get_error(c->ssl, n);
         if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE) return -2;
@@ -160,7 +163,7 @@ static int flush_tx(native_wss_t *c) {
         const uint8_t *p = c->tx + c->tx_offset;
         size_t left = c->tx_len - c->tx_offset;
         int n = c->ssl ? SSL_write(c->ssl, p, (int)left) : (int)send(c->fd, p, left, MSG_NOSIGNAL);
-        if (n > 0) { c->tx_offset += (size_t)n; continue; }
+        if (n > 0) { c->tx_offset += (size_t)n; c->tx_bytes += (uint64_t)n; continue; }
         if (c->ssl) {
             int e = SSL_get_error(c->ssl, n);
             if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE) return 0;
@@ -183,6 +186,14 @@ static bool queue_bytes(native_wss_t *c, const void *data, size_t len) {
 static ssize_t ws_read(wslay_event_context_ptr ws, uint8_t *buf, size_t len, int flags, void *arg) {
     (void)flags;
     native_wss_t *c = arg;
+    if (c->rx_off < c->rx_len) {
+        size_t available=c->rx_len-c->rx_off;
+        if (len>available) len=available;
+        memcpy(buf,c->rx+c->rx_off,len);
+        c->rx_off+=len;
+        if (c->rx_off==c->rx_len) c->rx_off=c->rx_len=0;
+        return (ssize_t)len;
+    }
     int n = read_bytes(c, buf, len);
     if (n == -2) { wslay_event_set_error(ws, WSLAY_ERR_WOULDBLOCK); return -1; }
     if (n < 0) { wslay_event_set_error(ws, WSLAY_ERR_CALLBACK_FAILURE); return -1; }
@@ -304,6 +315,13 @@ static int inspect_response(native_wss_t *c) {
     char expected[32];
     EVP_EncodeBlock((unsigned char *)expected,digest,sizeof(digest));
     if (strcmp(accept,expected)) { error(c,"WebSocket accept signature mismatch"); return -1; }
+    size_t header_bytes=(size_t)(end-c->http)+4;
+    if (c->http_len>header_bytes) {
+        size_t remain=c->http_len-header_bytes;
+        memcpy(c->rx,c->http+header_bytes,remain);
+        c->rx_len=remain;
+        c->rx_off=0;
+    }
     struct wslay_event_callbacks callbacks = {
         .recv_callback=ws_read, .send_callback=ws_write,
         .genmask_callback=ws_mask, .on_msg_recv_callback=ws_message
@@ -314,7 +332,9 @@ static int inspect_response(native_wss_t *c) {
     wslay_event_config_set_max_recv_msg_length(c->ws,RR_WSS_FRAME_MAX);
     c->stage=WEBSOCKET;
     rr_transport_emit(c->transport,RR_TRANSPORT_EVENT_OPEN,NULL,NULL,0);
-    /* Data arriving with HTTP/101 is currently handled by the next read. */
+    if (c->rx_len && !c->closing && wslay_event_recv(c->ws)<0) {
+        error(c,"Invalid frames following HTTP upgrade");return -1;
+    }
     return 1;
 }
 static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
@@ -339,12 +359,13 @@ static uint32_t capabilities(void *ctx) {
 static void close_transport(void *ctx) { ((native_wss_t *)ctx)->closing=true; }
 static int native_poll(void *ctx,int timeout_ms) {
     native_wss_t *c=ctx;
-    if (c->dead) goto finish;
+    if (c->dead || c->closing) { c->dead=true; goto finish; }
     struct pollfd pfd={.fd=c->fd,.events=POLLIN|POLLOUT};
     if (c->fd < 0) { error(c,"WebSocket has no socket"); goto finish; }
     int ready=poll(&pfd,1,timeout_ms);
     if (ready<0 && errno != EINTR) { error(c,"WebSocket poll failed"); goto finish; }
-    if (ready<=0) return 0;
+    if (ready<=0 && c->stage!=WEBSOCKET) return 0;
+    if (ready<=0 && !(c->rx_len>c->rx_off || (c->ssl && SSL_pending(c->ssl)>0))) return 0;
     if (pfd.revents & (POLLERR|POLLHUP|POLLNVAL)) {
         if (c->stage != WEBSOCKET) { error(c,"WebSocket socket disconnected"); goto finish; }
     }
@@ -387,7 +408,7 @@ static int native_poll(void *ctx,int timeout_ms) {
             if (wslay_event_send(c->ws)<0) { error(c,"WebSocket framing send failed");goto finish; }
             if (flush_tx(c)<0) { error(c,"WebSocket TCP send failed");goto finish; }
         }
-        if (pfd.revents&POLLIN) {
+        if ((pfd.revents&POLLIN) || c->rx_len>c->rx_off || (c->ssl && SSL_pending(c->ssl)>0)) {
             if (wslay_event_recv(c->ws)<0) { error(c,"WebSocket receive failed");goto finish; }
         }
         if ((pfd.revents&(POLLERR|POLLHUP|POLLNVAL)) || c->closing || !wslay_event_get_read_enabled(c->ws))
