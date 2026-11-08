@@ -19,7 +19,7 @@ LIBRUSTYAXE_STANDALONE := true
 
 include sources.mk
 OBJECTS := $(addprefix $(BUILD_DIR)/objects/,$(librustyaxe_objs))
-PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h,$(notdir $(wildcard *.h)))
+PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h build_config.h,$(notdir $(wildcard *.h)))
 TERM_LIB := $(shell $(PKG_CONFIG) --exists tinfo && echo tinfo || echo ncurses)
 DEPS := glib-2.0 gio-2.0 $(TERM_LIB)
 ifeq ($(filter clean distclean uninstall src-deb source-deb,$(MAKECMDGOALS)),)
@@ -70,14 +70,16 @@ install: all
 	ln -sfn $(notdir $(REAL_LIB)) "$(DESTDIR)$(LIBDIR)/$(SONAME)"
 	ln -sfn $(SONAME) "$(DESTDIR)$(LIBDIR)/librustyaxe.so"
 	install -d "$(DESTDIR)$(INCLUDEDIR)/librustyaxe"
-	@for h in $(PUBLIC_HEADERS); do install -m644 "$$h" "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$$h"; done
+	@for h in $(PUBLIC_HEADERS); do install -m644 "$h" "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$h"; done
+	install -m644 config/build_config.h "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/build_config.h"
 	install -Dm644 $(PC_FILE) "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
 	$(MAKE) -C librustyirc install BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 
 uninstall:
 	$(MAKE) -C librustyirc uninstall BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 	rm -f "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))" "$(DESTDIR)$(LIBDIR)/$(SONAME)" "$(DESTDIR)$(LIBDIR)/librustyaxe.so" "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
-	@for h in $(PUBLIC_HEADERS); do rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$$h"; done
+	@for h in $(PUBLIC_HEADERS); do rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$h"; done
+	rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/build_config.h"
 	-rmdir "$(DESTDIR)$(INCLUDEDIR)/librustyaxe"
 
 clean:
