@@ -20,7 +20,9 @@
 #include <stdbool.h>
 #include <librustyaxe/core.h>
 #include <librustyaxe/tui.internal.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 bool cfg_tui_colors = true;
 
