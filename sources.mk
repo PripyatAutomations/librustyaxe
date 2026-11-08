@@ -19,7 +19,9 @@ librustyaxe_objs += log-queue.o
 librustyaxe_objs += maidenhead.o
 librustyaxe_objs += module.o
 ifneq ($(LIBRUSTYAXE_STANDALONE),true)
+ifeq ($(USE_MONGOOSE),true)
 librustyaxe_objs += mongoose.o
+endif
 endif
 librustyaxe_objs += posix.o
 librustyaxe_objs += runtime-globals.o
