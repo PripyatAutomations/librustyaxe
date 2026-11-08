@@ -44,13 +44,13 @@ OBJECTS += $(BUILD_DIR)/objects/mongoose.o
 endif
 PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h build_config.h,$(notdir $(wildcard *.h)))
 TERM_LIB := $(shell $(PKG_CONFIG) --exists tinfo && echo tinfo || echo ncurses)
-DEPS := glib-2.0 gio-2.0 $(TERM_LIB) openssl libwslay
+DEPS := glib-2.0 gio-2.0 $(TERM_LIB) openssl
 ifeq ($(filter clean distclean uninstall src-deb source-deb,$(MAKECMDGOALS)),)
 ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error Missing development dependencies: $(DEPS))
 endif
 endif
-AXE_CPPFLAGS := -I$(BUILD_DIR)/generated -I$(BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags $(DEPS)) -DLIBRUSTYAXE_STANDALONE=1 -DHOST_POSIX=1
+AXE_CPPFLAGS := -I$(BUILD_DIR)/generated -I$(BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags $(DEPS)) $(shell $(PKG_CONFIG) --cflags libwslay 2>/dev/null) -DLIBRUSTYAXE_STANDALONE=1 -DHOST_POSIX=1
 AXE_LDLIBS := $(shell $(PKG_CONFIG) --libs $(DEPS)) -lbsd -lcrypt -ldl -lm -pthread -lssl -lcrypto -lwslay
 ifeq ($(WITH_MONGOOSE),true)
 AXE_CPPFLAGS += -DUSE_MONGOOSE=1 -I$(MONGOOSE_INCLUDE_DIR)
@@ -102,7 +102,7 @@ $(PC_FILE): GNUmakefile
 	@mkdir -p $(BUILD_DIR)
 	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' \
 	    'Name: librustyaxe' 'Description: Shared RustyRig utility library' 'Version: $(VERSION)' \
-	    'Libs: -L$${libdir} -lrustyaxe' 'Cflags: -I$${includedir}' 'Requires.private: glib-2.0 gio-2.0 openssl libwslay' > $@
+	    'Libs: -L$${libdir} -lrustyaxe' 'Cflags: -I$${includedir}' 'Requires.private: glib-2.0 gio-2.0 openssl' 'Libs.private: -lwslay' > $@
 
 check: all
 	$(MAKE) -C librustyirc check BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
