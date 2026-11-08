@@ -2,22 +2,6 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: librustyaxe
 Source: https://github.com/PripyatAutomations/librustyaxe
 
-Files: librustyirc/*
-Copyright: Pripyat Automations and contributors
-License: GPL-2
-
-License: GPL-2
- This program is free software; you can redistribute it and/or modify
- it under the terms of version 2 of the GNU General Public License,
- as published by the Free Software Foundation.
- .
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- .
- On Debian systems, the complete text of the GNU General Public License
- version 2 is in /usr/share/common-licenses/GPL-2.
-
 Files: *
 Copyright: Pripyat Automations and the respective contributors
 License: MIT

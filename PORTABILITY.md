@@ -3,7 +3,7 @@
 This repository builds two separate ABI/libraries from a single source tree:
 
 - **librustyaxe** (MIT): utility, configuration, event and platform helpers.
-- **librustyirc** (GPLv2): IRC parser, client protocol machinery, SASL, DCC.
+- **librustyirc** (MIT): IRC parser, client protocol machinery, SASL, DCC.
   It links to and requires librustyaxe, but librustyaxe does not require IRC.
 
 Normal POSIX development from this repository:
@@ -28,4 +28,4 @@ directory. Windows x64 (preferably MinGW-w64 cross-compiled), macOS and ESP32
 are planned first-class targets; the current POSIX shared-object make recipes
 are **not yet a validated native Windows/macOS/ESP-IDF implementation**.
 Portable source and platform-specific shared-library recipes will be kept
-separate; no MIT/GPLv2 relicensing should occur when reorganizing components.
+separate; keep both RustyAxe libraries MIT-licensed when reorganizing components.

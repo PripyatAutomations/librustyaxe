@@ -1,4 +1,4 @@
-# GPLv2 IRC library built alongside (but separately from) MIT RustyAxe.
+# MIT IRC library built alongside (but separately from) MIT RustyAxe.
 .DEFAULT_GOAL := all
 CC ?= cc
 PKG_CONFIG ?= pkg-config
@@ -33,7 +33,7 @@ $(REAL_LIB): $(OBJECTS) $(AXE_BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 $(PC_FILE): GNUmakefile
 	@mkdir -p $(BUILD_DIR)
 	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' \
-	 'Name: librustyirc' 'Description: GPLv2 IRC protocol library built with RustyAxe' \
+	 'Name: librustyirc' 'Description: MIT IRC protocol library built with RustyAxe' \
 	 'Version: $(VERSION)' 'Requires: librustyaxe' \
 	 'Libs: -L${libdir} -lrustyirc' 'Cflags: -I${includedir}' > $@
 
