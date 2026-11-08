@@ -512,7 +512,7 @@ static const rr_transport_driver_t ops={
     .send_message=send_text,.send_binary_message=send_binary,
     .queued_bytes=queued,.poll=native_poll,.close=close_transport
 };
-rr_transport_t *rr_transport_wss_connect(const char *url,const rr_wss_client_options_t *options,
+rr_transport_t *rr_transport_wss_connect_ex(const char *url,const rr_wss_client_options_ex_t *options,
                                           rr_transport_callback_t cb,void *user) {
     if (!url) return NULL;
     native_wss_t *c=calloc(1,sizeof(*c));
@@ -535,6 +535,14 @@ rr_transport_t *rr_transport_wss_connect(const char *url,const rr_wss_client_opt
     c->transport=rr_transport_new(&ops,c,cb,user);
     if (!c->transport) { reset_socket(c); free(c); return NULL; }
     return c->transport;
+}
+rr_transport_t *rr_transport_wss_connect(const char *url,
+    const rr_wss_client_options_t *options, rr_transport_callback_t cb, void *user) {
+    rr_wss_client_options_ex_t extended = {
+        .user_agent = options ? options->user_agent : NULL,
+        .allow_cross_origin_redirect = options && options->allow_cross_origin_redirect
+    };
+    return rr_transport_wss_connect_ex(url, &extended, cb, user);
 }
 void rr_transport_wss_traffic(rr_transport_t *t, uint64_t *rx, uint64_t *tx) {
     native_wss_t *c=t ? rr_transport_driver_context(t) : NULL;
