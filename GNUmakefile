@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 .DEFAULT_GOAL := all
 CC ?= cc
+CFLAGS += -std=gnu23
 PKG_CONFIG ?= pkg-config
 PREFIX ?= /usr
 LIBDIR ?= $(PREFIX)/lib/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || $(CC) -dumpmachine)
