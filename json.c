@@ -21,7 +21,9 @@
 #include <limits.h>
 #include <time.h>
 #include <librustyaxe/core.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 #define JSON_MAX_DEPTH 64
 
