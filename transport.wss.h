@@ -19,6 +19,7 @@ typedef struct rr_wss_client_options_ex {
    bool allow_cross_origin_redirect;
    const char *subprotocol;  /* exact requested/required RFC6455 subprotocol */
    const char *ca_file;      /* optional PEM trust bundle */
+   const char *tls_server_name; /* verification name, independent of dialed URL host */
 } rr_wss_client_options_ex_t;
 
 /* Connection and callbacks run on the calling thread. No background loop.
