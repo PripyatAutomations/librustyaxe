@@ -20,7 +20,9 @@
 #include <termios.h>
 #include <unistd.h>
 #include <librustyaxe/core.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 #include <librustyaxe/termkey.h>
 #include <glib.h>
 #include <glib-unix.h>
