@@ -1,3 +1,13 @@
+librustyaxe (0.1.0-2) unstable; urgency=medium
+
+  * Enable the optional Mongoose compatibility backend using the distribution's
+    mongoose-webserver-source build dependency.
+  * Record backend availability in the installed SDK build configuration.
+  * Keep public headers independent of private Mongoose include paths.
+  * Document the GPLv2 obligations for Mongoose-enabled binaries.
+
+ -- Pripyat Automations <dangerousdevices@istabpeople.com>  Sun, 08 Nov 2026 02:00:00 -0500
+
 librustyaxe (0.1.0-1) unstable; urgency=medium
 
   * Initial standalone library source and binary packaging.
