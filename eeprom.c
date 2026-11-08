@@ -23,7 +23,9 @@
 #include <string.h>
 #include <errno.h>
 #include <librustyaxe/core.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 // support for file-backed emulated eeproms
 #if     defined(HOST_POSIX)
