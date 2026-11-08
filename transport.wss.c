@@ -441,11 +441,9 @@ rr_transport_t *rr_transport_wss_connect(const char *url,const rr_wss_client_opt
         free(c);return NULL;
     }
     snprintf(c->user_agent,sizeof(c->user_agent),"%s",ua);
+    if (!start(c)) { reset_socket(c); free(c); return NULL; }
     c->transport=rr_transport_new(&ops,c,cb,user);
-    if (!c->transport || !start(c)) {
-        if (c->transport) { rr_transport_emit(c->transport,RR_TRANSPORT_EVENT_CLOSE,NULL,NULL,0); rr_transport_free(c->transport); }
-        reset_socket(c);free(c);return NULL;
-    }
+    if (!c->transport) { reset_socket(c); free(c); return NULL; }
     return c->transport;
 }
 void rr_transport_wss_traffic(rr_transport_t *t, uint64_t *rx, uint64_t *tx) {
