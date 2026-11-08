@@ -8,7 +8,8 @@ endif
 CFLAGS +=$(call pkgconfig, --cflags $(AXE_TERM_PKG) glib-2.0 gio-2.0)
 LDFLAGS +=$(call pkgconfig, --libs $(AXE_TERM_PKG) glib-2.0 gio-2.0)
 ifeq ($(PLATFORM),posix)
-LDFLAGS += $(shell pkg-config --libs openssl libwslay 2>/dev/null)
+LDFLAGS += $(shell pkg-config --libs openssl 2>/dev/null) -lwslay
+CFLAGS += $(shell pkg-config --cflags libwslay 2>/dev/null)
 endif
 
 librustyaxe ?= ../librustyaxe.so
