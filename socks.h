@@ -17,7 +17,8 @@
 # include "build_config.h"
 #endif
 #ifdef USE_MONGOOSE
-#include <ext/libmongoose/mongoose.h>
+/* Do not require a private Mongoose checkout in the public SDK. */
+struct mg_connection;
 
 typedef struct {
    char url[1024];
