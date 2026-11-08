@@ -1,3 +1,11 @@
+librustyaxe (0.1.0-5) unstable; urgency=medium
+
+  * Allow native WSS consumers to negotiate an explicit WebSocket subprotocol.
+  * Require the selected subprotocol in the 101 response.
+  * Support a configured PEM trust bundle without disabling TLS verification.
+
+ -- Pripyat Automations <dangerousdevices@istabpeople.com>  Sun, 08 Nov 2026 13:10:00 -0500
+
 librustyaxe (0.1.0-4) unstable; urgency=medium
 
   * Make rrconn IRC state pointer unconditional to stabilize the shared
