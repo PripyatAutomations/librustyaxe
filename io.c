@@ -23,8 +23,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <librustyaxe/core.h>
-/* The parent-tree build historically exposed protocol declarations here.
- * The standalone utility library must not depend on librrprotocol. */
+/* The parent-tree build historically exposed protocol declarations here. The standalone utility library must not depend on librrprotocol. */
 #ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
 #endif

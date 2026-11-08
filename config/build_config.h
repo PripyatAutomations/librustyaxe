@@ -3,9 +3,8 @@
 #define LIBRUSTYAXE_PUBLIC_BUILD_CONFIG_H
 
 /*
- * Configuration of the installed RustyAxe SDK, not the consuming program.
- * Standalone builds never bundle Mongoose. RustyRig's own build_config.h
- * controls optional application-side transports independently.
+ * Configuration of the installed RustyAxe SDK, not the consuming program. Standalone builds never bundle Mongoose. RustyRig's own build_config.h controls
+ * optional application-side transports independently.
  *
  * No public RustyAxe header requires ext/libmongoose/mongoose.h.
  */
