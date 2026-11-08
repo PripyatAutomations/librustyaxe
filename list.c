@@ -5,7 +5,11 @@
 //
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #include <librustyaxe/core.h>
+/* The parent-tree build historically exposed protocol declarations here.
+ * The standalone utility library must not depend on librrprotocol. */
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 rrlist_t *rrlist_find_by_ptr(rrlist_t *list, void *ptr) {
    if (!list || !ptr) {
