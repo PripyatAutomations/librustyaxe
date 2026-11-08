@@ -12,6 +12,7 @@ Vcs-Browser: https://github.com/PripyatAutomations/librustyaxe
 Package: librustyaxe0
 Architecture: any
 Multi-Arch: same
+Recommends: librustyirc0
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Breaks: librustyaxe (<< 1.0.3~)
 Replaces: librustyaxe (<< 1.0.3~)
@@ -25,3 +26,18 @@ Multi-Arch: same
 Depends: librustyaxe0 (= ${binary:Version}), libbsd-dev, libglib2.0-dev, ${misc:Depends}
 Description: Development files for librustyaxe
  Public headers, linker symlink and pkg-config metadata.
+
+Package: librustyirc0
+Architecture: any
+Multi-Arch: same
+Depends: librustyaxe0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: Reusable IRC wire protocol library
+ GPLv2 IRC messaging, registration, capabilities and DCC support.
+
+Package: librustyirc-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: librustyirc0 (= ${binary:Version}), librustyaxe-dev, ${misc:Depends}
+Description: Development headers for librustyirc
+ Headers, linker symlink and pkg-config metadata for the IRC library.
