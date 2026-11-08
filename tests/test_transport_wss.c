@@ -31,6 +31,8 @@ static void receive_message(rr_transport_t *transport, enum rr_transport_event e
     } else if (ev==RR_TRANSPORT_EVENT_BINARY_MESSAGE) {
         assert(len==5 && !memcmp(data,"first",5));
         state->binary++;
+    } else if (ev==RR_TRANSPORT_EVENT_MESSAGE) {
+        assert(len==2 && !memcmp(data,"ok",2));
         rr_transport_close(transport);
     } else if (ev==RR_TRANSPORT_EVENT_ERROR) {
         fprintf(stderr,"native ws error: %.*s\n",(int)len,(const char *)data);
@@ -78,9 +80,25 @@ static void child_serve(int listenfd) {
     const unsigned char packet[]={0x82,0x05,'f','i','r','s','t'};
     memcpy(reply+replylen,packet,sizeof(packet));
     if(send(fd,reply,(size_t)replylen+sizeof(packet),0)!=(ssize_t)((size_t)replylen+sizeof(packet))) _exit(10);
-    /* Let the client process its first message and close gracefully. */
-    struct pollfd pfd={.fd=fd,.events=POLLIN};
-    poll(&pfd,1,1000);
+    /* Confirm outbound client frames are RFC6455-masked and unmask correctly. */
+    unsigned char frame[11];
+    size_t got=0;
+    while(got<sizeof(frame)) {
+        struct pollfd incoming={.fd=fd,.events=POLLIN};
+        if(poll(&incoming,1,5000)!=1)_exit(11);
+        int n=recv(fd,frame+got,sizeof(frame)-got,0);
+        if(n<=0)_exit(12);
+        got+=(size_t)n;
+    }
+    if(frame[0]!=0x81 || frame[1]!=0x85)_exit(13);
+    for(unsigned i=0;i<5;i++) {
+        if((frame[6+i]^frame[2+i%4])!=(unsigned char)"hello"[i])_exit(14);
+    }
+    const unsigned char ack[]={0x81,0x02,'o','k'};
+    if(send(fd,ack,sizeof(ack),0)!=(ssize_t)sizeof(ack))_exit(15);
+    /* Give the client time to receive the ACK and start closing. */
+    struct pollfd closing={.fd=fd,.events=POLLIN};
+    poll(&closing,1,1000);
     close(fd);
     close(listenfd);
     _exit(0);
