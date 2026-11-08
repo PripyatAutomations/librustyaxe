@@ -468,7 +468,21 @@ static int native_poll(void *ctx,int timeout_ms) {
         } else {
             int e=SSL_get_error(c->ssl,n);
             c->tls_want=e;
-            if (e!=SSL_ERROR_WANT_READ && e!=SSL_ERROR_WANT_WRITE) { error(c,"WebSocket TLS handshake failed");goto finish; }
+            if (e!=SSL_ERROR_WANT_READ && e!=SSL_ERROR_WANT_WRITE) {
+                long verify=SSL_get_verify_result(c->ssl);
+                char why[256];
+                if (verify != X509_V_OK) {
+                    snprintf(why,sizeof(why),"WebSocket TLS verification failed for %s: %s (code %ld). Check trusted CA and certificate SAN",
+                        c->host,X509_verify_cert_error_string(verify),verify);
+                } else {
+                    unsigned long code=ERR_peek_last_error();
+                    const char *detail=code ? ERR_reason_error_string(code) : NULL;
+                    snprintf(why,sizeof(why),"WebSocket TLS handshake failed for %s (SSL error %d%s%s)",
+                        c->host,e,detail ? ": " : "",detail ? detail : "");
+                }
+                error(c,why);
+                goto finish;
+            }
         }
     }
     if (c->stage==HTTP_SEND && flush_tx(c)<0) { error(c,"WebSocket HTTP request write failed");goto finish; }
