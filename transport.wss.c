@@ -34,7 +34,7 @@ typedef struct native_wss {
     SSL *ssl;
     wslay_event_context_ptr ws;
     char url[1024], host[256], path[768], origin[384], user_agent[384];
-    char key[32], subprotocol[128], ca_file[1024];
+    char key[32], subprotocol[128], ca_file[1024], tls_server_name[256];
     unsigned port;
     bool tls, allow_cross_origin, dead, closing, error_sent;
     char http[RR_WSS_HTTP_MAX + 1];
@@ -190,8 +190,9 @@ static bool setup_tls(native_wss_t *c) {
     SSL_CTX_set_verify(c->ctx, SSL_VERIFY_PEER, NULL);
     c->ssl = SSL_new(c->ctx);
     if (!c->ssl || !SSL_set_fd(c->ssl, c->fd)) return false;
-    if (!SSL_set_tlsext_host_name(c->ssl, c->host)) return false;
-    if (!SSL_set1_host(c->ssl, c->host)) return false;
+    const char *identity = c->tls_server_name[0] ? c->tls_server_name : c->host;
+    if (!SSL_set_tlsext_host_name(c->ssl, identity)) return false;
+    if (!SSL_set1_host(c->ssl, identity)) return false;
     SSL_set_mode(c->ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_set_connect_state(c->ssl);
     c->tls_want = SSL_ERROR_WANT_WRITE;
@@ -474,7 +475,8 @@ static int native_poll(void *ctx,int timeout_ms) {
                 char why[256];
                 if (verify != X509_V_OK) {
                     snprintf(why,sizeof(why),"WebSocket TLS verification failed for %s: %s (code %ld). Check trusted CA and certificate SAN",
-                        c->host,X509_verify_cert_error_string(verify),verify);
+                        c->tls_server_name[0] ? c->tls_server_name : c->host,
+                        X509_verify_cert_error_string(verify),verify);
                 } else {
                     unsigned long code=ERR_peek_last_error();
                     const char *detail=code ? ERR_reason_error_string(code) : NULL;
@@ -538,14 +540,17 @@ rr_transport_t *rr_transport_wss_connect_ex(const char *url,const rr_wss_client_
     const char *ua=options && options->user_agent ? options->user_agent : "RustyRig/1.0";
     const char *proto=options && options->subprotocol ? options->subprotocol : "";
     const char *ca=options && options->ca_file ? options->ca_file : "";
+    const char *tls_name=options && options->tls_server_name ? options->tls_server_name : "";
     if (strlen(ua)>=sizeof(c->user_agent) || strpbrk(ua,"\r\n") ||
         strlen(proto)>=sizeof(c->subprotocol) || strpbrk(proto,"\r\n") ||
-        strlen(ca)>=sizeof(c->ca_file) || !parse_url(c,url)) {
+        strlen(ca)>=sizeof(c->ca_file) || strlen(tls_name)>=sizeof(c->tls_server_name) ||
+        strpbrk(tls_name,"\r\n") || !parse_url(c,url)) {
         free(c);return NULL;
     }
     snprintf(c->user_agent,sizeof(c->user_agent),"%s",ua);
     snprintf(c->subprotocol,sizeof(c->subprotocol),"%s",proto);
     snprintf(c->ca_file,sizeof(c->ca_file),"%s",ca);
+    snprintf(c->tls_server_name,sizeof(c->tls_server_name),"%s",tls_name);
     if (!start(c)) { reset_socket(c); free(c); return NULL; }
     c->transport=rr_transport_new(&ops,c,cb,user);
     if (!c->transport) { reset_socket(c); free(c); return NULL; }
