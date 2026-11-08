@@ -17,8 +17,31 @@ SOVERSION ?= 0
 USE_EEPROM ?= false
 LIBRUSTYAXE_STANDALONE := true
 
+# Source-only Debian package: mongoose-webserver-source.
+# Set WITH_MONGOOSE=false to explicitly disable this optional backend.
+MONGOOSE_SOURCE ?= $(if $(wildcard /usr/src/mongoose.c),/usr/src/mongoose.c,)
+MONGOOSE_INCLUDE_DIR ?= $(if $(wildcard /usr/include/mongoose.h),/usr/include,)
+WITH_MONGOOSE ?= auto
+ifeq ($(WITH_MONGOOSE),auto)
+WITH_MONGOOSE := $(if $(and $(MONGOOSE_SOURCE),$(MONGOOSE_INCLUDE_DIR)),true,false)
+endif
+ifeq ($(filter true false,$(WITH_MONGOOSE)),)
+$(error WITH_MONGOOSE must be auto, true or false)
+endif
+ifeq ($(WITH_MONGOOSE),true)
+ifeq ($(wildcard $(MONGOOSE_SOURCE)),)
+$(error Mongoose requested but source missing: $(MONGOOSE_SOURCE))
+endif
+ifeq ($(wildcard $(MONGOOSE_INCLUDE_DIR)/mongoose.h),)
+$(error Mongoose requested but header missing: $(MONGOOSE_INCLUDE_DIR)/mongoose.h)
+endif
+endif
+
 include sources.mk
 OBJECTS := $(addprefix $(BUILD_DIR)/objects/,$(librustyaxe_objs))
+ifeq ($(WITH_MONGOOSE),true)
+OBJECTS += $(BUILD_DIR)/objects/mongoose.o
+endif
 PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h build_config.h,$(notdir $(wildcard *.h)))
 TERM_LIB := $(shell $(PKG_CONFIG) --exists tinfo && echo tinfo || echo ncurses)
 DEPS := glib-2.0 gio-2.0 $(TERM_LIB)
@@ -27,26 +50,48 @@ ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error Missing development dependencies: $(DEPS))
 endif
 endif
-AXE_CPPFLAGS := -I$(BUILD_DIR)/include -I$(BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS)) -DLIBRUSTYAXE_STANDALONE=1 -DHOST_POSIX=1
+AXE_CPPFLAGS := -I$(BUILD_DIR)/generated -I$(BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags $(DEPS)) -DLIBRUSTYAXE_STANDALONE=1 -DHOST_POSIX=1
 AXE_LDLIBS := $(shell $(PKG_CONFIG) --libs $(DEPS)) -lbsd -lcrypt -ldl -lm -pthread
+ifeq ($(WITH_MONGOOSE),true)
+AXE_CPPFLAGS += -DUSE_MONGOOSE=1 -I$(MONGOOSE_INCLUDE_DIR)
+endif
 REAL_LIB := $(BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 SONAME := librustyaxe.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyaxe.pc
 
 .PHONY: all clean distclean check install uninstall irc-build deb src-deb source-deb
-all: $(REAL_LIB) $(PC_FILE) irc-build
+all: $(BUILD_DIR)/generated/librustyaxe/build_config.h $(REAL_LIB) $(PC_FILE) irc-build
 
 irc-build: $(REAL_LIB)
 	$(MAKE) -C librustyirc all BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
 
+# The generated public header describes this library, never its consumers.
+# Recalculate on each invocation but preserve timestamps when unchanged.
+.PHONY: axe-config-force
+$(BUILD_DIR)/generated/librustyaxe/build_config.h: axe-config-force
+	@mkdir -p $(BUILD_DIR)/generated/librustyaxe
+	@printf '%s\n' '/* SPDX-License-Identifier: MIT */' \
+	 '#ifndef LIBRUSTYAXE_PUBLIC_BUILD_CONFIG_H' \
+	 '#define LIBRUSTYAXE_PUBLIC_BUILD_CONFIG_H' \
+	 '#define LIBRUSTYAXE_HAVE_MONGOOSE $(if $(filter true,$(WITH_MONGOOSE)),1,0)' \
+	 '#define LIBRUSTYAXE_PUBLIC_MONGOOSE_HEADERS 0' '#endif' > $@.new
+	@cmp -s $@.new $@ && rm -f $@.new || mv -f $@.new $@
+
 $(BUILD_DIR)/include/librustyaxe $(BUILD_DIR)/generated/build_config.h &:
 	@mkdir -p $(BUILD_DIR)/include $(BUILD_DIR)/generated
 	@ln -sfn ../.. $(BUILD_DIR)/include/librustyaxe
-	@printf '%s\n' '/* Standalone library: no RustyRig board config. */' '#ifndef LIBRUSTYAXE_BUILD_CONFIG_H' '#define LIBRUSTYAXE_BUILD_CONFIG_H' '#endif' > $(BUILD_DIR)/generated/build_config.h
+	@printf '%s\n' '/* Standalone library: no RustyRig board config. */' \
+	 '#ifndef LIBRUSTYAXE_BUILD_CONFIG_H' '#define LIBRUSTYAXE_BUILD_CONFIG_H' '#endif' > $(BUILD_DIR)/generated/build_config.h
 
-$(BUILD_DIR)/objects/%.o: %.c $(wildcard *.h) | $(BUILD_DIR)/include/librustyaxe $(BUILD_DIR)/generated/build_config.h
+$(BUILD_DIR)/objects/%.o: %.c $(wildcard *.h) $(BUILD_DIR)/generated/librustyaxe/build_config.h | $(BUILD_DIR)/include/librustyaxe $(BUILD_DIR)/generated/build_config.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(AXE_CPPFLAGS) $(CFLAGS) -fPIC -c -o $@ $<
+
+ifeq ($(WITH_MONGOOSE),true)
+$(BUILD_DIR)/objects/mongoose.o: $(MONGOOSE_SOURCE) $(MONGOOSE_INCLUDE_DIR)/mongoose.h $(BUILD_DIR)/generated/librustyaxe/build_config.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CPPFLAGS) $(AXE_CPPFLAGS) $(CFLAGS) -fPIC -c -o $@ $(MONGOOSE_SOURCE)
+endif
 
 $(REAL_LIB): $(OBJECTS)
 	$(CC) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $^ $(AXE_LDLIBS)
@@ -71,7 +116,7 @@ install: all
 	ln -sfn $(SONAME) "$(DESTDIR)$(LIBDIR)/librustyaxe.so"
 	install -d "$(DESTDIR)$(INCLUDEDIR)/librustyaxe"
 	@for h in $(PUBLIC_HEADERS); do install -m644 "$h" "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$h"; done
-	install -m644 config/build_config.h "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/build_config.h"
+	install -m644 $(BUILD_DIR)/generated/librustyaxe/build_config.h "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/build_config.h"
 	install -Dm644 $(PC_FILE) "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
 	$(MAKE) -C librustyirc install BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 
