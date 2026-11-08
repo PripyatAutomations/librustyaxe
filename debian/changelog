@@ -1,0 +1,5 @@
+librustyaxe (0.1.0-1) unstable; urgency=medium
+
+  * Initial standalone library source and binary packaging.
+
+ -- Pripyat Automations <dangerousdevices@istabpeople.com>  Sun, 08 Nov 2026 00:00:00 -0500
