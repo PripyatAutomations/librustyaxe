@@ -1,0 +1,3 @@
+usr/lib/*/librustyirc.so
+usr/lib/*/pkgconfig/librustyirc.pc
+usr/include/librustyirc/*.h
