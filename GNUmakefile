@@ -4,8 +4,11 @@
 CC ?= cc
 CFLAGS += -std=gnu23
 PKG_CONFIG ?= pkg-config
-PREFIX ?= /usr
-LIBDIR ?= $(PREFIX)/lib/$(shell dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || $(CC) -dumpmachine)
+# Derive native distro layouts from the selected toolchain's pkg-config.
+# Explicit PREFIX/LIBDIR remain authoritative (including cross builds).
+BUILD_PC_PREFIX := $(shell $(PKG_CONFIG) --variable=prefix glib-2.0 2>/dev/null)
+PREFIX ?= $(if $(BUILD_PC_PREFIX),$(BUILD_PC_PREFIX),/usr)
+LIBDIR ?= $(if $(filter $(BUILD_PC_PREFIX),$(PREFIX)),$(shell $(PKG_CONFIG) --variable=libdir glib-2.0 2>/dev/null),$(PREFIX)/lib)
 INCLUDEDIR ?= $(PREFIX)/include
 DESTDIR ?=
 BUILD_DIR ?= build
@@ -19,7 +22,7 @@ OBJECTS := $(addprefix $(BUILD_DIR)/objects/,$(librustyaxe_objs))
 PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h,$(notdir $(wildcard *.h)))
 TERM_LIB := $(shell $(PKG_CONFIG) --exists tinfo && echo tinfo || echo ncurses)
 DEPS := glib-2.0 gio-2.0 $(TERM_LIB)
-ifeq ($(filter clean distclean src-deb source-deb,$(MAKECMDGOALS)),)
+ifeq ($(filter clean distclean uninstall src-deb source-deb,$(MAKECMDGOALS)),)
 ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error Missing development dependencies: $(DEPS))
 endif
