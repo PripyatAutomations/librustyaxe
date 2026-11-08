@@ -28,7 +28,7 @@
 enum { RESOLVING, CONNECTING, TLS_HANDSHAKE, HTTP_SEND, HTTP_READ, WEBSOCKET, DEAD };
 typedef struct native_wss {
     rr_transport_t *transport;
-    int fd, resolver_fd, stage, hops;
+    int fd, resolver_fd, stage, hops, tls_want, write_want;
     SSL_CTX *ctx;
     SSL *ssl;
     wslay_event_context_ptr ws;
@@ -63,6 +63,7 @@ static void reset_socket(native_wss_t *c) {
     if (c->fd >= 0) { close(c->fd); c->fd = -1; }
     if (c->resolver_fd >= 0) { close(c->resolver_fd); c->resolver_fd = -1; }
     c->tx_len = c->tx_offset = c->ssl_retry_len = c->http_len = c->rx_len = c->rx_off = 0;
+    c->tls_want = c->write_want = 0;
 }
 static bool parse_url(native_wss_t *c, const char *url) {
     bool tls;
@@ -191,6 +192,7 @@ static bool setup_tls(native_wss_t *c) {
     if (!SSL_set1_host(c->ssl, c->host)) return false;
     SSL_set_mode(c->ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_set_connect_state(c->ssl);
+    c->tls_want = SSL_ERROR_WANT_WRITE;
     return true;
 }
 static int read_bytes(native_wss_t *c, void *buf, size_t len) {
@@ -210,16 +212,17 @@ static int flush_tx(native_wss_t *c) {
         size_t left = c->tx_len - c->tx_offset;
         size_t attempt = c->ssl && c->ssl_retry_len ? c->ssl_retry_len : left;
         int n = c->ssl ? SSL_write(c->ssl, p, (int)attempt) : (int)send(c->fd, p, left, MSG_NOSIGNAL);
-        if (n > 0) { c->ssl_retry_len=0; c->tx_offset += (size_t)n; c->tx_bytes += (uint64_t)n; continue; }
+        if (n > 0) { c->ssl_retry_len=0; c->write_want=0; c->tx_offset += (size_t)n; c->tx_bytes += (uint64_t)n; continue; }
         if (c->ssl) {
             int e = SSL_get_error(c->ssl, n);
             if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE) {
-                c->ssl_retry_len=attempt; return 0;
+                c->ssl_retry_len=attempt; c->write_want=e; return 0;
             }
         } else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) return 0;
         return -1;
     }
     c->tx_len = c->tx_offset = 0;
+    c->write_want = 0;
     return 1;
 }
 static bool queue_bytes(native_wss_t *c, const void *data, size_t len) {
@@ -415,12 +418,21 @@ static int native_poll(void *ctx,int timeout_ms) {
             return 0;
         }
     }
-    struct pollfd pfd={.fd=c->fd,.events=POLLIN|POLLOUT};
+    short interest=POLLIN;
+    if(c->stage==CONNECTING)interest=POLLOUT;
+    else if(c->stage==TLS_HANDSHAKE)interest=c->tls_want==SSL_ERROR_WANT_READ ? POLLIN : POLLOUT;
+    else if(c->stage==HTTP_SEND)interest=c->write_want==SSL_ERROR_WANT_READ ? POLLIN : POLLOUT;
+    else if(c->stage==WEBSOCKET) {
+        if(c->tx_len>c->tx_offset)
+            interest=c->write_want==SSL_ERROR_WANT_READ ? POLLIN : POLLIN|POLLOUT;
+        else if(c->ws && wslay_event_want_write(c->ws))interest=POLLIN|POLLOUT;
+    }
+    bool buffered=(c->rx_len>c->rx_off || (c->ssl && SSL_pending(c->ssl)>0));
+    struct pollfd pfd={.fd=c->fd,.events=interest};
     if (c->fd < 0) { error(c,"WebSocket has no socket"); goto finish; }
-    int ready=poll(&pfd,1,timeout_ms);
+    int ready=poll(&pfd,1,buffered ? 0 : timeout_ms);
     if (ready<0 && errno != EINTR) { error(c,"WebSocket poll failed"); goto finish; }
-    if (ready<=0 && c->stage!=WEBSOCKET) return 0;
-    if (ready<=0 && !(c->rx_len>c->rx_off || (c->ssl && SSL_pending(c->ssl)>0))) return 0;
+    if (ready<=0 && !buffered) return 0;
     if (pfd.revents & (POLLERR|POLLNVAL)) {
         if (c->stage != WEBSOCKET) { error(c,"WebSocket socket error"); goto finish; }
     }
@@ -446,6 +458,7 @@ static int native_poll(void *ctx,int timeout_ms) {
             }
         } else {
             int e=SSL_get_error(c->ssl,n);
+            c->tls_want=e;
             if (e!=SSL_ERROR_WANT_READ && e!=SSL_ERROR_WANT_WRITE) { error(c,"WebSocket TLS handshake failed");goto finish; }
         }
     }
