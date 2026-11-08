@@ -19,7 +19,7 @@ typedef struct rustyirc_callback {
 //      This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 extern const irc_cap_t irc_capabilities[];
 extern void rustyirc_capabilities_reset(irc_conn_t *);
 extern void rustyirc_capabilities_clear(irc_conn_t *);
@@ -44,7 +44,7 @@ extern void rustyirc_capabilities_poll(irc_conn_t *);
 
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 /* RustyRig DCC AUDIO: v1 rig referrals, v2 peer microphone voice over RTP. */
 
 

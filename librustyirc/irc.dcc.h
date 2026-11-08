@@ -1,6 +1,6 @@
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 /* Original DCC CHAT/SEND wire format. Sessions and sockets belong to the app. */
 #ifndef LIBRUSTYIRC_DCC_H
 #define LIBRUSTYIRC_DCC_H

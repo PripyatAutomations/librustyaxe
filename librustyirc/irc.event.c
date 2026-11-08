@@ -1,7 +1,7 @@
 #include "internal.h"
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 
 void rustyirc_emit_message(const char *event, irc_conn_t *cptr, const irc_message_t *mp) {
    if (!event || !mp || mp->argc < 1 || !mp->argv) {

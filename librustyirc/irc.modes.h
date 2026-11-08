@@ -1,7 +1,7 @@
 //      This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
 //
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: MIT
 #if     !defined(__irc_modes_h)
 #define __irc_modes_h
 

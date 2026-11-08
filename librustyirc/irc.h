@@ -1,7 +1,7 @@
 //      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
 //
-// SPDX-License-Identifier: GPL-2.0-only
-/* Original IRC wire parser API. Licensed under MIT, or GPL with mongoose. */
+// SPDX-License-Identifier: MIT
+/* Original IRC wire parser API. Licensed under MIT. */
 #ifndef LIBRUSTYIRC_IRC_H
 #define LIBRUSTYIRC_IRC_H
 #include <stddef.h>
