@@ -22,7 +22,9 @@
 #include <errno.h>
 #include <librustyaxe/core.h>
 #include <librustyaxe/tui.internal.h>
+#ifndef LIBRUSTYAXE_STANDALONE
 #include <librrprotocol/rrprotocol.h>
+#endif
 
 extern void tui_keys_init(void); // tui.keys.c
 extern void tui_keys_fini(void); // tui.keys.c
