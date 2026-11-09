@@ -30,6 +30,17 @@ typedef struct rr_wss_client_options_secure {
    bool tls_trust_on_first_use; /* explicit opt-in; persist first key before application traffic */
 } rr_wss_client_options_secure_t;
 
+/* Extended secure client options with a SOCKS5/SOCKS5H TCP tunnel.
+ * The proxy MUST succeed before TLS or HTTP traffic begins; never bypass it.
+ * Separate API to preserve the existing secure options ABI. */
+typedef struct rr_wss_client_options_proxy {
+   rr_wss_client_options_secure_t secure;
+   const char *proxy_url;
+   const char *proxy_user;
+   const char *proxy_pass;
+} rr_wss_client_options_proxy_t;
+rr_transport_t *rr_transport_wss_connect_proxy(const char *url, const rr_wss_client_options_proxy_t *options, rr_transport_callback_t cb, void *user);
+
 /* Connection and callbacks run on the calling thread. No background loop. Call rr_transport_poll(t, 0) regularly; the driver performs no blocking I/O after
  * name resolution. Handles both ws:// and wss:// with verified TLS. Close events are the point at which rr_transport_free() becomes legal. Driver state is
  * retained until the application calls rr_transport_wss_release() after receiving CLOSE.
