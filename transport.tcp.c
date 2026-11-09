@@ -151,7 +151,10 @@ static int poll_tcp(void *ctx, int timeout_ms) {
       if (poll(&p, 1, timeout_ms) <= 0) return 0;
       int result = SSL_do_handshake(c->ssl);
       if (result == 1) {
-         if (SSL_get_verify_result(c->ssl) != X509_V_OK || !SSL_get1_peer_certificate(c->ssl)) {
+         X509 *certificate = SSL_get1_peer_certificate(c->ssl);
+         bool verified = certificate && SSL_get_verify_result(c->ssl) == X509_V_OK;
+         X509_free(certificate);
+         if (!verified) {
             fail(c, "TCP TLS peer certificate verification failed"); goto done;
          }
          c->tls_verified = true;
