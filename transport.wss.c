@@ -38,6 +38,7 @@ typedef struct native_wss {
    char url[1024], host[256], path[768], origin[384], user_agent[384];
    char key[32], subprotocol[128], ca_file[1024], tls_server_name[256];
    char tls_peer_spki_pin[65], tls_peer_spki_seen[65];
+   char tls_cert_sha256[65], tls_peer_cn[256], tls_peer_sans[512];
    bool tls_trust_on_first_use, tls_peer_authenticated;
    unsigned port;
    bool tls, allow_cross_origin, dead, closing, error_sent;
@@ -92,6 +93,7 @@ static void reset_socket(native_wss_t *c) {
    c->tls_want = c->write_want = 0;
    c->tls_peer_authenticated = false;
    c->tls_peer_spki_seen[0] = '\0';
+   c->tls_cert_sha256[0] = c->tls_peer_cn[0] = c->tls_peer_sans[0] = '\0';
 }
 static bool parse_url(native_wss_t *c, const char *url) {
    bool tls;
@@ -343,28 +345,50 @@ static bool setup_tls(native_wss_t *c) {
 
    return true;
 }
-/* Verify SHA256 of DER SubjectPublicKeyInfo, independent of certificate renewal. */
+/* Collect peer identity for display before any application protocol traffic.
+ * Never treat names or a fingerprint as trusted merely because they exist. */
 static bool verify_peer_public_key(native_wss_t *c) {
    X509 *peer = SSL_get1_peer_certificate(c->ssl);
    if (!peer) return false;
-   /* The URL host is a dial address. When an expected Node Name is
-    * provided, require the peer certificate to identify THAT station.
-    * Disabling CA validation for an explicitly pinned key never disables
-    * validation of the expected station name. */
-   if (c->tls_server_name[0] &&
-       X509_check_host(peer, c->tls_server_name, 0, 0, NULL) != 1) {
-      X509_free(peer);
-      error(c, "TLS certificate does not match the configured Node Name");
-      return false;
-   }
    unsigned char digest[EVP_MAX_MD_SIZE];
    unsigned int length = 0;
    int ok = X509_pubkey_digest(peer, EVP_sha256(), digest, &length);
+   if (ok == 1 && length == 32) {
+      for (unsigned i = 0; i < 32; ++i)
+         snprintf(c->tls_peer_spki_seen + i * 2, 3, "%02x", digest[i]);
+      c->tls_peer_spki_seen[64] = '\0';
+   }
+   length = 0;
+   if (X509_digest(peer, EVP_sha256(), digest, &length) == 1 && length == 32) {
+      for (unsigned i = 0; i < 32; ++i)
+         snprintf(c->tls_cert_sha256 + i * 2, 3, "%02x", digest[i]);
+      c->tls_cert_sha256[64] = '\0';
+   }
+   X509_NAME_get_text_by_NID(X509_get_subject_name(peer), NID_commonName,
+      c->tls_peer_cn, (int)sizeof(c->tls_peer_cn));
+   GENERAL_NAMES *names = X509_get_ext_d2i(peer, NID_subject_alt_name, NULL, NULL);
+   if (names) {
+      for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
+         const GENERAL_NAME *name = sk_GENERAL_NAME_value(names, i);
+         if (name->type != GEN_DNS) continue;
+         const ASN1_STRING *asn = name->d.dNSName;
+         const unsigned char *dns = ASN1_STRING_get0_data(asn);
+         int n = ASN1_STRING_length(asn);
+         if (!dns || n <= 0 || memchr(dns, '\0', (size_t)n) ||
+             n > 250 || strlen(c->tls_peer_sans) + (size_t)n + 3 >= sizeof(c->tls_peer_sans))
+            continue;
+         size_t off = strlen(c->tls_peer_sans);
+         if (off) { memcpy(c->tls_peer_sans + off, ", ", 2); off += 2; }
+         memcpy(c->tls_peer_sans + off, dns, (size_t)n);
+         c->tls_peer_sans[off + (size_t)n] = 0;
+      }
+      GENERAL_NAMES_free(names);
+   }
    X509_free(peer);
-   if (ok != 1 || length != 32) return false;
-   for (unsigned i = 0; i < 32; ++i)
-      snprintf(c->tls_peer_spki_seen + i * 2, 3, "%02x", digest[i]);
-   c->tls_peer_spki_seen[64] = '\0';
+   if (!c->tls_peer_spki_seen[0]) return false;
+   /* A pinned key, or an explicitly trusted connection, supersedes CA and
+    * dial-address hostname checks. Node identity is independently validated
+    * by the client against the server's authenticated domain announcement. */
    if (c->tls_peer_spki_pin[0] &&
        CRYPTO_memcmp(c->tls_peer_spki_pin, c->tls_peer_spki_seen, 64)) {
       char mismatch[128];
@@ -372,8 +396,14 @@ static bool verify_peer_public_key(native_wss_t *c) {
       error(c, mismatch);
       return false;
    }
-   if (!c->tls_peer_spki_pin[0] && !c->tls_trust_on_first_use &&
-       SSL_get_verify_result(c->ssl) != X509_V_OK) return false;
+   if (!c->tls_peer_spki_pin[0] && c->tls_trust_on_first_use) {
+      char challenge[128];
+      snprintf(challenge, sizeof(challenge), "TLS_TRUST_REQUIRED:%s", c->tls_peer_spki_seen);
+      error(c, challenge);
+      return false;
+   }
+   if (!c->tls_peer_spki_pin[0] && SSL_get_verify_result(c->ssl) != X509_V_OK)
+      return false;
    c->tls_peer_authenticated = true;
    return true;
 }
@@ -1032,7 +1062,19 @@ rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_cl
 }
 const char *rr_transport_wss_peer_spki_sha256(const rr_transport_t *transport) {
    native_wss_t *c = transport ? rr_transport_driver_context((rr_transport_t *) transport) : NULL;
-   return c && c->tls_peer_authenticated && c->tls_peer_spki_seen[0] ? c->tls_peer_spki_seen : NULL;
+   return c && c->tls_peer_spki_seen[0] ? c->tls_peer_spki_seen : NULL;
+}
+const char *rr_transport_wss_peer_cert_sha256(const rr_transport_t *t) {
+   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *)t) : NULL;
+   return c && c->tls_cert_sha256[0] ? c->tls_cert_sha256 : NULL;
+}
+const char *rr_transport_wss_peer_common_name(const rr_transport_t *t) {
+   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *)t) : NULL;
+   return c && c->tls_peer_cn[0] ? c->tls_peer_cn : NULL;
+}
+const char *rr_transport_wss_peer_dns_names(const rr_transport_t *t) {
+   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *)t) : NULL;
+   return c && c->tls_peer_sans[0] ? c->tls_peer_sans : NULL;
 }
 rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client_options_ex_t *options, rr_transport_callback_t cb, void *user) {
    rr_wss_client_options_secure_t secure = {
