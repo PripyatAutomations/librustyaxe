@@ -558,8 +558,14 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    struct timespec submitted_time;
    bool delivering = ra_log_queue_delivery_time(&submitted_time);
 
-   /* Every ordinary Log() call queues, regardless of its originating thread. Only the queue drain invokes callbacks and performs I/O. */
-   if (!delivering && atomic_load_explicit(&logger_owner_valid, memory_order_acquire)) {
+   /* Only worker threads enqueue. The logger owner must deliver synchronously:
+    * startup failure paths can exit before GLib has ever serviced the drain
+    * source, and the main thread must not lose their diagnostics.
+    * Queue deliveries already bypass this branch via the delivery guard. */
+   if (!delivering &&
+       atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
+       atomic_load_explicit(&logger_owner_valid, memory_order_acquire) &&
+       !pthread_equal(pthread_self(), logger_owner)) {
       /* LOG_CRAZY never reaches callbacks, including RAW subscribers. Do not
        * let a raw subscriber force filtered trace traffic into the queue. */
       bool visible = !debug_filter(subsys, priority);
