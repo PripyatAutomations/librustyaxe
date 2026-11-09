@@ -36,6 +36,8 @@ typedef struct native_wss {
    wslay_event_context_ptr ws;
    char url[1024], host[256], path[768], origin[384], user_agent[384];
    char key[32], subprotocol[128], ca_file[1024], tls_server_name[256];
+   char tls_peer_spki_pin[65], tls_peer_spki_seen[65];
+   bool tls_trust_on_first_use, tls_peer_authenticated;
    unsigned port;
    bool tls, allow_cross_origin, dead, closing, error_sent;
    char http[RR_WSS_HTTP_MAX + 1];
@@ -316,7 +318,8 @@ static bool setup_tls(native_wss_t *c) {
    if (c->ca_file[0] && !SSL_CTX_load_verify_locations(c->ctx, c->ca_file, NULL)) {
       return false;
    }
-   SSL_CTX_set_verify(c->ctx, SSL_VERIFY_PEER, NULL);
+   /* Pinned identities are checked after TLS handshake. */
+   SSL_CTX_set_verify(c->ctx, (c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) ? SSL_VERIFY_NONE : SSL_VERIFY_PEER, NULL);
    c->ssl = SSL_new(c->ctx);
 
    if (!c->ssl || !SSL_set_fd(c->ssl, c->fd)) {
@@ -328,13 +331,32 @@ static bool setup_tls(native_wss_t *c) {
       return false;
    }
 
-   if (!SSL_set1_host(c->ssl, identity)) {
+   if (!(c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) && !SSL_set1_host(c->ssl, identity)) {
       return false;
    }
    SSL_set_mode(c->ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
    SSL_set_connect_state(c->ssl);
    c->tls_want = SSL_ERROR_WANT_WRITE;
 
+   return true;
+}
+/* Verify SHA256 of DER SubjectPublicKeyInfo, independent of certificate renewal. */
+static bool verify_peer_public_key(native_wss_t *c) {
+   X509 *peer = SSL_get1_peer_certificate(c->ssl);
+   if (!peer) return false;
+   unsigned char digest[EVP_MAX_MD_SIZE];
+   unsigned int length = 0;
+   int ok = X509_pubkey_digest(peer, EVP_sha256(), digest, &length);
+   X509_free(peer);
+   if (ok != 1 || length != 32) return false;
+   for (unsigned i = 0; i < 32; ++i)
+      snprintf(c->tls_peer_spki_seen + i * 2, 3, "%02x", digest[i]);
+   c->tls_peer_spki_seen[64] = '\0';
+   if (c->tls_peer_spki_pin[0] &&
+       CRYPTO_memcmp(c->tls_peer_spki_pin, c->tls_peer_spki_seen, 64)) return false;
+   if (!c->tls_peer_spki_pin[0] && !c->tls_trust_on_first_use &&
+       SSL_get_verify_result(c->ssl) != X509_V_OK) return false;
+   c->tls_peer_authenticated = true;
    return true;
 }
 static int read_bytes(native_wss_t *c, void *buf, size_t len) {
@@ -730,7 +752,9 @@ static size_t queued(void *ctx) {
 static uint32_t capabilities(void *ctx) {
    native_wss_t *c = ctx;
 
-   return RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES | (c->tls ? RR_TRANSPORT_TLS_ENCRYPTED | RR_TRANSPORT_TLS_AUTHENTICATED : 0);
+   return RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES |
+      (c->tls ? RR_TRANSPORT_TLS_ENCRYPTED : 0) |
+      (c->tls_peer_authenticated ? RR_TRANSPORT_TLS_AUTHENTICATED : 0);
 }
 static void close_transport(void *ctx) {
    ((native_wss_t *) ctx)->closing = true;
@@ -825,7 +849,7 @@ static int native_poll(void *ctx, int timeout_ms) {
       int n = SSL_do_handshake(c->ssl);
 
       if (n == 1) {
-         if (SSL_get_verify_result(c->ssl) != X509_V_OK || !begin_upgrade(c)) {
+         if (!verify_peer_public_key(c) || !begin_upgrade(c)) {
             error(c, "WebSocket TLS peer verification/upgrade failed");
             goto finish;
          }
@@ -950,10 +974,12 @@ rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client
    const char *proto = options && options->subprotocol ? options->subprotocol : "";
    const char *ca = options && options->ca_file ? options->ca_file : "";
    const char *tls_name = options && options->tls_server_name ? options->tls_server_name : "";
+   const char *pin = options && options->tls_peer_spki_sha256 ? options->tls_peer_spki_sha256 : "";
 
    if (strlen(ua) >= sizeof(c->user_agent) || strpbrk(ua, "\r\n") ||
       strlen(proto) >= sizeof(c->subprotocol) || strpbrk(proto, "\r\n") ||
-      strlen(ca) >= sizeof(c->ca_file) || strlen(tls_name) >= sizeof(c->tls_server_name) || strpbrk(tls_name, "\r\n") || !parse_url(c, url)) {
+      strlen(ca) >= sizeof(c->ca_file) || strlen(tls_name) >= sizeof(c->tls_server_name) || strpbrk(tls_name, "\r\n") ||
+       (pin[0] && (strlen(pin) != 64 || strspn(pin, "0123456789abcdef") != 64)) || !parse_url(c, url)) {
       free(c);
 
       return NULL;
@@ -962,6 +988,8 @@ rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client
    snprintf(c->subprotocol, sizeof(c->subprotocol), "%s", proto);
    snprintf(c->ca_file, sizeof(c->ca_file), "%s", ca);
    snprintf(c->tls_server_name, sizeof(c->tls_server_name), "%s", tls_name);
+   snprintf(c->tls_peer_spki_pin, sizeof(c->tls_peer_spki_pin), "%s", pin);
+   c->tls_trust_on_first_use = options && options->tls_trust_on_first_use;
 
    if (!start(c)) {
       reset_socket(c);
@@ -979,6 +1007,10 @@ rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client
    }
 
    return c->transport;
+}
+const char *rr_transport_wss_peer_spki_sha256(const rr_transport_t *transport) {
+   native_wss_t *c = transport ? rr_transport_driver_context((rr_transport_t *) transport) : NULL;
+   return c && c->tls_peer_authenticated && c->tls_peer_spki_seen[0] ? c->tls_peer_spki_seen : NULL;
 }
 rr_transport_t *rr_transport_wss_connect(const char *url, const rr_wss_client_options_t *options, rr_transport_callback_t cb, void *user) {
    rr_wss_client_options_ex_t extended = {
