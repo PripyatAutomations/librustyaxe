@@ -24,6 +24,8 @@ bool ra_log_queue_delivery_time(struct timespec *timestamp);
 uint64_t ra_log_queue_dropped(const ra_log_queue_t *queue);
 uint64_t ra_log_queue_contention_dropped(const ra_log_queue_t *queue);
 uint64_t ra_log_queue_full_dropped(const ra_log_queue_t *queue);
+/* First subsystem to encounter a full queue since the previous snapshot. */
+void ra_log_queue_full_source(ra_log_queue_t *queue, char *out, size_t out_size);
 size_t ra_log_queue_depth(ra_log_queue_t *queue);
 
 #endif
