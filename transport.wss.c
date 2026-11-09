@@ -356,7 +356,9 @@ static bool verify_peer_public_key(native_wss_t *c) {
    c->tls_peer_spki_seen[64] = '\0';
    if (c->tls_peer_spki_pin[0] &&
        CRYPTO_memcmp(c->tls_peer_spki_pin, c->tls_peer_spki_seen, 64)) {
-      error(c, "WebSocket TLS public-key pin mismatch: the server key changed; refusing connection");
+      char mismatch[128];
+      snprintf(mismatch, sizeof(mismatch), "TLS_PIN_MISMATCH:%s", c->tls_peer_spki_seen);
+      error(c, mismatch);
       return false;
    }
    if (!c->tls_peer_spki_pin[0] && !c->tls_trust_on_first_use &&
