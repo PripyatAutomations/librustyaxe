@@ -1,6 +1,7 @@
 #include "../log-queue.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 /* Stub the delivery sink to verify ordering without a logger runtime. */
 static unsigned received;
 void Log(logpriority_t level, const char *subsys, const char *fmt, ...) {
@@ -16,6 +17,11 @@ int main(void) {
    assert(ra_log_queue_push(q, LOG_WARN, "test", "two"));
    assert(!ra_log_queue_push(q, LOG_WARN, "test", "three"));
    assert(ra_log_queue_dropped(q) == 1);
+   char source[64];
+   ra_log_queue_full_source(q, source, sizeof(source));
+   assert(!strcmp(source, "test"));
+   ra_log_queue_full_source(q, source, sizeof(source));
+   assert(!*source);
    assert(ra_log_queue_drain(q, 1) == 1);
    assert(received == 1);
    assert(ra_log_queue_drain(q, 10) == 1);
