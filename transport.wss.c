@@ -958,7 +958,7 @@ static const rr_transport_driver_t ops = {
    .send_message = send_text, .send_binary_message = send_binary,
    .queued_bytes = queued, .poll = native_poll, .close = close_transport
 };
-rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client_options_ex_t *options, rr_transport_callback_t cb, void *user) {
+rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_client_options_secure_t *options, rr_transport_callback_t cb, void *user) {
    if (!url) {
       return NULL;
    }
@@ -1011,6 +1011,16 @@ rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client
 const char *rr_transport_wss_peer_spki_sha256(const rr_transport_t *transport) {
    native_wss_t *c = transport ? rr_transport_driver_context((rr_transport_t *) transport) : NULL;
    return c && c->tls_peer_authenticated && c->tls_peer_spki_seen[0] ? c->tls_peer_spki_seen : NULL;
+}
+rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client_options_ex_t *options, rr_transport_callback_t cb, void *user) {
+   rr_wss_client_options_secure_t secure = {
+      .user_agent = options ? options->user_agent : NULL,
+      .allow_cross_origin_redirect = options && options->allow_cross_origin_redirect,
+      .subprotocol = options ? options->subprotocol : NULL,
+      .ca_file = options ? options->ca_file : NULL,
+      .tls_server_name = options ? options->tls_server_name : NULL
+   };
+   return rr_transport_wss_connect_secure(url, &secure, cb, user);
 }
 rr_transport_t *rr_transport_wss_connect(const char *url, const rr_wss_client_options_t *options, rr_transport_callback_t cb, void *user) {
    rr_wss_client_options_ex_t extended = {
