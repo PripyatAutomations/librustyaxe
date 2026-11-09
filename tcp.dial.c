@@ -27,7 +27,7 @@ static bool write_all(int fd, const void *data, size_t len) {
    while (len) {
       if (!io_wait(fd, POLLOUT)) return false;
       ssize_t n = send(fd, p, len, MSG_NOSIGNAL);
-      if (n < 0 && errno == EINTR) continue;
+      if (n < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) continue;
       if (n <= 0) return false;
       p += n; len -= (size_t)n;
    }
