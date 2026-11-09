@@ -85,10 +85,12 @@ static gboolean logger_drain_tick(gpointer unused) {
    uint64_t dropped = ra_log_queue_dropped(worker_log_queue);
 
    if (dropped != logger_drops_reported) {
+      char full_source[64];
+      ra_log_queue_full_source(worker_log_queue, full_source, sizeof(full_source));
       uint64_t delta = dropped - logger_drops_reported;
       logger_drops_reported = dropped;
-      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu; contention=%llu full=%llu)", (unsigned long long)delta, (unsigned long long)
-         dropped, (unsigned long long)ra_log_queue_contention_dropped(worker_log_queue), (unsigned long long)ra_log_queue_full_dropped(worker_log_queue));
+      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu; contention=%llu full=%llu; first-full-source=%s)", (unsigned long long)delta, (unsigned long long)
+         dropped, (unsigned long long)ra_log_queue_contention_dropped(worker_log_queue), (unsigned long long)ra_log_queue_full_dropped(worker_log_queue), full_source[0] ? full_source : "unknown");
    }
 
    return G_SOURCE_CONTINUE;
@@ -406,6 +408,23 @@ bool debug_filter(const char *subsys, logpriority_t msg_level) {
    return filtered;
 }
 
+/* Ingress must enforce limits before messages enter the worker queue.
+ * Otherwise a filtered or rate-limited producer can still overflow it.
+ * The default per-subsystem cap protects the owner thread from runaway
+ * informational/trace logging; warnings, critical messages and audits are
+ * never capped by this default. Explicit configured rates take precedence. */
+static bool logger_worker_ingress_allowed(const char *subsys, logpriority_t level, unsigned *skipped) {
+   *skipped = 0;
+   pthread_rwlock_wrlock(&log_filters_lock);
+   const struct log_filter *f = log_matching_filter(subsys);
+   unsigned count = f ? f->rate_count : 0;
+   unsigned seconds = f ? f->rate_seconds : 0;
+   if (!count && level >= LOG_INFO) { count = 250; seconds = 1; }
+   bool allow = !count || log_rate_allowed(subsys, level, count, seconds, skipped);
+   pthread_rwlock_unlock(&log_filters_lock);
+   return allow;
+}
+
 // Dump all log_filters
 void log_dump_log_filters(void) {
    fprintf(stderr, "---------------------\n");
@@ -541,11 +560,24 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
 
    /* Every ordinary Log() call queues, regardless of its originating thread. Only the queue drain invokes callbacks and performs I/O. */
    if (!delivering && atomic_load_explicit(&logger_owner_valid, memory_order_acquire)) {
+      /* LOG_CRAZY never reaches callbacks, including RAW subscribers. Do not
+       * let a raw subscriber force filtered trace traffic into the queue. */
+      bool visible = !debug_filter(subsys, priority);
+      bool raw_delivery = priority != LOG_CRAZY &&
+         atomic_load_explicit(&log_raw_subscribers, memory_order_acquire) != 0;
       if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
-         (!debug_filter(subsys, priority) || atomic_load_explicit(&log_raw_subscribers, memory_order_acquire))) {
-         char message[1024];
-         vsnprintf(message, sizeof(message), fmt, ap);
-         ra_log_queue_push(worker_log_queue, priority, subsys, message);
+          (visible || raw_delivery)) {
+         unsigned skipped = 0;
+         if (logger_worker_ingress_allowed(subsys, priority, &skipped)) {
+            char message[1024];
+            vsnprintf(message, sizeof(message), fmt, ap);
+            if (skipped) {
+               size_t n = strlen(message);
+               snprintf(message + n, sizeof(message) - n,
+                  " [rate limit: %u earlier messages suppressed]", skipped);
+            }
+            ra_log_queue_push(worker_log_queue, priority, subsys, message);
+         }
       }
       va_end(ap);
 
@@ -554,8 +586,8 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    bool allowed = !debug_filter(subsys, priority);
    unsigned suppressed = 0;
 
-   if (allowed) {
-      pthread_rwlock_rdlock(&log_filters_lock);
+   if (allowed && !delivering) {
+      pthread_rwlock_wrlock(&log_filters_lock);
       const struct log_filter *filter = log_matching_filter(subsys);
 
       if (filter && !log_rate_allowed(subsys, priority, filter->rate_count, filter->rate_seconds, &suppressed)) {
