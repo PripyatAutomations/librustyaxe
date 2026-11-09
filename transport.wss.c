@@ -2,6 +2,7 @@
  * establishment.
  */
 #include <librustyaxe/transport.wss.h>
+#include <librustyaxe/tcp.dial.h>
 #include <wslay/wslay.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -37,6 +38,7 @@ typedef struct native_wss {
    wslay_event_context_ptr ws;
    char url[1024], host[256], path[768], origin[384], user_agent[384];
    char key[32], subprotocol[128], ca_file[1024], tls_server_name[256];
+   char proxy_url[1024], proxy_user[256], proxy_pass[256];
    char tls_peer_spki_pin[65], tls_peer_spki_seen[65];
    char tls_cert_sha256[65], tls_peer_cn[256], tls_peer_sans[512];
    bool tls_trust_on_first_use, tls_peer_authenticated;
@@ -206,48 +208,16 @@ static bool parse_url(native_wss_t *c, const char *url) {
  * descriptors are process-wide: transferring the integer is sufficient.
  */
 typedef struct resolver_task {
-   char host[256], port[12];
+   char host[256], proxy_url[1024], proxy_user[256], proxy_pass[256];
+   unsigned port;
    int notify;
 } resolver_task_t;
 static void *resolve_worker(void *opaque) {
    resolver_task_t *task = opaque;
-   struct addrinfo hint = {
-      .ai_family = AF_UNSPEC, .ai_socktype = SOCK_STREAM
-   };
-   struct addrinfo *list = NULL;
-   int fd = -1;
-
-   if (!getaddrinfo(task->host, task->port, &hint, &list)) {
-      for (struct addrinfo *a = list ; a ; a = a->ai_next) {
-         fd = socket(a->ai_family, a->ai_socktype | SOCK_NONBLOCK | SOCK_CLOEXEC, a->ai_protocol);
-
-         if (fd < 0) {
-            continue;
-         }
-         int rc = connect(fd, a->ai_addr, a->ai_addrlen);
-
-         if (rc == 0) {
-            break;
-         }
-
-         if (rc < 0 && errno == EINPROGRESS) {
-            struct pollfd pending = {
-               .fd = fd, .events = POLLOUT
-            };
-            int ready = poll(&pending, 1, 3000);
-            int status = 0;
-            socklen_t length = sizeof(status);
-
-            if (ready > 0 && getsockopt(fd, SOL_SOCKET, SO_ERROR, &status, &length) == 0 && !status) {
-               break;
-            }
-         }
-         close(fd);
-         fd = -1;
-      }
-
-      freeaddrinfo(list);
-   }
+   /* DNS and SOCKS5 negotiation run off the core/audio thread. A configured
+    * proxy may never fall back to direct dialing. */
+   int fd = rr_tcp_dial(task->host, (uint16_t)task->port, task->proxy_url,
+                        task->proxy_user, task->proxy_pass);
 
    if (send(task->notify, &fd, sizeof(fd), MSG_NOSIGNAL) != (ssize_t) sizeof(fd) && fd >= 0) {
       close(fd);
@@ -272,7 +242,10 @@ static bool start(native_wss_t *c) {
       return false;
    }
    snprintf(task->host, sizeof(task->host), "%s", c->host);
-   snprintf(task->port, sizeof(task->port), "%u", c->port);
+   task->port = c->port;
+   snprintf(task->proxy_url, sizeof(task->proxy_url), "%s", c->proxy_url);
+   snprintf(task->proxy_user, sizeof(task->proxy_user), "%s", c->proxy_user);
+   snprintf(task->proxy_pass, sizeof(task->proxy_pass), "%s", c->proxy_pass);
    task->notify = pair[1];
    pthread_t thread;
 
@@ -1006,7 +979,8 @@ static const rr_transport_driver_t ops = {
    .send_message = send_text, .send_binary_message = send_binary,
    .queued_bytes = queued, .poll = native_poll, .close = close_transport
 };
-rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_client_options_secure_t *options, rr_transport_callback_t cb, void *user) {
+rr_transport_t *rr_transport_wss_connect_proxy(const char *url, const rr_wss_client_options_proxy_t *proxy_options, rr_transport_callback_t cb, void *user) {
+   const rr_wss_client_options_secure_t *options = proxy_options ? &proxy_options->secure : NULL;
    if (!url) {
       return NULL;
    }
@@ -1023,10 +997,15 @@ rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_cl
    const char *ca = options && options->ca_file ? options->ca_file : "";
    const char *tls_name = options && options->tls_server_name ? options->tls_server_name : "";
    const char *pin = options && options->tls_peer_spki_sha256 ? options->tls_peer_spki_sha256 : "";
+   const char *proxy_url = proxy_options && proxy_options->proxy_url ? proxy_options->proxy_url : "";
+   const char *proxy_user = proxy_options && proxy_options->proxy_user ? proxy_options->proxy_user : "";
+   const char *proxy_pass = proxy_options && proxy_options->proxy_pass ? proxy_options->proxy_pass : "";
 
    if (strlen(ua) >= sizeof(c->user_agent) || strpbrk(ua, "\r\n") ||
       strlen(proto) >= sizeof(c->subprotocol) || strpbrk(proto, "\r\n") ||
       strlen(ca) >= sizeof(c->ca_file) || strlen(tls_name) >= sizeof(c->tls_server_name) || strpbrk(tls_name, "\r\n") ||
+       strlen(proxy_url) >= sizeof(c->proxy_url) || strlen(proxy_user) >= sizeof(c->proxy_user) ||
+       strlen(proxy_pass) >= sizeof(c->proxy_pass) ||
        (pin[0] && (strlen(pin) != 64 || strspn(pin, "0123456789abcdef") != 64)) || !parse_url(c, url)) {
       free(c);
 
@@ -1037,6 +1016,9 @@ rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_cl
    snprintf(c->ca_file, sizeof(c->ca_file), "%s", ca);
    snprintf(c->tls_server_name, sizeof(c->tls_server_name), "%s", tls_name);
    snprintf(c->tls_peer_spki_pin, sizeof(c->tls_peer_spki_pin), "%s", pin);
+   snprintf(c->proxy_url, sizeof(c->proxy_url), "%s", proxy_url);
+   snprintf(c->proxy_user, sizeof(c->proxy_user), "%s", proxy_user);
+   snprintf(c->proxy_pass, sizeof(c->proxy_pass), "%s", proxy_pass);
    c->tls_trust_on_first_use = options && options->tls_trust_on_first_use;
    if (!c->tls && (c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use)) {
       free(c);
@@ -1059,6 +1041,11 @@ rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_cl
    }
 
    return c->transport;
+}
+rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_client_options_secure_t *options, rr_transport_callback_t cb, void *user) {
+   rr_wss_client_options_proxy_t extended = {0};
+   if (options) extended.secure = *options;
+   return rr_transport_wss_connect_proxy(url, &extended, cb, user);
 }
 const char *rr_transport_wss_peer_spki_sha256(const rr_transport_t *transport) {
    native_wss_t *c = transport ? rr_transport_driver_context((rr_transport_t *) transport) : NULL;
