@@ -89,6 +89,8 @@ static void reset_socket(native_wss_t *c) {
    }
    c->tx_len = c->tx_offset = c->ssl_retry_len = c->http_len = c->rx_len = c->rx_off = 0;
    c->tls_want = c->write_want = 0;
+   c->tls_peer_authenticated = false;
+   c->tls_peer_spki_seen[0] = '\0';
 }
 static bool parse_url(native_wss_t *c, const char *url) {
    bool tls;
@@ -353,7 +355,10 @@ static bool verify_peer_public_key(native_wss_t *c) {
       snprintf(c->tls_peer_spki_seen + i * 2, 3, "%02x", digest[i]);
    c->tls_peer_spki_seen[64] = '\0';
    if (c->tls_peer_spki_pin[0] &&
-       CRYPTO_memcmp(c->tls_peer_spki_pin, c->tls_peer_spki_seen, 64)) return false;
+       CRYPTO_memcmp(c->tls_peer_spki_pin, c->tls_peer_spki_seen, 64)) {
+      error(c, "WebSocket TLS public-key pin mismatch: the server key changed; refusing connection");
+      return false;
+   }
    if (!c->tls_peer_spki_pin[0] && !c->tls_trust_on_first_use &&
        SSL_get_verify_result(c->ssl) != X509_V_OK) return false;
    c->tls_peer_authenticated = true;
@@ -990,6 +995,10 @@ rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_cl
    snprintf(c->tls_server_name, sizeof(c->tls_server_name), "%s", tls_name);
    snprintf(c->tls_peer_spki_pin, sizeof(c->tls_peer_spki_pin), "%s", pin);
    c->tls_trust_on_first_use = options && options->tls_trust_on_first_use;
+   if (!c->tls && (c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use)) {
+      free(c);
+      return NULL;
+   }
 
    if (!start(c)) {
       reset_socket(c);
