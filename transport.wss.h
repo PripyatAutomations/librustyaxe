@@ -39,6 +39,10 @@ rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client
 rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_client_options_secure_t *options, rr_transport_callback_t cb, void *user);
 /* Returns the peer SPKI SHA256 hex after a successful handshake, or NULL. */
 const char *rr_transport_wss_peer_spki_sha256(const rr_transport_t *transport);
+/* Observed peer details for a failed-closed trust prompt. Borrowed until release. */
+const char *rr_transport_wss_peer_cert_sha256(const rr_transport_t *transport);
+const char *rr_transport_wss_peer_common_name(const rr_transport_t *transport);
+const char *rr_transport_wss_peer_dns_names(const rr_transport_t *transport);
 void rr_transport_wss_traffic(rr_transport_t *transport, uint64_t *rx, uint64_t *tx);
 void rr_transport_wss_release(rr_transport_t *transport);
 #endif
