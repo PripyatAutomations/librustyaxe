@@ -33,6 +33,7 @@ librustyaxe_objs += subproc.o
 librustyaxe_objs += reactor.glib.o
 librustyaxe_objs += transport.o
 librustyaxe_objs += tcp.dial.o
+librustyaxe_objs += transport.tcp.o
 # The native POSIX/OpenSSL/wslay WebSocket client is not part of MCU builds.
 ifeq ($(LIBRUSTYAXE_STANDALONE),true)
 librustyaxe_objs += transport.wss.o
