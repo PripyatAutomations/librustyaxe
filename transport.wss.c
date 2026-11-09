@@ -8,6 +8,7 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
+#include <openssl/x509v3.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <poll.h>
@@ -346,6 +347,16 @@ static bool setup_tls(native_wss_t *c) {
 static bool verify_peer_public_key(native_wss_t *c) {
    X509 *peer = SSL_get1_peer_certificate(c->ssl);
    if (!peer) return false;
+   /* The URL host is a dial address. When an expected Node Name is
+    * provided, require the peer certificate to identify THAT station.
+    * Disabling CA validation for an explicitly pinned key never disables
+    * validation of the expected station name. */
+   if (c->tls_server_name[0] &&
+       X509_check_host(peer, c->tls_server_name, 0, 0, NULL) != 1) {
+      X509_free(peer);
+      error(c, "TLS certificate does not match the configured Node Name");
+      return false;
+   }
    unsigned char digest[EVP_MAX_MD_SIZE];
    unsigned int length = 0;
    int ok = X509_pubkey_digest(peer, EVP_sha256(), digest, &length);
