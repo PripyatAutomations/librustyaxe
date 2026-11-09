@@ -18,6 +18,8 @@ typedef struct rr_wss_client_options_ex {
    const char *subprotocol;     /* exact requested/required RFC6455 subprotocol */
    const char *ca_file;         /* optional PEM trust bundle */
    const char *tls_server_name; /* verification name, independent of dialed URL host */
+   const char *tls_peer_spki_sha256; /* optional pinned peer SPKI SHA256 hex (64 chars) */
+   bool tls_trust_on_first_use; /* opt-in: accept first self-signed key, then persist pin */
 } rr_wss_client_options_ex_t;
 
 /* Connection and callbacks run on the calling thread. No background loop. Call rr_transport_poll(t, 0) regularly; the driver performs no blocking I/O after
@@ -26,6 +28,8 @@ typedef struct rr_wss_client_options_ex {
  */
 rr_transport_t *rr_transport_wss_connect(const char *url, const rr_wss_client_options_t *options, rr_transport_callback_t cb, void *user);
 rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client_options_ex_t *options, rr_transport_callback_t cb, void *user);
+/* Returns the peer SPKI SHA256 hex after a successful handshake, or NULL. */
+const char *rr_transport_wss_peer_spki_sha256(const rr_transport_t *transport);
 void rr_transport_wss_traffic(rr_transport_t *transport, uint64_t *rx, uint64_t *tx);
 void rr_transport_wss_release(rr_transport_t *transport);
 #endif
