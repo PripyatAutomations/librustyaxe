@@ -31,6 +31,7 @@ bool ra_log_queue_delivery_time(struct timespec *timestamp) {
 struct ra_log_queue {
    pthread_mutex_t lock;
    size_t capacity, head, tail, length;
+   char first_full_source[64];
    _Atomic uint64_t dropped, contention_dropped, full_dropped;
    ra_log_record_t records[];
 };
@@ -73,6 +74,7 @@ bool ra_log_queue_push(ra_log_queue_t *q, logpriority_t level, const char *subsy
    }
 
    if (q->length == q->capacity) {
+      if (!q->first_full_source[0]) snprintf(q->first_full_source, sizeof(q->first_full_source), "%s", subsys);
       atomic_fetch_add_explicit(&q->full_dropped, 1, memory_order_relaxed);
       atomic_fetch_add_explicit(&q->dropped, 1, memory_order_relaxed);
       pthread_mutex_unlock(&q->lock);
@@ -135,4 +137,14 @@ size_t ra_log_queue_depth(ra_log_queue_t *q) {
    pthread_mutex_unlock(&q->lock);
 
    return n;
+}
+
+void ra_log_queue_full_source(ra_log_queue_t *q, char *out, size_t out_size) {
+   if (!out || !out_size) return;
+   out[0] = '\0';
+   if (!q) return;
+   pthread_mutex_lock(&q->lock);
+   snprintf(out, out_size, "%s", q->first_full_source);
+   q->first_full_source[0] = '\0';
+   pthread_mutex_unlock(&q->lock);
 }
