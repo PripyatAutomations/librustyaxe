@@ -4,6 +4,7 @@
 - `scheduler.h`: opt-in OS policy selection; scheduling refusal does not abort a managed worker.
 - `subproc_spawn_fds_profile`: applies a chosen policy in the forked child prior to exec.
 - `log-queue.h`: bounded queue of already-formatted fixed-size messages. Producers use a try-lock and drop on contention/full capacity; drain invokes existing `Log()` callbacks on its owning thread. `ra_log_queue_dropped()` reports lost records.
+- `logger.c` filters and rate-limits worker submissions **before** enqueueing. By default INFO/DEBUG/CRAZY are capped to 250 records per subsystem/severity per second (a configured `log.level` `@count/interval` rate takes precedence); WARN/CRIT/AUDIT have no implicit cap. Suppressed counts are appended to the first surviving record of the next window. Queue-overflow warnings identify the first subsystem to encounter a full queue since the last snapshot.
 
 ## Constraints / next stages
 - Do not call existing `Log()` from hard RT callbacks. It allocates, locks indirectly through callbacks and performs I/O.
