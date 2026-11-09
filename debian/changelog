@@ -1,3 +1,12 @@
+librustyaxe (0.1.0-6) unstable; urgency=medium
+
+  * Add opt-in per-server TLS public-key pinning and first-use trust for WSS.
+  * Preserve the existing connect_ex ABI using a separate secure entrypoint.
+  * Report changed peer SPKI fingerprints for explicit client confirmation.
+  * Keep verified TLS the default and reject changed keys before application data.
+
+ -- Pripyat Automations <dangerousdevices@istabpeople.com>  Sun, 08 Nov 2026 20:30:00 -0500
+
 librustyaxe (0.1.0-5) unstable; urgency=medium
 
   * Allow native WSS consumers to negotiate an explicit WebSocket subprotocol.
