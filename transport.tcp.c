@@ -3,6 +3,7 @@
 #include <librustyaxe/transport.tcp.h>
 #include <librustyaxe/tcp.dial.h>
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <openssl/x509v3.h>
 #include <arpa/inet.h>
 #include <errno.h>
@@ -78,6 +79,24 @@ static void cleanup(tcp_client_t *c) {
    if (c->ctx) { SSL_CTX_free(c->ctx); c->ctx = NULL; }
    if (c->fd >= 0) { close(c->fd); c->fd = -1; }
    if (c->notify >= 0) { close(c->notify); c->notify = -1; }
+}
+static void tls_handshake_failure(tcp_client_t *c, int ssl_error) {
+   char reason[512];
+   const char *name = c->tls_name[0] ? c->tls_name : c->host;
+   long verify = SSL_get_verify_result(c->ssl);
+   if (verify != X509_V_OK) {
+      snprintf(reason, sizeof(reason),
+         "TCP TLS handshake failed for %s:%u (verify name %s): certificate verification: %s",
+         c->host, (unsigned)c->port, name, X509_verify_cert_error_string(verify));
+   } else {
+      unsigned long code = ERR_peek_last_error();
+      char detail[256];
+      if (code) ERR_error_string_n(code, detail, sizeof(detail));
+      else snprintf(detail, sizeof(detail), "SSL error %d (peer closed or rejected handshake)", ssl_error);
+      snprintf(reason, sizeof(reason), "TCP TLS handshake failed for %s:%u: %s",
+         c->host, (unsigned)c->port, detail);
+   }
+   fail(c, reason);
 }
 static bool tls_start(tcp_client_t *c) {
    c->ctx = SSL_CTX_new(TLS_client_method());
@@ -163,7 +182,7 @@ static int poll_tcp(void *ctx, int timeout_ms) {
       } else {
          c->tls_want = SSL_get_error(c->ssl, result);
          if (c->tls_want != SSL_ERROR_WANT_READ && c->tls_want != SSL_ERROR_WANT_WRITE) {
-            fail(c, "TCP TLS handshake failed"); goto done;
+            tls_handshake_failure(c, c->tls_want); goto done;
          }
          return 0;
       }
