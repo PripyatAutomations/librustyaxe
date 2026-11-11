@@ -11,6 +11,8 @@
 struct result {
    unsigned opened, received, errors, closed;
    char error[512];
+   char received_bytes[1024];
+   size_t received_len;
 };
 static void on_transport(rr_transport_t *t, enum rr_transport_event event,
    rr_transport_channel_t *channel, const uint8_t *data, size_t len, void *user) {
@@ -27,9 +29,16 @@ static void on_transport(rr_transport_t *t, enum rr_transport_event event,
                != RR_TRANSPORT_OK) state->errors++;
          break;
       case RR_TRANSPORT_EVENT_STREAM_DATA:
-         if (len >= 4 && memmem(data, len, " 001 ", 5)) {
-            state->received++;
-            rr_transport_close(t);
+         if (len && state->received_len < sizeof(state->received_bytes) - 1) {
+            size_t copy = len < sizeof(state->received_bytes) - 1 - state->received_len
+               ? len : sizeof(state->received_bytes) - 1 - state->received_len;
+            memcpy(state->received_bytes + state->received_len, data, copy);
+            state->received_len += copy;
+            state->received_bytes[state->received_len] = '\0';
+            if (strstr(state->received_bytes, " 001 ")) {
+               state->received++;
+               rr_transport_close(t);
+            }
          }
          break;
       case RR_TRANSPORT_EVENT_ERROR:
