@@ -59,8 +59,10 @@ $(TEST_BUILD_DIR)/test_log_queue: log-queue.c ../log-queue.c | $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -pthread -o $@ $^
 
 check: all
-	@fail=0; for t in $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue; do ./$t || fail=1; done; \
-	python3 socks_tcp_tls.py $(TEST_BUILD_DIR)/test_transport_tcp || fail=1; \
+	@fail=0; for t in $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue; do \
+	   case "$t" in /*) "$t" ;; *) "./$t" ;; esac || fail=1; \
+	done; \
+	python3 socks_tcp_tls.py "$(TEST_BUILD_DIR)/test_transport_tcp" || fail=1; \
 	$(MAKE) clean; \
 	exit $fail
 
