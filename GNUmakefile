@@ -18,10 +18,10 @@ USE_EEPROM ?= false
 LIBRUSTYAXE_STANDALONE := true
 
 # Source-only Debian package: mongoose-webserver-source.
-# Set WITH_MONGOOSE=false to explicitly disable this optional backend.
+# Mongoose is disabled by default; opt in with WITH_MONGOOSE=true (or auto).
 MONGOOSE_SOURCE ?= $(if $(wildcard /usr/src/mongoose.c),/usr/src/mongoose.c,)
 MONGOOSE_INCLUDE_DIR ?= $(if $(wildcard /usr/include/mongoose.h),/usr/include,)
-WITH_MONGOOSE ?= auto
+WITH_MONGOOSE ?= false
 ifeq ($(WITH_MONGOOSE),auto)
 WITH_MONGOOSE := $(if $(and $(MONGOOSE_SOURCE),$(MONGOOSE_INCLUDE_DIR)),true,false)
 endif
