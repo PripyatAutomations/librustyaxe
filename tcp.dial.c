@@ -38,7 +38,7 @@ static bool read_all(int fd, void *data, size_t len) {
    while (len) {
       if (!io_wait(fd, POLLIN)) return false;
       ssize_t n = recv(fd, p, len, 0);
-      if (n < 0 && errno == EINTR) continue;
+      if (n < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) continue;
       if (n <= 0) return false;
       p += n; len -= (size_t)n;
    }
@@ -143,19 +143,44 @@ static bool negotiate(int fd, const char *host, uint16_t port, const char *user,
    unsigned char discard[257];
    return read_all(fd, discard, remainder);
 }
-int rr_tcp_dial(const char *host, uint16_t port, const char *proxy_url,
-                const char *proxy_user, const char *proxy_pass) {
-   if (!host || !*host || !port) return -1;
+int rr_tcp_dial_ex(const char *host, uint16_t port, const char *proxy_url,
+                   const char *proxy_user, const char *proxy_pass,
+                   char *reason, size_t reason_size) {
+   if (reason && reason_size) *reason = '\0';
+   if (!host || !*host || !port) {
+      if (reason && reason_size) snprintf(reason, reason_size, "Invalid TCP destination");
+      return -1;
+   }
    const bool proxied = proxy_url && *proxy_url;
-   char proxy_host[256];
+   char proxy_host[256] = {0};
    unsigned proxy_port = 0;
-   if (proxied && !proxy_address(proxy_url, proxy_host, &proxy_port)) return -1;
+   if (proxied && !proxy_address(proxy_url, proxy_host, &proxy_port)) {
+      if (reason && reason_size) snprintf(reason, reason_size, "Invalid SOCKS5 proxy URL");
+      return -1;
+   }
    int fd = connect_host(proxied ? proxy_host : host, proxied ? proxy_port : port);
-   if (fd < 0) return -1;
+   if (fd < 0) {
+      if (reason && reason_size) {
+         if (proxied)
+            snprintf(reason, reason_size, "Could not reach SOCKS5 proxy %s:%u (destination %s:%u)",
+               proxy_host, proxy_port, host, (unsigned)port);
+         else
+            snprintf(reason, reason_size, "Could not reach TCP destination %s:%u",
+               host, (unsigned)port);
+      }
+      return -1;
+   }
    if (proxied && !negotiate(fd, host, port, proxy_user ? proxy_user : "",
                             proxy_pass ? proxy_pass : "")) {
+      if (reason && reason_size)
+         snprintf(reason, reason_size, "SOCKS5 CONNECT or authentication rejected via %s:%u for %s:%u",
+            proxy_host, proxy_port, host, (unsigned)port);
       close(fd);
       return -1;
    }
    return fd;
+}
+int rr_tcp_dial(const char *host, uint16_t port, const char *proxy_url,
+                const char *proxy_user, const char *proxy_pass) {
+   return rr_tcp_dial_ex(host, port, proxy_url, proxy_user, proxy_pass, NULL, 0);
 }
