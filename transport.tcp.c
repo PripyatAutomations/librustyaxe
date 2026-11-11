@@ -37,12 +37,18 @@ typedef struct {
    uint16_t port;
    int notify;
 } tcp_task_t;
+typedef struct {
+   int fd;
+   char error[256];
+} tcp_dial_result_t;
 static void *resolve_worker(void *opaque) {
    tcp_task_t *task = opaque;
-   int fd = rr_tcp_dial(task->host, task->port, task->proxy_url,
-                        task->proxy_user, task->proxy_pass);
-   if (send(task->notify, &fd, sizeof(fd), MSG_NOSIGNAL) != (ssize_t)sizeof(fd) && fd >= 0)
-      close(fd);
+   tcp_dial_result_t result = { .fd = -1 };
+   result.fd = rr_tcp_dial_ex(task->host, task->port, task->proxy_url,
+      task->proxy_user, task->proxy_pass, result.error, sizeof(result.error));
+   if (send(task->notify, &result, sizeof(result), MSG_NOSIGNAL) !=
+       (ssize_t)sizeof(result) && result.fd >= 0)
+      close(result.fd);
    close(task->notify);
    free(task);
    return NULL;
@@ -149,14 +155,15 @@ static int poll_tcp(void *ctx, int timeout_ms) {
    if (c->stage == TCP_RESOLVE) {
       struct pollfd p = { .fd = c->notify, .events = POLLIN };
       if (poll(&p, 1, timeout_ms) <= 0) return 0;
-      int fd = -1;
-      ssize_t n = recv(c->notify, &fd, sizeof(fd), 0);
+      tcp_dial_result_t result = { .fd = -1 };
+      ssize_t n = recv(c->notify, &result, sizeof(result), 0);
       close(c->notify); c->notify = -1;
-      if (n != sizeof(fd) || fd < 0) {
-         fail(c, "TCP dial or SOCKS5 negotiation failed");
+      if (n != sizeof(result) || result.fd < 0) {
+         fail(c, n == sizeof(result) && result.error[0] ? result.error :
+            "TCP dial or SOCKS5 negotiation failed");
          goto done;
       }
-      c->fd = fd;
+      c->fd = result.fd;
       if (c->tls) {
          if (!tls_start(c)) { fail(c, "TCP TLS initialization failed"); goto done; }
       } else {
