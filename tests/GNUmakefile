@@ -21,7 +21,7 @@ GLOBAL_OBJECT = $(TEST_BUILD_DIR)/test_globals.o
 TARGETS = $(addprefix $(TEST_BUILD_DIR)/,$(TEST_SOURCES:.c=))
 TEST_NAMES = $(TEST_SOURCES:.c=)
 
-all: $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue
+all: $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue $(TEST_BUILD_DIR)/test_transport_tcp
 
 # Preserve the convenient `make test_dict` style without placing the
 # executable in the source directory.
@@ -45,6 +45,10 @@ $(TEST_BUILD_DIR)/test_event_messages: LIBS += -pthread
 $(TEST_BUILD_DIR)/test_maidenhead: LIBS += -lm
 $(TEST_BUILD_DIR)/test_transport_wss: LIBS += -lcrypto
 
+# End-to-end SOCKS5h with an authenticated/verified native TLS transport.
+$(TEST_BUILD_DIR)/test_transport_tcp: $(TEST_BUILD_DIR)/test_transport_tcp.o
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $< $(LIBS) -lssl -lcrypto
+
 $(TEST_BUILD_DIR):
 	mkdir -p $@
 
@@ -55,9 +59,10 @@ $(TEST_BUILD_DIR)/test_log_queue: log-queue.c ../log-queue.c | $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -pthread -o $@ $^
 
 check: all
-	@fail=0; for t in $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue; do ./$$t || fail=1; done; \
+	@fail=0; for t in $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue; do ./$t || fail=1; done; \
+	python3 socks_tcp_tls.py $(TEST_BUILD_DIR)/test_transport_tcp || fail=1; \
 	$(MAKE) clean; \
-	exit $$fail
+	exit $fail
 
 clean:
 	rm -rf $(TEST_BUILD_DIR)
