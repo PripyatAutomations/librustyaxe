@@ -1,3 +1,9 @@
+librustyaxe (0.1.1-1) unstable; urgency=medium
+
+  * Release upstream version 0.1.1.
+
+ -- Pripyat Automations <dangerousdevices@istabpeople.com>  Tue, 10 Nov 2026 21:43:34 -0500
+
 librustyaxe (0.1.0-7) unstable; urgency=medium
 
   * Expose peer certificate CN/SAN and SHA-256 details for trust decisions; require explicit first-use approval with Accept Once or persistently pinned Accept Always.
