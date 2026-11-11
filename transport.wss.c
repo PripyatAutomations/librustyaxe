@@ -579,6 +579,11 @@ static bool redirect(native_wss_t *c, const char *location) {
       return false;
    }
 
+   /* Redirects may upgrade WS to WSS, never downgrade an established
+    * WSS connection to plaintext, even if cross-origin redirects are allowed. */
+   if (c->tls && !parsed.tls) {
+      return false;
+   }
    if (!c->allow_cross_origin && strcasecmp(parsed.origin, oldorigin)) {
       return false;
    }
