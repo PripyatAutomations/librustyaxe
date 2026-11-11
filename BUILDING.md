@@ -17,10 +17,12 @@ a development linker symlink, public headers and pkg-config metadata.
 Supported overrides include PREFIX, LIBDIR, INCLUDEDIR, DESTDIR, CC,
 CPPFLAGS, CFLAGS and LDFLAGS.
 
-The standalone build automatically enables the optional Mongoose adapter when
-both `/usr/src/mongoose.c` and `/usr/include/mongoose.h` are installed by
-`mongoose-webserver-source`. Override with `WITH_MONGOOSE=false`, or set
-`MONGOOSE_SOURCE` and `MONGOOSE_INCLUDE_DIR` for custom installations. The
+The standalone build defaults to `WITH_MONGOOSE=false`, even if
+`mongoose-webserver-source` is installed. To explicitly build the legacy
+Mongoose adapter, use `WITH_MONGOOSE=true` with `/usr/src/mongoose.c` and
+`/usr/include/mongoose.h` installed, or `WITH_MONGOOSE=auto` to enable it
+only when both are present. Set `MONGOOSE_SOURCE` and
+`MONGOOSE_INCLUDE_DIR` for custom source installations. The
 installed `<librustyaxe/build_config.h>` records the compiled feature;
 consumers do not need Mongoose headers. It must not require librrprotocol, because
 librrprotocol depends on librustyaxe.
