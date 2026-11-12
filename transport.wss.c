@@ -11,6 +11,7 @@
 #include <openssl/evp.h>
 #include <openssl/x509v3.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <poll.h>
 #include <fcntl.h>
@@ -309,8 +310,21 @@ static bool setup_tls(native_wss_t *c) {
       return false;
    }
 
-   if (!(c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) && !SSL_set1_host(c->ssl, identity)) {
-      return false;
+   if (!(c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use)) {
+      /* For an IP dial address, OpenSSL needs IP SAN matching, not DNS
+       * hostname matching. It must not fall back to the certificate CN. */
+      unsigned char ip[sizeof(struct in6_addr)];
+      bool is_ip = inet_pton(AF_INET, identity, ip) == 1 ||
+                   inet_pton(AF_INET6, identity, ip) == 1;
+      X509_VERIFY_PARAM *param = SSL_get0_param(c->ssl);
+      if (is_ip) {
+         if (!X509_VERIFY_PARAM_set1_ip_asc(param, identity)) return false;
+      } else {
+         X509_VERIFY_PARAM_set_hostflags(param,
+             X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS |
+             X509_CHECK_FLAG_NEVER_CHECK_SUBJECT);
+         if (!SSL_set1_host(c->ssl, identity)) return false;
+      }
    }
    SSL_set_mode(c->ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
    SSL_set_connect_state(c->ssl);
@@ -356,6 +370,27 @@ static bool verify_peer_public_key(native_wss_t *c) {
          c->tls_peer_sans[off + (size_t)n] = 0;
       }
       GENERAL_NAMES_free(names);
+   }
+   /* A pinned key authenticates the key, not its asserted DNS identity.
+    * When the caller provides a verification name, enforce certificate SAN
+    * matching even when the CA chain is replaced by explicit SPKI trust.
+    * An empty override is reserved for an identity not yet learned; callers
+    * must authenticate that identity before persisting trust. */
+   if ((c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) &&
+       c->tls_server_name[0]) {
+      const char *name = c->tls_server_name;
+      unsigned char ip[sizeof(struct in6_addr)];
+      bool is_ip = inet_pton(AF_INET, name, ip) == 1 ||
+                   inet_pton(AF_INET6, name, ip) == 1;
+      int name_ok = is_ip ? X509_check_ip_asc(peer, name, 0) :
+         X509_check_host(peer, name, 0,
+                         X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS |
+                         X509_CHECK_FLAG_NEVER_CHECK_SUBJECT, NULL);
+      if (name_ok != 1) {
+         X509_free(peer);
+         error(c, "TLS certificate name does not match expected hostname");
+         return false;
+      }
    }
    X509_free(peer);
    if (!c->tls_peer_spki_seen[0]) return false;
