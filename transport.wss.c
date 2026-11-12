@@ -11,6 +11,7 @@
 #include <openssl/evp.h>
 #include <openssl/x509v3.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <poll.h>
 #include <fcntl.h>
@@ -365,9 +366,13 @@ static bool verify_peer_public_key(native_wss_t *c) {
    if ((c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) &&
        c->tls_server_name[0]) {
       const char *name = c->tls_server_name;
-      int name_ok = X509_check_ip_asc(peer, name, 0);
-      if (name_ok != 1)
-         name_ok = X509_check_host(peer, name, 0, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS, NULL);
+      unsigned char ip[sizeof(struct in6_addr)];
+      bool is_ip = inet_pton(AF_INET, name, ip) == 1 ||
+                   inet_pton(AF_INET6, name, ip) == 1;
+      int name_ok = is_ip ? X509_check_ip_asc(peer, name, 0) :
+         X509_check_host(peer, name, 0,
+                         X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS |
+                         X509_CHECK_FLAG_NEVER_CHECK_SUBJECT, NULL);
       if (name_ok != 1) {
          X509_free(peer);
          error(c, "TLS certificate name does not match expected hostname");
