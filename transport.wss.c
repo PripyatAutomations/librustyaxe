@@ -357,6 +357,23 @@ static bool verify_peer_public_key(native_wss_t *c) {
       }
       GENERAL_NAMES_free(names);
    }
+   /* A pinned key authenticates the key, not its asserted DNS identity.
+    * When the caller provides a verification name, enforce certificate SAN
+    * matching even when the CA chain is replaced by explicit SPKI trust.
+    * An empty override is reserved for an identity not yet learned; callers
+    * must authenticate that identity before persisting trust. */
+   if ((c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) &&
+       c->tls_server_name[0]) {
+      const char *name = c->tls_server_name;
+      int name_ok = X509_check_ip_asc(peer, name, 0);
+      if (name_ok != 1)
+         name_ok = X509_check_host(peer, name, 0, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS, NULL);
+      if (name_ok != 1) {
+         X509_free(peer);
+         error(c, "TLS certificate name does not match expected hostname");
+         return false;
+      }
+   }
    X509_free(peer);
    if (!c->tls_peer_spki_seen[0]) return false;
    /* A pinned key, or an explicitly trusted connection, supersedes CA and
