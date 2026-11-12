@@ -310,8 +310,21 @@ static bool setup_tls(native_wss_t *c) {
       return false;
    }
 
-   if (!(c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) && !SSL_set1_host(c->ssl, identity)) {
-      return false;
+   if (!(c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use)) {
+      /* For an IP dial address, OpenSSL needs IP SAN matching, not DNS
+       * hostname matching. It must not fall back to the certificate CN. */
+      unsigned char ip[sizeof(struct in6_addr)];
+      bool is_ip = inet_pton(AF_INET, identity, ip) == 1 ||
+                   inet_pton(AF_INET6, identity, ip) == 1;
+      X509_VERIFY_PARAM *param = SSL_get0_param(c->ssl);
+      if (is_ip) {
+         if (!X509_VERIFY_PARAM_set1_ip_asc(param, identity)) return false;
+      } else {
+         X509_VERIFY_PARAM_set_hostflags(param,
+             X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS |
+             X509_CHECK_FLAG_NEVER_CHECK_SUBJECT);
+         if (!SSL_set1_host(c->ssl, identity)) return false;
+      }
    }
    SSL_set_mode(c->ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
    SSL_set_connect_state(c->ssl);
