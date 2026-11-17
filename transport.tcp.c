@@ -92,14 +92,14 @@ static void tls_handshake_failure(tcp_client_t *c, int ssl_error) {
    long verify = SSL_get_verify_result(c->ssl);
    if (verify != X509_V_OK) {
       snprintf(reason, sizeof(reason),
-         "TCP TLS handshake failed for %s:%u (verify name %s): certificate verification: %s",
+         "TCP TLS handshake failed for %.100s:%u (verify name %.100s): certificate verification: %.180s",
          c->host, (unsigned)c->port, name, X509_verify_cert_error_string(verify));
    } else {
       unsigned long code = ERR_peek_last_error();
       char detail[256];
       if (code) ERR_error_string_n(code, detail, sizeof(detail));
       else snprintf(detail, sizeof(detail), "SSL error %d (peer closed or rejected handshake)", ssl_error);
-      snprintf(reason, sizeof(reason), "TCP TLS handshake failed for %s:%u: %s",
+      snprintf(reason, sizeof(reason), "TCP TLS handshake failed for %.100s:%u: %.240s",
          c->host, (unsigned)c->port, detail);
    }
    fail(c, reason);
