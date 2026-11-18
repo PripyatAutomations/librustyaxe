@@ -38,6 +38,7 @@ bool rustyirc_connection_hold(irc_conn_t *c) {
 
    return true;
 }
+
 void rustyirc_connection_release(irc_conn_t *c) {
    if (--c->references) {
       return;
@@ -51,6 +52,7 @@ void rustyirc_connection_release(irc_conn_t *c) {
 
    free(c);
 }
+
 void rustyirc_connection_free(irc_conn_t *c) {
    if (!c || c->closing) {
       return;
@@ -58,6 +60,7 @@ void rustyirc_connection_free(irc_conn_t *c) {
    c->closing = true;
    rustyirc_connection_release(c);
 }
+
 bool rustyirc_connection_set_nick(rustyirc_connection_t *c, const char *nick) {
    if (!c || !nick || !*nick || strlen(nick) >= sizeof(c->nick)) {
       return false;
@@ -73,12 +76,15 @@ bool rustyirc_connection_set_nick(rustyirc_connection_t *c, const char *nick) {
 
    return true;
 }
+
 const char *rustyirc_connection_nick(const rustyirc_connection_t *c) {
    return c ? c->nick : "";
 }
+
 bool rustyirc_connection_registered(const rustyirc_connection_t *c) {
    return c && c->registered;
 }
+
 void rustyirc_connection_reset(rustyirc_connection_t *c) {
    if (!c) {
       return;
@@ -88,6 +94,7 @@ void rustyirc_connection_reset(rustyirc_connection_t *c) {
    c->registered = false;
    c->sent_login = false;
 }
+
 static bool rustyirc_connection_send_impl(rustyirc_connection_t *c, const char *line) {
    if (!c || !c->callbacks.send || !line) {
       return false;
@@ -104,14 +111,17 @@ static bool rustyirc_connection_send_impl(rustyirc_connection_t *c, const char *
 
    return c->callbacks.send(c->callbacks.context, wire, n + 2);
 }
+
 void rustyirc_connection_set_fd(irc_conn_t *c, int fd) {
    if (c) {
       c->fd = fd;
    }
 }
+
 int rustyirc_connection_fd(const irc_conn_t *c) {
    return c ? c->fd : -1;
 }
+
 void rustyirc_connection_set_sasl(irc_conn_t *c, const char *user, const char *pass, const char *mechanism) {
    if (!c) {
       return;
@@ -120,6 +130,7 @@ void rustyirc_connection_set_sasl(irc_conn_t *c, const char *user, const char *p
    snprintf(c->credentials.sasl_pass, sizeof(c->credentials.sasl_pass), "%s", pass ? pass : "");
    snprintf(c->credentials.sasl_mechanism, sizeof(c->credentials.sasl_mechanism), "%s", mechanism ? mechanism : "");
 }
+
 bool rustyirc_send(irc_conn_t *c, const char *fmt, ...) {
    char line[IRC_MSGLEN];
    va_list args;
@@ -129,11 +140,13 @@ bool rustyirc_send(irc_conn_t *c, const char *fmt, ...) {
 
    return n >= 0 && (size_t)n <= rustyirc_line_limit(c) - 2 && rustyirc_connection_send(c, line);
 }
+
 void rustyirc_event_emit(const char *event, irc_conn_t *c, const char *data) {
    if (c && !c->closing && c->callbacks.on_event) {
       c->callbacks.on_event(c->callbacks.context, c, event, data);
    }
 }
+
 void rustyirc_event_emit_dict(const char *event, irc_conn_t *c, dict *d) {
    char *json = dict2json(d);
 
@@ -235,7 +248,6 @@ static bool rustyirc_connection_register_impl(irc_conn_t *cptr, const char *iden
 
    return true;
 }
-
 
 bool rustyirc_connection_send(irc_conn_t *c, const char *line) {
    if (!rustyirc_connection_hold(c)) {

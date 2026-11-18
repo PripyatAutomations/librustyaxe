@@ -67,7 +67,6 @@ static const char *skip_ws(const char *s) {
    return s;
 }
 
-
 // Validate the complete quoted token before decoding it. Never skip past NUL.
 static const char *json_parse_str(const char *s, char **out) {
    if (*s != '"') {

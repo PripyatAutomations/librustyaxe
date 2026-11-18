@@ -9,6 +9,7 @@ static bool host_callback(logpriority_t priority, const char *subsys, const char
 
    return false;
 }
+
 int main(int argc, char **argv) {
    assert(argc == 2);
    cfg = dict_new();

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Format tracked, owned C sources, including frontend and test subdirectories.
+set -euo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root"
+for formatter in indent uncrustify; do
+   if ! command -v "$formatter" >/dev/null; then
+      printf 'Required formatter not found: %s\n' "$formatter" >&2
+      exit 1
+   fi
+done
+if ! command -v timeout >/dev/null; then
+   printf 'Required command not found: timeout (GNU coreutils)\n' >&2
+   exit 1
+fi
+format_timeout=${FORMAT_TIMEOUT:-120}
+if [[ ! "$format_timeout" =~ ^[1-9][0-9]*$ ]]; then
+   printf 'FORMAT_TIMEOUT must be a positive integer (seconds)\n' >&2
+   exit 1
+fi
+# Ignore personal indent profiles; use the repository's explicit options.
+mapfile -t indent_options < "$root/.indent.pro"
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+mapfile -d '' files < <(git ls-files -z -- '*.c' '*.h')
+
+TGT="."
+for component in ${TGT}; do
+   while IFS= read -r -d '' file; do
+      files+=("$component/$file")
+   done < <(git -C "$component" ls-files -z -- '*.c' '*.h')
+done
+total=${#files[@]}
+current=0
+printf 'Discovered %d tracked C/header files; per-tool timeout: %ss\n' "$total" "$format_timeout"
+for file in "${files[@]}"; do
+   current=$((current + 1))
+   case "$file" in
+      ext/*|*/ext/*|www/*|debian/*|build/*|snippets/*) continue ;;
+      wire-registry.h) continue ;; # Regenerated from wire-schema.json.
+   esac
+   [[ -f "$file" ]] || continue
+   printf '[%d/%d] %s: indent\n' "$current" "$total" "$file"
+   if ! timeout --signal=TERM --kill-after=5s "${format_timeout}s" \
+      indent -npro "${indent_options[@]}" "$file" -o "$workdir/indent.c"; then
+      printf 'indent failed or timed out on %s\n' "$file" >&2
+      exit 1
+   fi
+   printf '[%d/%d] %s: uncrustify\n' "$current" "$total" "$file"
+   if ! timeout --signal=TERM --kill-after=5s "${format_timeout}s" \
+      uncrustify -q -c "$root/.uncrustify.cfg" -l C -f "$workdir/indent.c" -o "$workdir/formatted.c"; then
+      printf 'uncrustify failed or timed out on %s\n' "$file" >&2
+      exit 1
+   fi
+   if ! cmp -s "$file" "$workdir/formatted.c"; then
+      cat "$workdir/formatted.c" > "$file"
+   fi
+done
+printf 'Formatting complete.\n'

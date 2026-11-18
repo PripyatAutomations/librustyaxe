@@ -21,6 +21,7 @@ static bool mapped(const uint8_t *address) {
 
    return !memcmp(address, prefix, sizeof(prefix));
 }
+
 static bool address_parse(const char *ip, uint8_t *address, unsigned *family) {
    memset(address, 0, 16);
 
@@ -34,6 +35,7 @@ static bool address_parse(const char *ip, uint8_t *address, unsigned *family) {
 
    return true;
 }
+
 static bool network_parse(acl_rule_t *rule, const char *text) {
    if (!strcmp(text, "all") || !strcmp(text, "*")) {
       return true;
@@ -80,6 +82,7 @@ static bool network_parse(acl_rule_t *rule, const char *text) {
 
    return true;
 }
+
 bool acl_rule_parse(acl_rule_t *rule, bool allow, const char *selector) {
    if (!rule || !selector || !*selector || strlen(selector) >= 256) {
       return false;
@@ -142,6 +145,7 @@ bool acl_rule_parse(acl_rule_t *rule, bool allow, const char *selector) {
 
    return true;
 }
+
 bool acl_subject_init(acl_subject_t *subject, const char *ip, const char *user, acl_group_fn in_group, void *context) {
    if (!subject) {
       return false;
@@ -165,6 +169,7 @@ bool acl_subject_init(acl_subject_t *subject, const char *ip, const char *user, 
 
    return true;
 }
+
 acl_result_t acl_rule_match(const acl_rule_t *rule, const acl_subject_t *subject) {
    if (!rule || !subject) {
       return ACL_NO_MATCH;
@@ -202,6 +207,7 @@ acl_result_t acl_rule_match(const acl_rule_t *rule, const acl_subject_t *subject
 
    return pending ? ACL_DEFER : rule->allow ? ACL_ALLOW : ACL_DENY;
 }
+
 acl_result_t acl_check(const acl_rule_t *rules, size_t count, const acl_subject_t *subject) {
    if (!rules || !subject) {
       return ACL_DENY;

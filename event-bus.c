@@ -173,6 +173,7 @@ bool event_profile_summary(event_profile_summary_t *summary) {
 
    return false;
 }
+
 #endif
 
 /* Dynamically grow profiling reports so one Log() call owns each dump. */
@@ -397,6 +398,7 @@ bool event_domain_register(const char *name, event_dispatch_t dispatch, void *us
 
    return true;
 }
+
 bool event_domain_unregister(const char *name) {
    if (!name) {
       return false;
@@ -599,6 +601,7 @@ static void deliver_message(void *opaque) {
    free(p->payload);
    free(p);
 }
+
 rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user) {
    if (!name || !cb) {
       return NULL;
@@ -626,6 +629,7 @@ rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t 
 
    return token;
 }
+
 void event_emit_message(const rr_event_message_t *message) {
    if (!message || !message->name || (!message->payload && message->length)) {
       return;
@@ -677,7 +681,6 @@ void event_emit_message(const rr_event_message_t *message) {
    free(targets);
 }
 
-
 /*
  * Look up an event entry.
  *
@@ -716,7 +719,6 @@ static event_entry_t *event_get_or_create_locked(const char *event) {
    return entry;
 }
 
-
 /*
  * Free an event entry and its listener arrays.
  *
@@ -731,7 +733,6 @@ static void event_entry_free(event_entry_t *entry) {
    free(entry->binary_listeners);
    free(entry);
 }
-
 
 /*
  * Remove an empty event entry.
@@ -753,7 +754,6 @@ static void event_remove_if_empty_locked(const char *event, event_entry_t *entry
    dict_del(event_store, event);
    event_entry_free(entry);
 }
-
 
 /*
  * Run a queued text callback in the destination dispatcher/thread.
@@ -778,7 +778,6 @@ static void event_dispatch_run(void *arg) {
    free(queued);
 }
 
-
 /*
  * Run a queued binary callback in the destination dispatcher/thread.
  */
@@ -801,7 +800,6 @@ static void event_dispatch_binary_run(void *arg) {
    free(queued->data);
    free(queued);
 }
-
 
 /*
  * Deliver one text event to one listener.
@@ -870,7 +868,6 @@ static void event_fire_binary_listener(const event_binary_listener_t *listener, 
    listener->dispatch(event_dispatch_binary_run, queued, listener->dispatch_user);
 }
 
-
 /*
  * Snapshot the text listener array.
  *
@@ -894,7 +891,6 @@ static event_listener_t *event_snapshot_locked(event_entry_t *entry, size_t *cou
    return snapshot;
 }
 
-
 /*
  * Snapshot the binary listener array.
  *
@@ -916,7 +912,6 @@ static event_binary_listener_t *event_binary_snapshot_locked(event_entry_t *entr
    return snapshot;
 }
 
-
 void event_init(void) {
    pthread_mutex_lock(&event_lock);
 
@@ -931,14 +926,12 @@ void event_init(void) {
    pthread_mutex_unlock(&event_lock);
 }
 
-
 /*
  * Subscribe to a synchronous text event.
  */
 void event_on(const char *event, event_cb_t cb, void *user) {
    event_on_dispatch(event, cb, user, NULL, NULL);
 }
-
 
 /*
  * Subscribe to a text event using a dispatcher.
@@ -979,7 +972,6 @@ void event_on_dispatch(const char *event, event_cb_t cb, void *user, event_dispa
 
    pthread_mutex_unlock(&event_lock);
 }
-
 
 /*
  * Register a listener and return an opaque token owning it.
@@ -1224,7 +1216,6 @@ void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *use
    pthread_mutex_unlock(&event_lock);
 }
 
-
 void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    event_listener_t *snapshot = NULL;
    size_t count = 0;
@@ -1360,7 +1351,6 @@ void event_emit(const char *event, rrconn_t *cptr, const char *data) {
    free(snapshot);
 }
 
-
 void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size_t len) {
    event_binary_listener_t *snapshot = NULL;
    size_t count = 0;
@@ -1438,7 +1428,6 @@ void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size
    }
 }
 
-
 void event_emit_dict(const char *event, rrconn_t *cptr, dict *data) {
    const char *jp = NULL;
 
@@ -1451,7 +1440,6 @@ void event_emit_dict(const char *event, rrconn_t *cptr, dict *data) {
       free((void *)jp);
    }
 }
-
 
 /*
  * Remove matching text listeners.
@@ -1504,7 +1492,6 @@ void event_off(const char *event, event_cb_t cb, void *user) {
    pthread_mutex_unlock(&event_lock);
 }
 
-
 /*
  * Remove matching binary listeners.
  */
@@ -1552,7 +1539,6 @@ void event_off_binary(const char *event, event_binary_cb_t cb, void *user) {
    event_remove_if_empty_locked(event, entry);
    pthread_mutex_unlock(&event_lock);
 }
-
 
 /*
  * Optional cleanup.

@@ -150,3 +150,7 @@ src-deb source-deb:
 	@v=$$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$$//'); \
 	 git archive --format=tar --prefix="librustyaxe-$$v/" HEAD -- . ':!debian' | gzip -n > "../librustyaxe_$$v.orig.tar.gz"
 	dpkg-buildpackage -S -us -uc
+
+
+indent:
+	./tools/indent.sh

@@ -5,6 +5,7 @@
 static bool group(const char *name, void *context) {
    return !strcmp(name, context);
 }
+
 static acl_result_t match(bool allow, const char *selector, const char *ip, const char *user) {
    acl_rule_t rule;
    acl_subject_t subject;
@@ -13,6 +14,7 @@ static acl_result_t match(bool allow, const char *selector, const char *ip, cons
 
    return acl_check(&rule, 1, &subject);
 }
+
 int main(void) {
    acl_subject_t subject;
    assert(acl_subject_init(&subject, "10.200.4.5", NULL, NULL, NULL));

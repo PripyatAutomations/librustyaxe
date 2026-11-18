@@ -475,7 +475,6 @@ uint32_t eeprom_get_int(const char *key) {
    return eeprom_get_int_i(eeprom_offset_index(key));
 }
 
-
 float eeprom_get_float_i(uint32_t idx) {
    if (eeprom_ready != 1 || eeprom_corrupted == 1) {
       return -1;

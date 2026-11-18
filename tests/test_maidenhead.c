@@ -77,6 +77,7 @@ static void test_location_display(void) {
    CHECK(strstr(text, "Grid square:") != NULL);
    CHECK(!rr_location_format(NULL, NULL, true, text, sizeof(text)));
 }
+
 int main(void) {
    test_locator_to_latlon();
    test_latlon_to_locator();

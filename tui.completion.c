@@ -60,9 +60,11 @@ static bool (*completion_handler)(tui_window_t *);
 void tui_set_completion_handler(bool (*fn) (tui_window_t *)) {
    completion_handler = fn;
 }
+
 void tui_set_completion_describer(tui_completion_describer_t fn) {
    completion_describer = fn;
 }
+
 void completion_describe(const char *line, const char *value, char *out, size_t capacity) {
    if (!out || !capacity) {
       return;

@@ -37,6 +37,7 @@ static int native_policy(ra_sched_class_t policy) {
       }
    }
 }
+
 int ra_sched_apply(pid_t pid, const ra_sched_options_t *options) {
    if (!options || pid < 0) {
       errno = EINVAL;
@@ -73,6 +74,7 @@ int ra_sched_apply(pid_t pid, const ra_sched_options_t *options) {
 
    return 0;
 }
+
 int ra_sched_drop_rt(pid_t pid, int nice_value) {
    ra_sched_options_t options = {
       .policy = RA_SCHED_NORMAL, .priority = 0, .nice = nice_value,
@@ -81,6 +83,7 @@ int ra_sched_drop_rt(pid_t pid, int nice_value) {
 
    return ra_sched_apply(pid, &options);
 }
+
 int ra_sched_query(pid_t pid, ra_sched_options_t *options) {
    if (!options || pid < 0) {
       errno = EINVAL;
@@ -164,6 +167,7 @@ const char *ra_sched_class_name(ra_sched_class_t policy) {
       }
    }
 }
+
 int ra_sched_apply_profile(pid_t pid, const char *name) {
    if (!name || !*name || !strcmp(name, "normal")) {
       /* Avoid a redundant sched_setscheduler() on an ordinary worker:

@@ -6,6 +6,7 @@ static void describe(const char *line, const char *word, char *out, size_t capac
    assert(!strcmp(line, "/media subscribe "));
    snprintf(out, capacity, "%s — Main receiver [RX opus]", word);
 }
+
 int main(void) {
    char word[] = "rig0.vfo_a.rx", label[128];
    completion_describe("/media subscribe ", word, label, sizeof(label));

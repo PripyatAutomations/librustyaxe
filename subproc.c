@@ -161,6 +161,7 @@ bool subproc_spawn_fds(subproc_t *process, const char *path, const char *const a
    size_t close_count) {
    return subproc_spawn_fds_impl(process, path, argv, mappings, mapping_count, close_fds, close_count, false, NULL);
 }
+
 bool subproc_spawn_fds_profile(subproc_t *process, const char *path, const char *const argv[], const subproc_fd_t *mappings, size_t mapping_count, const int *
    close_fds, size_t close_count, const char *profile) {
    return subproc_spawn_fds_impl(process, path, argv, mappings, mapping_count, close_fds, close_count, false, profile);
@@ -280,6 +281,7 @@ static bool subproc_spawn_pipes(subproc_t *process, const char *path, const char
 bool subproc_spawn(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr) {
    return subproc_spawn_pipes(process, path, argv, merge_stderr, false);
 }
+
 bool subproc_spawn_group(subproc_t *process, const char *path, const char *const argv[], bool merge_stderr) {
    return subproc_spawn_pipes(process, path, argv, merge_stderr, true);
 }

@@ -56,4 +56,5 @@ void rustyirc_event_emit_dict(const char *, irc_conn_t *, dict *);
 static inline const char *rustyirc_name(irc_conn_t *c) {
    return c ? c->nick : "irc";
 }
+
 #endif

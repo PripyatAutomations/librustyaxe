@@ -197,7 +197,6 @@ const char *tui_window_get_active_title(void) {
    return w ? w->title : NULL;
 }
 
-
 tui_window_t *tui_window_focus(const char *title) {
    if (!title) {
       return NULL;

@@ -32,6 +32,7 @@ static uint32_t capabilities(void *ctx) {
 
    return flags;
 }
+
 static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
    struct mongoose_transport *m = ctx;
    struct mg_connection *c = m->socket;
@@ -69,17 +70,21 @@ static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
 
    return RR_TRANSPORT_IO_ERROR;
 }
+
 static int send_text(void *ctx, const uint8_t *data, size_t len) {
    return send_frame(ctx, data, len, WEBSOCKET_OP_TEXT);
 }
+
 static int send_binary(void *ctx, const uint8_t *data, size_t len) {
    return send_frame(ctx, data, len, WEBSOCKET_OP_BINARY);
 }
+
 static size_t queued(void *ctx) {
    struct mongoose_transport *m = ctx;
 
    return m->socket ? m->socket->send.len : 0;
 }
+
 static void closing(void *ctx) {
    struct mongoose_transport *m = ctx;
 
@@ -113,11 +118,13 @@ rr_transport_t *rr_transport_mongoose_adopt(void *connection, rr_transport_callb
 
    return t;
 }
+
 void rr_transport_mongoose_open(rr_transport_t *t) {
    if (t) {
       rr_transport_emit(t, RR_TRANSPORT_EVENT_OPEN, NULL, NULL, 0);
    }
 }
+
 void rr_transport_mongoose_closed(rr_transport_t *t) {
    if (!t) {
       return;
@@ -129,6 +136,7 @@ void rr_transport_mongoose_closed(rr_transport_t *t) {
    }
    rr_transport_emit(t, RR_TRANSPORT_EVENT_CLOSE, NULL, NULL, 0);
 }
+
 void rr_transport_mongoose_release(rr_transport_t *t) {
    if (!t || rr_transport_state(t) != RR_TRANSPORT_CLOSED) {
       return;
@@ -137,6 +145,7 @@ void rr_transport_mongoose_release(rr_transport_t *t) {
    rr_transport_free(t);
    free(m);
 }
+
 #else
 rr_transport_t *rr_transport_mongoose_adopt(void *connection, rr_transport_callback_t callback, void *context) {
    (void)connection;
@@ -145,13 +154,17 @@ rr_transport_t *rr_transport_mongoose_adopt(void *connection, rr_transport_callb
 
    return NULL;
 }
+
 void rr_transport_mongoose_open(rr_transport_t *transport) {
    (void)transport;
 }
+
 void rr_transport_mongoose_closed(rr_transport_t *transport) {
    (void)transport;
 }
+
 void rr_transport_mongoose_release(rr_transport_t *transport) {
    (void)transport;
 }
+
 #endif

@@ -199,6 +199,7 @@ static const char *unibi_get_str_by_name(const unibi_term *ut, const char *name)
 
    return unibi_get_str(ut, idx);
 }
+
 #endif
 
 /* To be efficient at lookups, we store the byte sequence => keyinfo mapping in a trie. This avoids a slow linear search through a flat list of sequences.

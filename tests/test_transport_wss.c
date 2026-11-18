@@ -42,6 +42,7 @@ static void receive_message(rr_transport_t *transport, enum rr_transport_event e
       state->closed++;
    }
 }
+
 static void child_serve(int listenfd) {
    struct pollfd waitfd = {
       .fd = listenfd, .events = POLLIN
@@ -159,6 +160,7 @@ static void child_serve(int listenfd) {
    close(listenfd);
    _exit(0);
 }
+
 int main(void) {
    signal(SIGPIPE, SIG_IGN);
    int fd = socket(AF_INET, SOCK_STREAM, 0);

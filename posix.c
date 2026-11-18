@@ -100,6 +100,7 @@ void init_signals(void) {
    signal(SIGUSR1, sighandler);
    signal(SIGUSR2, sighandler);
 }
+
 #endif
 
 bool host_init(void) {

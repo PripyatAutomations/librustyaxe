@@ -54,6 +54,7 @@ ra_log_queue_t *ra_log_queue_new(size_t capacity) {
 
    return q;
 }
+
 void ra_log_queue_free(ra_log_queue_t *q) {
    if (!q) {
       return;
@@ -61,6 +62,7 @@ void ra_log_queue_free(ra_log_queue_t *q) {
    pthread_mutex_destroy(&q->lock);
    free(q);
 }
+
 bool ra_log_queue_push(ra_log_queue_t *q, logpriority_t level, const char *subsys, const char *message) {
    if (!q || !subsys || !message) {
       return false;
@@ -74,7 +76,9 @@ bool ra_log_queue_push(ra_log_queue_t *q, logpriority_t level, const char *subsy
    }
 
    if (q->length == q->capacity) {
-      if (!q->first_full_source[0]) snprintf(q->first_full_source, sizeof(q->first_full_source), "%s", subsys);
+      if (!q->first_full_source[0]) {
+         snprintf(q->first_full_source, sizeof(q->first_full_source), "%s", subsys);
+      }
       atomic_fetch_add_explicit(&q->full_dropped, 1, memory_order_relaxed);
       atomic_fetch_add_explicit(&q->dropped, 1, memory_order_relaxed);
       pthread_mutex_unlock(&q->lock);
@@ -92,6 +96,7 @@ bool ra_log_queue_push(ra_log_queue_t *q, logpriority_t level, const char *subsy
 
    return true;
 }
+
 size_t ra_log_queue_drain(ra_log_queue_t *q, size_t max_records) {
    if (!q) {
       return 0;
@@ -117,6 +122,7 @@ size_t ra_log_queue_drain(ra_log_queue_t *q, size_t max_records) {
    }
    return n;
 }
+
 uint64_t ra_log_queue_dropped(const ra_log_queue_t *q) {
    return q ? atomic_load_explicit(&q->dropped, memory_order_relaxed) : 0;
 }
@@ -124,6 +130,7 @@ uint64_t ra_log_queue_dropped(const ra_log_queue_t *q) {
 uint64_t ra_log_queue_contention_dropped(const ra_log_queue_t *q) {
    return q ? atomic_load_explicit(&q->contention_dropped, memory_order_relaxed) : 0;
 }
+
 uint64_t ra_log_queue_full_dropped(const ra_log_queue_t *q) {
    return q ? atomic_load_explicit(&q->full_dropped, memory_order_relaxed) : 0;
 }
@@ -140,9 +147,14 @@ size_t ra_log_queue_depth(ra_log_queue_t *q) {
 }
 
 void ra_log_queue_full_source(ra_log_queue_t *q, char *out, size_t out_size) {
-   if (!out || !out_size) return;
+   if (!out || !out_size) {
+      return;
+   }
    out[0] = '\0';
-   if (!q) return;
+
+   if (!q) {
+      return;
+   }
    pthread_mutex_lock(&q->lock);
    snprintf(out, out_size, "%s", q->first_full_source);
    q->first_full_source[0] = '\0';

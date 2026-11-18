@@ -30,6 +30,7 @@ static bool decimal(const char *text, uint64_t maximum, uint64_t *value) {
 
    return true;
 }
+
 bool rustyirc_dcc_filename_valid(const char *name) {
    if (!name || !*name || strlen(name) > 255 || !strcmp(name, ".") || !strcmp(name, "..")) {
       return false;
@@ -43,6 +44,7 @@ bool rustyirc_dcc_filename_valid(const char *name) {
 
    return true;
 }
+
 bool rustyirc_dcc_decode(const char *payload, rustyirc_dcc_offer_t *offer) {
    if (!payload || !offer) {
       return false;
@@ -126,6 +128,7 @@ bool rustyirc_dcc_decode(const char *payload, rustyirc_dcc_offer_t *offer) {
 
    return inet_ntop(AF_INET, &address, offer->ip, sizeof(offer->ip)) != NULL;
 }
+
 char *rustyirc_dcc_encode(const rustyirc_dcc_offer_t *offer) {
    if (!offer || (offer->type != IRC_DCC_CHAT && offer->type != IRC_DCC_SEND) || (offer->type == IRC_DCC_SEND && !rustyirc_dcc_filename_valid(offer->filename)))
    {

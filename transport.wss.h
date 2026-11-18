@@ -26,13 +26,12 @@ typedef struct rr_wss_client_options_secure {
    const char *subprotocol;
    const char *ca_file;
    const char *tls_server_name;
-   const char *tls_peer_spki_sha256; /* pinned SPKI SHA256, lowercase hex */
+   const char *tls_peer_spki_sha256;   /* pinned SPKI SHA256, lowercase hex */
    bool tls_trust_on_first_use; /* explicit opt-in; persist first key before application traffic */
 } rr_wss_client_options_secure_t;
 
-/* Extended secure client options with a SOCKS5/SOCKS5H TCP tunnel.
- * The proxy MUST succeed before TLS or HTTP traffic begins; never bypass it.
- * Separate API to preserve the existing secure options ABI. */
+/* Extended secure client options with a SOCKS5/SOCKS5H TCP tunnel. The proxy MUST succeed before TLS or HTTP traffic begins; never bypass it. Separate API to
+ * preserve the existing secure options ABI. */
 typedef struct rr_wss_client_options_proxy {
    rr_wss_client_options_secure_t secure;
    const char *proxy_url;

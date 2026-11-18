@@ -300,4 +300,5 @@ int rr_socks_event(rr_socks_t *s, struct mg_connection *c, int event) {
    }
    return -1;
 }
+
 #endif

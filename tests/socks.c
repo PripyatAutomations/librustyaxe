@@ -14,14 +14,17 @@ static void handler(struct mg_connection *c, int ev, void *data) {
       c->is_closing = 0;        /* Failure must stay closed even if a callback clears it. */
    }
 }
+
 static void clear(struct mg_connection *c) {
    mg_iobuf_del(&c->send, 0, c->send.len);
 }
+
 static int feed(rr_socks_t *s, struct mg_connection *c, const void *p, size_t n) {
    assert(mg_iobuf_add(&c->recv, c->recv.len, p, n) == n);
 
    return rr_socks_event(s, c, MG_EV_READ);
 }
+
 int main(void) {
    const char *host = "chat.invalid";
    uint16_t port = 6697;

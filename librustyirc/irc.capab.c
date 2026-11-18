@@ -138,11 +138,13 @@ void rustyirc_capabilities_clear(irc_conn_t *c) {
       }
    }
 }
+
 void rustyirc_capabilities_shutdown(void) {
    while (states) {
       rustyirc_capabilities_clear((irc_conn_t *) states->connection);
    }
 }
+
 void rustyirc_capabilities_reset(irc_conn_t *c) {
    rustyirc_capabilities_clear(c);
    irc_cap_state_t *s = state(c, true);
@@ -221,6 +223,7 @@ bool rustyirc_supports_rustyrig(const irc_conn_t *c) {
 
    return s && s->rusty;
 }
+
 char rustyirc_prefix_mode(const irc_conn_t *c, char symbol) {
    irc_cap_state_t *s = state(c, false);
    const char *symbols = s ? s->symbols : "~&@%+";
@@ -229,6 +232,7 @@ char rustyirc_prefix_mode(const irc_conn_t *c, char symbol) {
 
    return p ? modes[p - symbols] : 0;
 }
+
 const char *rustyirc_modes_symbol(const irc_conn_t *c, const char *modes) {
    irc_cap_state_t *s = state(c, false);
    const char *order = s ? s->modes : "qaohv";
@@ -245,6 +249,7 @@ const char *rustyirc_modes_symbol(const irc_conn_t *c, const char *modes) {
 
    return "";
 }
+
 bool rustyirc_mode_has_argument(const irc_conn_t *c, char mode, bool adding) {
    irc_cap_state_t *s = state(c, false);
 
@@ -263,9 +268,11 @@ bool rustyirc_mode_has_argument(const irc_conn_t *c, char mode, bool adding) {
 
    return false;
 }
+
 static bool sasl_configured(irc_conn_t *c) {
    return(c->credentials.sasl_user[0] || !strcasecmp(c->credentials.sasl_mechanism, "EXTERNAL"));
 }
+
 static void sasl_finish(irc_conn_t *c, irc_cap_state_t *s, const char *result) {
    s->sasl_wait = false;
    s->sasl_deadline = 0;
@@ -279,6 +286,7 @@ static void sasl_finish(irc_conn_t *c, irc_cap_state_t *s, const char *result) {
       rustyirc_event_emit("irc.sasl", c, result);
    }
 }
+
 static void rustyirc_capabilities_poll_impl(irc_conn_t *c) {
    irc_cap_state_t *s = state(c, false);
 
@@ -289,6 +297,7 @@ static void rustyirc_capabilities_poll_impl(irc_conn_t *c) {
       sasl_finish(c, s, "SASL authentication timed out");
    }
 }
+
 static bool sasl_response(irc_conn_t *c) {
    __typeof__(c->credentials) * server = &c->credentials;
 

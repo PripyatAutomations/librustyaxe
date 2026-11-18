@@ -191,7 +191,6 @@ void tui_scrollback_appended(tui_window_t *window, const char *line) {
    }
 }
 
-
 // Read the terminal size and update our size to match
 static void update_term_size(void) {
    struct winsize ws;

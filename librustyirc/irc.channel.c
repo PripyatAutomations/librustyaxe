@@ -118,7 +118,6 @@ void chan_end_names(irc_channel_t *chan) {
    chan->userlist_complete = true;
 }
 
-
 ////////
 // XXX: These need either moved to irc.{commands,numerics}.c or hooked to
 // appropriate events by the _init() function

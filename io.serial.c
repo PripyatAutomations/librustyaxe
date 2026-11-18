@@ -43,6 +43,7 @@ static bool baud_speed(unsigned baud, speed_t *speed) {
    }
 #undef RATE
 }
+
 bool rr_serial_mode_parse(const char *mode, rr_serial_settings_t *s) {
    if (!mode || !s || strlen(mode) != 3 || mode[0] < '5' || mode[0] > '8' || (mode[2] != '1' && mode[2] != '2')) {
       return false;
@@ -58,12 +59,14 @@ bool rr_serial_mode_parse(const char *mode, rr_serial_settings_t *s) {
 
    return true;
 }
+
 void rr_serial_mode_format(const rr_serial_settings_t *s, char mode[4]) {
    mode[0] = '0' + s->bits;
    mode[1] = s->parity;
    mode[2] = '0' + s->stops;
    mode[3] = '\0';
 }
+
 bool rr_serial_settings_apply(int fd, const rr_serial_settings_t *s) {
    struct termios settings;
    speed_t rate;
@@ -107,6 +110,7 @@ bool rr_serial_settings_apply(int fd, const rr_serial_settings_t *s) {
 
    return !cfsetispeed(&settings, rate) && !cfsetospeed(&settings, rate) && !tcsetattr(fd, TCSANOW, &settings);
 }
+
 bool rr_serial_settings_read(int fd, rr_serial_settings_t *s) {
    struct termios settings;
 
@@ -156,6 +160,7 @@ bool rr_serial_settings_read(int fd, rr_serial_settings_t *s) {
 
    return true;
 }
+
 int rr_serial_device_open(const char *path, const rr_serial_settings_t *settings, struct termios *original) {
    if (!path || !original) {
       errno = EINVAL;
@@ -187,6 +192,7 @@ int rr_serial_device_open(const char *path, const rr_serial_settings_t *settings
 
    return fd;
 }
+
 void rr_serial_device_close(int fd, const struct termios *original) {
    if (fd < 0) {
       return;
@@ -239,6 +245,7 @@ bool rr_serial_spec_parse(const char *spec, char *target, size_t capacity, rr_se
 
    return true;
 }
+
 bool rr_nmea_valid(const char *line) {
    if (!line || (line[0] != '$' && line[0] != '!')) {
       return false;
@@ -259,6 +266,7 @@ bool rr_nmea_valid(const char *line) {
 
    return checksum == strtoul(end + 1, NULL, 16);
 }
+
 static void nmea_angle(int32_t angle, unsigned width, char *out, size_t capacity) {
    uint32_t absolute = angle < 0 ? -(int64_t) angle : angle;
    unsigned degrees = absolute / 10000000;
@@ -270,6 +278,7 @@ static void nmea_angle(int32_t angle, unsigned width, char *out, size_t capacity
    }
    snprintf(out, capacity, "%0*u%02u.%06u", width, degrees, (unsigned)(minutes / 1000000), (unsigned)(minutes % 1000000));
 }
+
 size_t rr_nmea_rmc(int32_t latitude, int32_t longitude, uint8_t flags, time_t utc, char *out, size_t capacity) {
    if (!out || capacity < 8 || latitude < -900000000 || latitude > 900000000 || longitude < -1800000000 || longitude > 1800000000 || (flags & ~3)) {
       return 0;
@@ -344,6 +353,7 @@ failed: {
       return -1;
    }
 }
+
 void rr_serial_pty_close(int fd, int keeper, const char *path, const char *slave) {
    if (fd >= 0) {
       close(fd);

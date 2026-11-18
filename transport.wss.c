@@ -67,6 +67,7 @@ static void error(native_wss_t *c, const char *msg) {
    }
    c->dead = true;
 }
+
 static void reset_socket(native_wss_t *c) {
    if (c->ws) {
       wslay_event_context_free(c->ws);
@@ -98,6 +99,7 @@ static void reset_socket(native_wss_t *c) {
    c->tls_peer_spki_seen[0] = '\0';
    c->tls_cert_sha256[0] = c->tls_peer_cn[0] = c->tls_peer_sans[0] = '\0';
 }
+
 static bool parse_url(native_wss_t *c, const char *url) {
    bool tls;
    const char *p;
@@ -215,10 +217,8 @@ typedef struct resolver_task {
 } resolver_task_t;
 static void *resolve_worker(void *opaque) {
    resolver_task_t *task = opaque;
-   /* DNS and SOCKS5 negotiation run off the core/audio thread. A configured
-    * proxy may never fall back to direct dialing. */
-   int fd = rr_tcp_dial(task->host, (uint16_t)task->port, task->proxy_url,
-                        task->proxy_user, task->proxy_pass);
+   /* DNS and SOCKS5 negotiation run off the core/audio thread. A configured proxy may never fall back to direct dialing. */
+   int fd = rr_tcp_dial(task->host, (uint16_t) task->port, task->proxy_url, task->proxy_user, task->proxy_pass);
 
    if (send(task->notify, &fd, sizeof(fd), MSG_NOSIGNAL) != (ssize_t) sizeof(fd) && fd >= 0) {
       close(fd);
@@ -228,6 +228,7 @@ static void *resolve_worker(void *opaque) {
 
    return NULL;
 }
+
 static bool start(native_wss_t *c) {
    int pair[2];
 
@@ -263,6 +264,7 @@ static bool start(native_wss_t *c) {
 
    return true;
 }
+
 static bool resolver_ready(native_wss_t *c, int timeout_ms) {
    struct pollfd pfd = {
       .fd = c->resolver_fd, .events = POLLIN
@@ -287,6 +289,7 @@ static bool resolver_ready(native_wss_t *c, int timeout_ms) {
 
    return true;
 }
+
 static bool setup_tls(native_wss_t *c) {
    c->ctx = SSL_CTX_new(TLS_client_method());
 
@@ -311,19 +314,21 @@ static bool setup_tls(native_wss_t *c) {
    }
 
    if (!(c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use)) {
-      /* For an IP dial address, OpenSSL needs IP SAN matching, not DNS
-       * hostname matching. It must not fall back to the certificate CN. */
+      /* For an IP dial address, OpenSSL needs IP SAN matching, not DNS hostname matching. It must not fall back to the certificate CN. */
       unsigned char ip[sizeof(struct in6_addr)];
-      bool is_ip = inet_pton(AF_INET, identity, ip) == 1 ||
-                   inet_pton(AF_INET6, identity, ip) == 1;
+      bool is_ip = inet_pton(AF_INET, identity, ip) == 1 || inet_pton(AF_INET6, identity, ip) == 1;
       X509_VERIFY_PARAM *param = SSL_get0_param(c->ssl);
+
       if (is_ip) {
-         if (!X509_VERIFY_PARAM_set1_ip_asc(param, identity)) return false;
+         if (!X509_VERIFY_PARAM_set1_ip_asc(param, identity)) {
+            return false;
+         }
       } else {
-         X509_VERIFY_PARAM_set_hostflags(param,
-             X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS |
-             X509_CHECK_FLAG_NEVER_CHECK_SUBJECT);
-         if (!SSL_set1_host(c->ssl, identity)) return false;
+         X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS | X509_CHECK_FLAG_NEVER_CHECK_SUBJECT);
+
+         if (!SSL_set1_host(c->ssl, identity)) {
+            return false;
+         }
       }
    }
    SSL_set_mode(c->ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
@@ -332,89 +337,113 @@ static bool setup_tls(native_wss_t *c) {
 
    return true;
 }
-/* Collect peer identity for display before any application protocol traffic.
- * Never treat names or a fingerprint as trusted merely because they exist. */
+
+/* Collect peer identity for display before any application protocol traffic. Never treat names or a fingerprint as trusted merely because they exist. */
 static bool verify_peer_public_key(native_wss_t *c) {
    X509 *peer = SSL_get1_peer_certificate(c->ssl);
-   if (!peer) return false;
+
+   if (!peer) {
+      return false;
+   }
    unsigned char digest[EVP_MAX_MD_SIZE];
    unsigned int length = 0;
    int ok = X509_pubkey_digest(peer, EVP_sha256(), digest, &length);
+
    if (ok == 1 && length == 32) {
-      for (unsigned i = 0; i < 32; ++i)
+      for (unsigned i = 0 ; i < 32 ; ++i) {
          snprintf(c->tls_peer_spki_seen + i * 2, 3, "%02x", digest[i]);
+      }
+
       c->tls_peer_spki_seen[64] = '\0';
    }
    length = 0;
+
    if (X509_digest(peer, EVP_sha256(), digest, &length) == 1 && length == 32) {
-      for (unsigned i = 0; i < 32; ++i)
+      for (unsigned i = 0 ; i < 32 ; ++i) {
          snprintf(c->tls_cert_sha256 + i * 2, 3, "%02x", digest[i]);
+      }
+
       c->tls_cert_sha256[64] = '\0';
    }
-   X509_NAME_get_text_by_NID(X509_get_subject_name(peer), NID_commonName,
-      c->tls_peer_cn, (int)sizeof(c->tls_peer_cn));
+   X509_NAME_get_text_by_NID(X509_get_subject_name(peer), NID_commonName, c->tls_peer_cn, (int)sizeof(c->tls_peer_cn));
    GENERAL_NAMES *names = X509_get_ext_d2i(peer, NID_subject_alt_name, NULL, NULL);
+
    if (names) {
-      for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
+      for (int i = 0 ; i < sk_GENERAL_NAME_num(names) ; ++i) {
          const GENERAL_NAME *name = sk_GENERAL_NAME_value(names, i);
-         if (name->type != GEN_DNS) continue;
+
+         if (name->type != GEN_DNS) {
+            continue;
+         }
          const ASN1_STRING *asn = name->d.dNSName;
          const unsigned char *dns = ASN1_STRING_get0_data(asn);
          int n = ASN1_STRING_length(asn);
-         if (!dns || n <= 0 || memchr(dns, '\0', (size_t)n) ||
-             n > 250 || strlen(c->tls_peer_sans) + (size_t)n + 3 >= sizeof(c->tls_peer_sans))
+
+         if (!dns || n <= 0 || memchr(dns, '\0', (size_t)n) || n > 250 || strlen(c->tls_peer_sans) + (size_t)n + 3 >= sizeof(c->tls_peer_sans)) {
             continue;
+         }
          size_t off = strlen(c->tls_peer_sans);
-         if (off) { memcpy(c->tls_peer_sans + off, ", ", 2); off += 2; }
+
+         if (off) {
+            memcpy(c->tls_peer_sans + off, ", ", 2);
+            off += 2;
+         }
          memcpy(c->tls_peer_sans + off, dns, (size_t)n);
          c->tls_peer_sans[off + (size_t)n] = 0;
       }
+
       GENERAL_NAMES_free(names);
    }
-   /* A pinned key authenticates the key, not its asserted DNS identity.
-    * When the caller provides a verification name, enforce certificate SAN
-    * matching even when the CA chain is replaced by explicit SPKI trust.
-    * An empty override is reserved for an identity not yet learned; callers
-    * must authenticate that identity before persisting trust. */
-   if ((c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) &&
-       c->tls_server_name[0]) {
+
+   /* A pinned key authenticates the key, not its asserted DNS identity. When the caller provides a verification name, enforce certificate SAN matching even
+    * when the CA chain is replaced by explicit SPKI trust. An empty override is reserved for an identity not yet learned; callers must authenticate that
+    * identity before persisting trust. */
+   if ((c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use) && c->tls_server_name[0]) {
       const char *name = c->tls_server_name;
       unsigned char ip[sizeof(struct in6_addr)];
-      bool is_ip = inet_pton(AF_INET, name, ip) == 1 ||
-                   inet_pton(AF_INET6, name, ip) == 1;
-      int name_ok = is_ip ? X509_check_ip_asc(peer, name, 0) :
-         X509_check_host(peer, name, 0,
-                         X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS |
-                         X509_CHECK_FLAG_NEVER_CHECK_SUBJECT, NULL);
+      bool is_ip = inet_pton(AF_INET, name, ip) == 1 || inet_pton(AF_INET6, name, ip) == 1;
+      int name_ok = is_ip ? X509_check_ip_asc(peer, name, 0) : X509_check_host(peer, name, 0, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS |
+         X509_CHECK_FLAG_NEVER_CHECK_SUBJECT, NULL);
+
       if (name_ok != 1) {
          X509_free(peer);
          error(c, "TLS certificate name does not match expected hostname");
+
          return false;
       }
    }
    X509_free(peer);
-   if (!c->tls_peer_spki_seen[0]) return false;
-   /* A pinned key, or an explicitly trusted connection, supersedes CA and
-    * dial-address hostname checks. Node identity is independently validated
-    * by the client against the server's authenticated domain announcement. */
-   if (c->tls_peer_spki_pin[0] &&
-       CRYPTO_memcmp(c->tls_peer_spki_pin, c->tls_peer_spki_seen, 64)) {
+
+   if (!c->tls_peer_spki_seen[0]) {
+      return false;
+   }
+
+   /* A pinned key, or an explicitly trusted connection, supersedes CA and dial-address hostname checks. Node identity is independently validated by the client
+    * against the server's authenticated domain announcement. */
+   if (c->tls_peer_spki_pin[0] && CRYPTO_memcmp(c->tls_peer_spki_pin, c->tls_peer_spki_seen, 64)) {
       char mismatch[128];
       snprintf(mismatch, sizeof(mismatch), "TLS_PIN_MISMATCH:%s", c->tls_peer_spki_seen);
       error(c, mismatch);
+
       return false;
    }
+
    if (!c->tls_peer_spki_pin[0] && c->tls_trust_on_first_use) {
       char challenge[128];
       snprintf(challenge, sizeof(challenge), "TLS_TRUST_REQUIRED:%s", c->tls_peer_spki_seen);
       error(c, challenge);
+
       return false;
    }
-   if (!c->tls_peer_spki_pin[0] && SSL_get_verify_result(c->ssl) != X509_V_OK)
+
+   if (!c->tls_peer_spki_pin[0] && SSL_get_verify_result(c->ssl) != X509_V_OK) {
       return false;
+   }
    c->tls_peer_authenticated = true;
+
    return true;
 }
+
 static int read_bytes(native_wss_t *c, void *buf, size_t len) {
    int n = c->ssl ? SSL_read(c->ssl, buf, (int)len) : (int)recv(c->fd, buf, len, 0);
 
@@ -440,6 +469,7 @@ static int read_bytes(native_wss_t *c, void *buf, size_t len) {
 
    return -1;
 }
+
 static int flush_tx(native_wss_t *c) {
    while (c->tx_offset < c->tx_len) {
       const uint8_t *p = c->tx + c->tx_offset;
@@ -475,6 +505,7 @@ static int flush_tx(native_wss_t *c) {
 
    return 1;
 }
+
 static bool queue_bytes(native_wss_t *c, const void *data, size_t len) {
    size_t pending = c->tx_len - c->tx_offset;
 
@@ -492,6 +523,7 @@ static bool queue_bytes(native_wss_t *c, const void *data, size_t len) {
 
    return true;
 }
+
 static ssize_t ws_read(wslay_event_context_ptr ws, uint8_t *buf, size_t len, int flags, void *arg) {
    (void)flags;
    native_wss_t *c = arg;
@@ -527,6 +559,7 @@ static ssize_t ws_read(wslay_event_context_ptr ws, uint8_t *buf, size_t len, int
 
    return n;
 }
+
 static ssize_t ws_write(wslay_event_context_ptr ws, const uint8_t *data, size_t len, int flags, void *arg) {
    (void)flags;
    native_wss_t *c = arg;
@@ -539,12 +572,14 @@ static ssize_t ws_write(wslay_event_context_ptr ws, const uint8_t *data, size_t 
 
    return (ssize_t) len;
 }
+
 static int ws_mask(wslay_event_context_ptr ws, uint8_t *buf, size_t len, void *arg) {
    (void)ws;
    (void)arg;
 
    return RAND_bytes(buf, (int)len) == 1 ? 0 : -1;
 }
+
 static void ws_message(wslay_event_context_ptr ws, const struct wslay_event_on_msg_recv_arg *msg, void *arg) {
    (void)ws;
    native_wss_t *c = arg;
@@ -558,6 +593,7 @@ static void ws_message(wslay_event_context_ptr ws, const struct wslay_event_on_m
       c->closing = true;
    }
 }
+
 static bool begin_upgrade(native_wss_t *c) {
    uint8_t nonce[16];
 
@@ -581,6 +617,7 @@ static bool begin_upgrade(native_wss_t *c) {
 
    return true;
 }
+
 static bool redirect(native_wss_t *c, const char *location) {
    if (c->hops >= 8) {
       return false;
@@ -614,11 +651,11 @@ static bool redirect(native_wss_t *c, const char *location) {
       return false;
    }
 
-   /* Redirects may upgrade WS to WSS, never downgrade an established
-    * WSS connection to plaintext, even if cross-origin redirects are allowed. */
+   /* Redirects may upgrade WS to WSS, never downgrade an established WSS connection to plaintext, even if cross-origin redirects are allowed. */
    if (c->tls && !parsed.tls) {
       return false;
    }
+
    if (!c->allow_cross_origin && strcasecmp(parsed.origin, oldorigin)) {
       return false;
    }
@@ -645,6 +682,7 @@ static bool redirect(native_wss_t *c, const char *location) {
 
    return start(c);
 }
+
 static int inspect_response(native_wss_t *c) {
    char *end = strstr(c->http, "\r\n\r\n");
 
@@ -787,6 +825,7 @@ static int inspect_response(native_wss_t *c) {
 
    return 1;
 }
+
 static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
    native_wss_t *c = ctx;
 
@@ -799,27 +838,32 @@ static int send_frame(void *ctx, const uint8_t *data, size_t len, int opcode) {
 
    return wslay_event_queue_msg(c->ws, &msg) == 0 ? RR_TRANSPORT_OK : RR_TRANSPORT_IO_ERROR;
 }
+
 static int send_text(void *ctx, const uint8_t *data, size_t len) {
    return send_frame(ctx, data, len, WSLAY_TEXT_FRAME);
 }
+
 static int send_binary(void *ctx, const uint8_t *data, size_t len) {
    return send_frame(ctx, data, len, WSLAY_BINARY_FRAME);
 }
+
 static size_t queued(void *ctx) {
    native_wss_t *c = ctx;
 
    return c->tx_len - c->tx_offset + (c->ws ? wslay_event_get_queued_msg_length(c->ws) : 0);
 }
+
 static uint32_t capabilities(void *ctx) {
    native_wss_t *c = ctx;
 
    return RR_TRANSPORT_RELIABLE_MESSAGES | RR_TRANSPORT_BINARY_MESSAGES |
-      (c->tls ? RR_TRANSPORT_TLS_ENCRYPTED : 0) |
-      (c->tls_peer_authenticated ? RR_TRANSPORT_TLS_AUTHENTICATED : 0);
+          (c->tls ? RR_TRANSPORT_TLS_ENCRYPTED : 0) | (c->tls_peer_authenticated ? RR_TRANSPORT_TLS_AUTHENTICATED : 0);
 }
+
 static void close_transport(void *ctx) {
    ((native_wss_t *) ctx)->closing = true;
 }
+
 static int native_poll(void *ctx, int timeout_ms) {
    native_wss_t *c = ctx;
 
@@ -921,15 +965,17 @@ static int native_poll(void *ctx, int timeout_ms) {
          if (e != SSL_ERROR_WANT_READ && e != SSL_ERROR_WANT_WRITE) {
             long verify = SSL_get_verify_result(c->ssl);
             /* Bound variable diagnostic text independently of the destination size. */
-             char why[768];
+            char why[768];
 
             if (verify != X509_V_OK) {
-               snprintf(why, sizeof(why), "WebSocket TLS verification failed for %.255s: %.240s (code %ld). Check trusted CA and certificate SAN", c->tls_server_name[0]
+               snprintf(why, sizeof(why), "WebSocket TLS verification failed for %.255s: %.240s (code %ld). Check trusted CA and certificate SAN", c->
+                  tls_server_name[0]
                   ? c->tls_server_name : c->host, X509_verify_cert_error_string(verify), verify);
             } else {
                unsigned long code = ERR_peek_last_error();
                const char *detail = code ? ERR_reason_error_string(code) : NULL;
-               snprintf(why, sizeof(why), "WebSocket TLS handshake failed for %.255s (SSL error %d%s%.240s)", c->host, e, detail ? ": " : "", detail ? detail : "");
+               snprintf(why, sizeof(why), "WebSocket TLS handshake failed for %.255s (SSL error %d%s%.240s)", c->host, e, detail ? ": " : "", detail ? detail :
+                  "");
             }
             error(c, why);
             goto finish;
@@ -1021,6 +1067,7 @@ static const rr_transport_driver_t ops = {
 };
 rr_transport_t *rr_transport_wss_connect_proxy(const char *url, const rr_wss_client_options_proxy_t *proxy_options, rr_transport_callback_t cb, void *user) {
    const rr_wss_client_options_secure_t *options = proxy_options ? &proxy_options->secure : NULL;
+
    if (!url) {
       return NULL;
    }
@@ -1044,9 +1091,8 @@ rr_transport_t *rr_transport_wss_connect_proxy(const char *url, const rr_wss_cli
    if (strlen(ua) >= sizeof(c->user_agent) || strpbrk(ua, "\r\n") ||
       strlen(proto) >= sizeof(c->subprotocol) || strpbrk(proto, "\r\n") ||
       strlen(ca) >= sizeof(c->ca_file) || strlen(tls_name) >= sizeof(c->tls_server_name) || strpbrk(tls_name, "\r\n") ||
-       strlen(proxy_url) >= sizeof(c->proxy_url) || strlen(proxy_user) >= sizeof(c->proxy_user) ||
-       strlen(proxy_pass) >= sizeof(c->proxy_pass) ||
-       (pin[0] && (strlen(pin) != 64 || strspn(pin, "0123456789abcdef") != 64)) || !parse_url(c, url)) {
+      strlen(proxy_url) >= sizeof(c->proxy_url) || strlen(proxy_user) >= sizeof(c->proxy_user) ||
+      strlen(proxy_pass) >= sizeof(c->proxy_pass) || (pin[0] && (strlen(pin) != 64 || strspn(pin, "0123456789abcdef") != 64)) || !parse_url(c, url)) {
       free(c);
 
       return NULL;
@@ -1060,8 +1106,10 @@ rr_transport_t *rr_transport_wss_connect_proxy(const char *url, const rr_wss_cli
    snprintf(c->proxy_user, sizeof(c->proxy_user), "%s", proxy_user);
    snprintf(c->proxy_pass, sizeof(c->proxy_pass), "%s", proxy_pass);
    c->tls_trust_on_first_use = options && options->tls_trust_on_first_use;
+
    if (!c->tls && (c->tls_peer_spki_pin[0] || c->tls_trust_on_first_use)) {
       free(c);
+
       return NULL;
    }
 
@@ -1082,27 +1130,43 @@ rr_transport_t *rr_transport_wss_connect_proxy(const char *url, const rr_wss_cli
 
    return c->transport;
 }
+
 rr_transport_t *rr_transport_wss_connect_secure(const char *url, const rr_wss_client_options_secure_t *options, rr_transport_callback_t cb, void *user) {
-   rr_wss_client_options_proxy_t extended = {0};
-   if (options) extended.secure = *options;
+   rr_wss_client_options_proxy_t extended = {
+      0
+   };
+
+   if (options) {
+      extended.secure = *options;
+   }
+
    return rr_transport_wss_connect_proxy(url, &extended, cb, user);
 }
+
 const char *rr_transport_wss_peer_spki_sha256(const rr_transport_t *transport) {
    native_wss_t *c = transport ? rr_transport_driver_context((rr_transport_t *) transport) : NULL;
+
    return c && c->tls_peer_spki_seen[0] ? c->tls_peer_spki_seen : NULL;
 }
+
 const char *rr_transport_wss_peer_cert_sha256(const rr_transport_t *t) {
-   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *)t) : NULL;
+   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *) t) : NULL;
+
    return c && c->tls_cert_sha256[0] ? c->tls_cert_sha256 : NULL;
 }
+
 const char *rr_transport_wss_peer_common_name(const rr_transport_t *t) {
-   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *)t) : NULL;
+   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *) t) : NULL;
+
    return c && c->tls_peer_cn[0] ? c->tls_peer_cn : NULL;
 }
+
 const char *rr_transport_wss_peer_dns_names(const rr_transport_t *t) {
-   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *)t) : NULL;
+   native_wss_t *c = t ? rr_transport_driver_context((rr_transport_t *) t) : NULL;
+
    return c && c->tls_peer_sans[0] ? c->tls_peer_sans : NULL;
 }
+
 rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client_options_ex_t *options, rr_transport_callback_t cb, void *user) {
    rr_wss_client_options_secure_t secure = {
       .user_agent = options ? options->user_agent : NULL,
@@ -1111,8 +1175,10 @@ rr_transport_t *rr_transport_wss_connect_ex(const char *url, const rr_wss_client
       .ca_file = options ? options->ca_file : NULL,
       .tls_server_name = options ? options->tls_server_name : NULL
    };
+
    return rr_transport_wss_connect_secure(url, &secure, cb, user);
 }
+
 rr_transport_t *rr_transport_wss_connect(const char *url, const rr_wss_client_options_t *options, rr_transport_callback_t cb, void *user) {
    rr_wss_client_options_ex_t extended = {
       .user_agent = options ? options->user_agent : NULL,
@@ -1121,6 +1187,7 @@ rr_transport_t *rr_transport_wss_connect(const char *url, const rr_wss_client_op
 
    return rr_transport_wss_connect_ex(url, &extended, cb, user);
 }
+
 void rr_transport_wss_traffic(rr_transport_t *t, uint64_t *rx, uint64_t *tx) {
    native_wss_t *c = t ? rr_transport_driver_context(t) : NULL;
 
@@ -1132,6 +1199,7 @@ void rr_transport_wss_traffic(rr_transport_t *t, uint64_t *rx, uint64_t *tx) {
       *tx = c ? c->tx_bytes : 0;
    }
 }
+
 void rr_transport_wss_release(rr_transport_t *t) {
    if (!t || rr_transport_state(t) != RR_TRANSPORT_CLOSED) {
       return;

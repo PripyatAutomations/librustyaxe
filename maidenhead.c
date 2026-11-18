@@ -229,6 +229,7 @@ static bool rr_grid_valid(const char *grid) {
 
    return true;
 }
+
 bool rr_location_resolve(const char *coordinates, const char *grid, rr_location_t *out) {
    if (!out) {
       return false;
@@ -268,6 +269,7 @@ bool rr_location_resolve(const char *coordinates, const char *grid, rr_location_
 
    return true;
 }
+
 bool rr_location_format(const char *coordinates, const char *grid, bool compact, char *out, size_t capacity) {
    if (!out || !capacity) {
       return false;

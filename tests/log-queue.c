@@ -10,6 +10,7 @@ void Log(logpriority_t level, const char *subsys, const char *fmt, ...) {
    (void)fmt;
    received++;
 }
+
 int main(void) {
    ra_log_queue_t *q = ra_log_queue_new(2);
    assert(q);

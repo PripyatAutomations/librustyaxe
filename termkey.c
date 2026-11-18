@@ -346,6 +346,7 @@ static const char *res2str(TermKeyResult res) {
 
    return "unknown";
 }
+
 #endif
 
 /* Similar to snprintf(str, size, "%s", src) except it turns CamelCase into space separated values
@@ -1305,6 +1306,7 @@ retry:
    }
    /* UNREACHABLE */
 }
+
 #endif
 
 TermKeyResult termkey_advisereadable(TermKey *tk) {

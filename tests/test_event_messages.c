@@ -19,12 +19,14 @@ static void cb(const rr_event_message_t *m, void *user) {
    assert(m->length == 4 && !memcmp(m->payload, "a\0bc", 4));
    received++;
 }
+
 static void legacy_cb(const char *event, const char *data, rrconn_t *cptr, void *user) {
    (void)event;
    (void)data;
    (void)cptr;
    (void)user;
 }
+
 static void binary_cb(const char *event, const void *data, size_t length, rrconn_t *cptr, void *user) {
    (void)event;
    (void)data;
@@ -32,6 +34,7 @@ static void binary_cb(const char *event, const void *data, size_t length, rrconn
    (void)cptr;
    (void)user;
 }
+
 static void enqueue(event_dispatch_fn_t fn, void *arg, void *user) {
    (void)user;
    pthread_mutex_lock(&lock);
@@ -41,6 +44,7 @@ static void enqueue(event_dispatch_fn_t fn, void *arg, void *user) {
    pthread_cond_signal(&ready);
    pthread_mutex_unlock(&lock);
 }
+
 static void *consume(void *unused) {
    (void)unused;
    receiver_thread = pthread_self();
@@ -57,6 +61,7 @@ static void *consume(void *unused) {
 
    return NULL;
 }
+
 int main(void) {
    event_init();
    assert(event_domain_register("gtk", enqueue, NULL));

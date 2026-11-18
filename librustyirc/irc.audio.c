@@ -29,6 +29,7 @@ static bool atom(const char *text, size_t maximum) {
 
    return true;
 }
+
 static bool number(const char *text, unsigned maximum, unsigned *value) {
    if (!text || !*text) {
       return false;
@@ -50,6 +51,7 @@ static bool number(const char *text, unsigned maximum, unsigned *value) {
 
    return true;
 }
+
 dict *rustyirc_dcc_audio_decode(const char *payload) {
    if (!payload) {
       return NULL;
@@ -138,6 +140,7 @@ dict *rustyirc_dcc_audio_decode(const char *payload) {
 
    return d;
 }
+
 char *rustyirc_dcc_audio_encode(const char *parent, dict *grant) {
    if (!grant || !atom(parent, 63)) {
       return NULL;
@@ -171,6 +174,7 @@ char *rustyirc_dcc_audio_encode(const char *parent, dict *grant) {
 
    return strdup(payload);
 }
+
 bool rustyirc_send_dcc_audio(irc_conn_t *client, const char *target, const char *parent, dict *grant) {
    if (!client || !atom(target, NICKLEN) || strpbrk(target, ",#!&")) {
       return false;
@@ -185,6 +189,7 @@ bool rustyirc_send_dcc_audio(irc_conn_t *client, const char *target, const char 
 
    return sent;
 }
+
 bool rustyirc_dcc_audio_message(irc_conn_t *client, const irc_message_t *message) {
    if (!client || !message || message->argc < 3 || !message->argv[0] || !message->argv[2] ||
       (strcasecmp(message->argv[0], "PRIVMSG") && strcasecmp(message->argv[0], "NOTICE")) || strncasecmp(message->argv[2], "\001DCC AUDIO", 10)) {

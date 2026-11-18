@@ -89,13 +89,14 @@ static gboolean logger_drain_tick(gpointer unused) {
       ra_log_queue_full_source(worker_log_queue, full_source, sizeof(full_source));
       uint64_t delta = dropped - logger_drops_reported;
       logger_drops_reported = dropped;
-      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu; contention=%llu full=%llu; first-full-source=%s)", (unsigned long long)delta, (unsigned long long)
-         dropped, (unsigned long long)ra_log_queue_contention_dropped(worker_log_queue), (unsigned long long)ra_log_queue_full_dropped(worker_log_queue), full_source[0] ? full_source : "unknown");
+      Log(LOG_WARN, "logger", "Worker log queue dropped %llu records (total %llu; contention=%llu full=%llu; first-full-source=%s)", (unsigned long long)delta,
+         (unsigned long long)
+         dropped, (unsigned long long)ra_log_queue_contention_dropped(worker_log_queue), (unsigned long long)ra_log_queue_full_dropped(worker_log_queue),
+         full_source[0] ? full_source : "unknown");
    }
 
    return G_SOURCE_CONTINUE;
 }
-
 
 /* String constants we use more than a few times */
 const char s_prio_none[] = " NONE";
@@ -262,7 +263,6 @@ static bool log_rate_parse(const char *str, unsigned *count, unsigned *seconds) 
    return true;
 }
 
-
 static bool log_add_filter_rate(const char *pattern, logpriority_t level, unsigned count, unsigned seconds) {
    struct log_filter *f = malloc(sizeof(*f));
 
@@ -399,6 +399,7 @@ static const struct log_filter *log_matching_filter(const char *subsys) {
 
    return best;
 }
+
 bool debug_filter(const char *subsys, logpriority_t msg_level) {
    pthread_rwlock_rdlock(&log_filters_lock);
    const struct log_filter *best = log_matching_filter(subsys ? subsys : "");
@@ -408,20 +409,23 @@ bool debug_filter(const char *subsys, logpriority_t msg_level) {
    return filtered;
 }
 
-/* Ingress must enforce limits before messages enter the worker queue.
- * Otherwise a filtered or rate-limited producer can still overflow it.
- * The default per-subsystem cap protects the owner thread from runaway
- * informational/trace logging; warnings, critical messages and audits are
- * never capped by this default. Explicit configured rates take precedence. */
+/* Ingress must enforce limits before messages enter the worker queue. Otherwise a filtered or rate-limited producer can still overflow it. The default
+ * per-subsystem cap protects the owner thread from runaway informational/trace logging; warnings, critical messages and audits are never capped by this
+ * default. Explicit configured rates take precedence. */
 static bool logger_worker_ingress_allowed(const char *subsys, logpriority_t level, unsigned *skipped) {
    *skipped = 0;
    pthread_rwlock_wrlock(&log_filters_lock);
    const struct log_filter *f = log_matching_filter(subsys);
    unsigned count = f ? f->rate_count : 0;
    unsigned seconds = f ? f->rate_seconds : 0;
-   if (!count && level >= LOG_INFO) { count = 250; seconds = 1; }
+
+   if (!count && level >= LOG_INFO) {
+      count = 250;
+      seconds = 1;
+   }
    bool allow = !count || log_rate_allowed(subsys, level, count, seconds, skipped);
    pthread_rwlock_unlock(&log_filters_lock);
+
    return allow;
 }
 
@@ -559,28 +563,25 @@ void Log(logpriority_t priority, const char *subsys, const char *fmt, ...) {
    bool delivering = ra_log_queue_delivery_time(&submitted_time);
 
    /* Only worker threads enqueue. The logger owner must deliver synchronously:
-    * startup failure paths can exit before GLib has ever serviced the drain
-    * source, and the main thread must not lose their diagnostics.
-    * Queue deliveries already bypass this branch via the delivery guard. */
+    * startup failure paths can exit before GLib has ever serviced the drain source, and the main thread must not lose their diagnostics. Queue deliveries
+    * already bypass this branch via the delivery guard. */
    if (!delivering &&
-       atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
-       atomic_load_explicit(&logger_owner_valid, memory_order_acquire) &&
-       !pthread_equal(pthread_self(), logger_owner)) {
-      /* LOG_CRAZY never reaches callbacks, including RAW subscribers. Do not
-       * let a raw subscriber force filtered trace traffic into the queue. */
+      atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
+      atomic_load_explicit(&logger_owner_valid, memory_order_acquire) && !pthread_equal(pthread_self(), logger_owner)) {
+      /* LOG_CRAZY never reaches callbacks, including RAW subscribers. Do not let a raw subscriber force filtered trace traffic into the queue. */
       bool visible = !debug_filter(subsys, priority);
-      bool raw_delivery = priority != LOG_CRAZY &&
-         atomic_load_explicit(&log_raw_subscribers, memory_order_acquire) != 0;
-      if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) &&
-          (visible || raw_delivery)) {
+      bool raw_delivery = priority != LOG_CRAZY && atomic_load_explicit(&log_raw_subscribers, memory_order_acquire) != 0;
+
+      if (atomic_load_explicit(&worker_logging_enabled, memory_order_acquire) && (visible || raw_delivery)) {
          unsigned skipped = 0;
+
          if (logger_worker_ingress_allowed(subsys, priority, &skipped)) {
             char message[1024];
             vsnprintf(message, sizeof(message), fmt, ap);
+
             if (skipped) {
                size_t n = strlen(message);
-               snprintf(message + n, sizeof(message) - n,
-                  " [rate limit: %u earlier messages suppressed]", skipped);
+               snprintf(message + n, sizeof(message) - n, " [rate limit: %u earlier messages suppressed]", skipped);
             }
             ra_log_queue_push(worker_log_queue, priority, subsys, message);
          }

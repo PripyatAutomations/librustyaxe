@@ -17,6 +17,7 @@ static bool spawn(subproc_t *p, const char *mode, bool merge) {
 
    return subproc_spawn(p, program, args, merge);
 }
+
 static int exited(subproc_t *p) {
    int status = -1;
 
@@ -33,6 +34,7 @@ static int exited(subproc_t *p) {
 
    return -1;
 }
+
 int main(int argc, char **argv) {
    program = argv[0];
 
