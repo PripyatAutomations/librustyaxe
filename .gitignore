@@ -1,0 +1,46 @@
+.env
+# Automated testing tool artifacts
+compile_commands.json
+*/compile_commands.json
+*/*/compile_commands.json
+audit-logs/*
+audit-logs/*/*
+
+# Built libraries
+*.o
+*.so
+*.so.0
+*.dll
+
+# Built binaries
+bin/*
+
+# Build artifacts
+build/*
+build/*/*
+build/*/obj/*
+inc/autoconf.h
+
+# core files
+core.*
+core
+*.core
+*.core.*
+
+
+rrserver/master.db
+*/*.o
+*/*/*.o
+
+######################################
+# distclean should remove this stuff #
+######################################
+debian/*.log
+debian/.debhelper/*
+debian/*.debhelper
+debian/.debhelper
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/*/DEBIAN/
+debian/tmp/
