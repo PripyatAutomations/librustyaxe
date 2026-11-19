@@ -59,10 +59,10 @@ $(TEST_BUILD_DIR)/%.o: %.c | $(TEST_BUILD_DIR)
 $(TEST_BUILD_DIR)/test_log_queue: log-queue.c ../log-queue.c | $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -pthread -o $@ $^
 
-test tests check: all
+test tests: all
 	@bash ./run-check.sh "$(TEST_BUILD_DIR)" $(TARGETS) $(TEST_BUILD_DIR)/test_log_queue
 
 clean:
 	rm -rf $(TEST_BUILD_DIR)
 
-.PHONY: all clean test tests check
+.PHONY: all clean test tests
