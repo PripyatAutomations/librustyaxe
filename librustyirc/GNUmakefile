@@ -8,7 +8,7 @@ INCLUDEDIR ?= $(PREFIX)/include
 DESTDIR ?=
 BUILD_DIR ?= ../build/irc
 AXE_BUILD_DIR ?= ../build
-VERSION ?= 0.1.0
+VERSION ?= $(strip $(shell cat ../.version))
 SOVERSION ?= 0
 SOURCES := irc.c connection.c irc.channel.c irc.modes.c irc.user.c irc.capab.c irc.commands.c irc.numerics.c irc.event.c irc.dispatch.c irc.audio.c irc.dcc.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
@@ -18,14 +18,19 @@ SONAME := librustyirc.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyirc.pc
 IRC_CFLAGS := -I$(AXE_BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags glib-2.0 2>/dev/null) -std=gnu23
 IRC_LIBS := -L$(AXE_BUILD_DIR) -lrustyaxe -lbsd
+AXE_LIB := $(AXE_BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 .PHONY: all check install uninstall clean distclean
 all: $(REAL_LIB) $(PC_FILE)
 
-$(BUILD_DIR)/%.o: %.c $(wildcard *.h)
+$(AXE_LIB):
+	$(MAKE) -C .. BUILD_DIR="$(abspath $(AXE_BUILD_DIR))" VERSION="$(VERSION)" SOVERSION="$(SOVERSION)" "$(abspath $@)"
+
+# The parent creates generated headers and the include symlink used here.
+$(BUILD_DIR)/%.o: %.c $(wildcard *.h) | $(AXE_LIB)
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(IRC_CFLAGS) $(CFLAGS) -fPIC -c -o $@ $<
 
-$(REAL_LIB): $(OBJECTS) $(AXE_BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
+$(REAL_LIB): $(OBJECTS) $(AXE_LIB)
 	$(CC) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(OBJECTS) $(IRC_LIBS)
 	ln -sfn $(notdir $@) $(BUILD_DIR)/$(SONAME)
 	ln -sfn $(SONAME) $(BUILD_DIR)/librustyirc.so
@@ -40,8 +45,8 @@ $(PC_FILE): GNUmakefile
 check: all
 	@readelf -d $(REAL_LIB) | grep -q 'SONAME.*$(SONAME)'
 	@test -L $(BUILD_DIR)/$(SONAME)
-	@grep -Fqx 'Libs: -L${libdir} -lrustyirc' $(PC_FILE)
-	@grep -Fqx 'Cflags: -I${includedir}' $(PC_FILE)
+	@grep -Fqx 'Libs: -L$${libdir} -lrustyirc' $(PC_FILE)
+	@grep -Fqx 'Cflags: -I$${includedir}' $(PC_FILE)
 
 install: all
 	install -Dm755 $(REAL_LIB) "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))"
