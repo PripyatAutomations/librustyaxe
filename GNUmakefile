@@ -59,7 +59,7 @@ REAL_LIB := $(BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 SONAME := librustyaxe.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyaxe.pc
 
-.PHONY: all clean distclean test tests check install uninstall irc-build deb src-deb source-deb
+.PHONY: all clean distclean test tests install uninstall irc-build deb src-deb source-deb
 all: $(BUILD_DIR)/generated/librustyaxe/build_config.h $(REAL_LIB) $(PC_FILE) irc-build
 
 irc-build: $(REAL_LIB)
@@ -104,7 +104,7 @@ $(PC_FILE): GNUmakefile
 	    'Name: librustyaxe' 'Description: Shared RustyRig utility library' 'Version: $(VERSION)' \
 	    'Libs: -L$${libdir} -lrustyaxe' 'Cflags: -I$${includedir}' 'Requires.private: glib-2.0 gio-2.0 openssl' 'Libs.private: -lwslay' > $@
 
-test tests check: all
+test tests: all
 	$(MAKE) -C librustyirc test BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
 	$(MAKE) -C tests test TEST_BUILD_DIR="$(abspath $(BUILD_DIR))/tests" \
 	    INCLUDES="-I$(abspath $(BUILD_DIR))/generated -I$(abspath $(BUILD_DIR))/include $(shell $(PKG_CONFIG) --cflags $(DEPS))" \
