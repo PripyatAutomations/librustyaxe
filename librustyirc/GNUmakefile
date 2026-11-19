@@ -21,7 +21,7 @@ PC_FILE := $(BUILD_DIR)/librustyirc.pc
 IRC_CFLAGS := -I$(AXE_BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags glib-2.0 2>/dev/null) -std=gnu23
 IRC_LIBS := -L$(AXE_BUILD_DIR) -lrustyaxe -lbsd
 AXE_LIB := $(AXE_BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
-.PHONY: all check install uninstall clean distclean
+.PHONY: all test tests check install uninstall clean distclean
 all: $(REAL_LIB) $(PC_FILE)
 
 $(AXE_LIB):
@@ -44,7 +44,7 @@ $(PC_FILE): GNUmakefile
 	 'Version: $(VERSION)' 'Requires: librustyaxe' \
 	 'Libs: -L$${libdir} -lrustyirc' 'Cflags: -I$${includedir}' > $@
 
-check: all
+test tests check: all
 	@readelf -d $(REAL_LIB) | grep -q 'SONAME.*$(SONAME)'
 	@test -L $(BUILD_DIR)/$(SONAME)
 	@grep -Fqx 'Libs: -L$${libdir} -lrustyirc' $(PC_FILE)
