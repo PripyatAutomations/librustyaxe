@@ -1,16 +1,17 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -D_POSIX_C_SOURCE=200809L -O0 -g
-LIB_DIR = ..
-INCLUDES = -I$(LIB_DIR) -I$(LIB_DIR)/.. -I../../build/radio
-# Link against the prebuilt shared library instead of recompiling the whole lib
-LIBS = -L../.. -lrustyaxe -Wl,-rpath,$(abspath ../..)
+# Always use the librustyaxe checkout's own generated headers and binaries.
+REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
+INCLUDES = -I$(REPO_ROOT)/build/generated -I$(REPO_ROOT)/build/include $(shell pkg-config --cflags glib-2.0 gio-2.0)
+# Link against the independently built RustyAxe shared library.
+LIBS = -L$(REPO_ROOT)/build -lrustyaxe -Wl,-rpath,$(REPO_ROOT)/build
 
 TEST_SOURCES = test_mirc.c test_json.c test_dict.c test_list.c test_maidenhead.c test_ringbuffer.c test_util_time.c test_config_save.c test_config_includes.c test_event_tokens.c test_event_messages.c test_serial_config.c test_completion_labels.c test_runtime_globals.c test_transport_wss.c
 
 # Keep test artifacts out of the source directory. The top-level build already
 # owns generated files, so running a test suite must not leave .o files beside
 # the test sources.
-TEST_BUILD_DIR ?= ../../build/tests/librustyaxe
+TEST_BUILD_DIR ?= $(REPO_ROOT)/build/tests/librustyaxe
 
 
 # Object files and test executables
