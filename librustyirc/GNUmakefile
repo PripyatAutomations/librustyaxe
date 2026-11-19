@@ -1,14 +1,16 @@
 # MIT IRC library built alongside (but separately from) MIT RustyAxe.
 .DEFAULT_GOAL := all
+# Locate the owning librustyaxe checkout, regardless of the invocation cwd.
+REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 CC ?= cc
 PKG_CONFIG ?= pkg-config
 PREFIX ?= /usr
 LIBDIR ?= $(PREFIX)/lib/$(shell $(CC) -dumpmachine)
 INCLUDEDIR ?= $(PREFIX)/include
 DESTDIR ?=
-BUILD_DIR ?= ../build/irc
-AXE_BUILD_DIR ?= ../build
-VERSION ?= $(strip $(shell cat ../.version))
+BUILD_DIR ?= $(REPO_ROOT)/build/irc
+AXE_BUILD_DIR ?= $(REPO_ROOT)/build
+VERSION ?= $(strip $(shell cat $(REPO_ROOT)/.version))
 SOVERSION ?= 0
 SOURCES := irc.c connection.c irc.channel.c irc.modes.c irc.user.c irc.capab.c irc.commands.c irc.numerics.c irc.event.c irc.dispatch.c irc.audio.c irc.dcc.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
@@ -23,7 +25,7 @@ AXE_LIB := $(AXE_BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 all: $(REAL_LIB) $(PC_FILE)
 
 $(AXE_LIB):
-	$(MAKE) -C .. BUILD_DIR="$(abspath $(AXE_BUILD_DIR))" VERSION="$(VERSION)" SOVERSION="$(SOVERSION)" "$(abspath $@)"
+	$(MAKE) -C "$(REPO_ROOT)" BUILD_DIR="$(abspath $(AXE_BUILD_DIR))" VERSION="$(VERSION)" SOVERSION="$(SOVERSION)" "$(abspath $@)"
 
 # The parent creates generated headers and the include symlink used here.
 $(BUILD_DIR)/%.o: %.c $(wildcard *.h) | $(AXE_LIB)
