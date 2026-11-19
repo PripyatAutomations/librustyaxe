@@ -40,6 +40,8 @@ $(PC_FILE): GNUmakefile
 check: all
 	@readelf -d $(REAL_LIB) | grep -q 'SONAME.*$(SONAME)'
 	@test -L $(BUILD_DIR)/$(SONAME)
+	@grep -Fqx 'Libs: -L${libdir} -lrustyirc' $(PC_FILE)
+	@grep -Fqx 'Cflags: -I${includedir}' $(PC_FILE)
 
 install: all
 	install -Dm755 $(REAL_LIB) "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))"
