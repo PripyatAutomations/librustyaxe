@@ -35,7 +35,7 @@ $(PC_FILE): GNUmakefile
 	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' \
 	 'Name: librustyirc' 'Description: MIT IRC protocol library built with RustyAxe' \
 	 'Version: $(VERSION)' 'Requires: librustyaxe' \
-	 'Libs: -L${libdir} -lrustyirc' 'Cflags: -I${includedir}' > $@
+	 'Libs: -L$${libdir} -lrustyirc' 'Cflags: -I$${includedir}' > $@
 
 check: all
 	@readelf -d $(REAL_LIB) | grep -q 'SONAME.*$(SONAME)'
