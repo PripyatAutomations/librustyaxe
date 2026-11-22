@@ -1,63 +1,48 @@
-# RustyScript — parser foundation (work in progress)
+# RustyScript (early implementation)
 
-This directory is the beginning of the independent `librustyscript` library
-within the librustyaxe repository.
+RustyScript is a separately built and packaged C library inside the
+librustyaxe repository. The initial host integration is in rustyrig-fw
+(`rrclient` and `rrserver`) and uses the installed librustyscript library.
 
-The initial parser recognizes and reports three **top-level registrations**:
+Three host registration forms are recognized:
 
 ```c
 script("/hello", {
-    window.input("#test", "Hello")
+    log.info("Hello from RustyScript")
 });
 
 hotkey _&^X {
-    window.input("#test", "/who")
+    log.info("Shift+Alt+Ctrl+X")
 }
 
 event irc.privmsg {
-    if (event.text == "!ping") {
-        irc.say(event.target, "pong")
-    }
+    log.info(event.text)
 }
 ```
 
-`_` = Shift, `&` = Alt, `^` = Control. Modifier order is not significant.
-The host will decide whether key names are valid and where bindings apply.
+`_` = Shift, `&` = Alt, `^` = Control. Braces are mandatory.
+The script loader owns registrations but does not execute handler bodies.
+The host invokes handlers through `rrs_vm_invoke`. Native host functions
+are registered through `rrs_vm_register_native`. Script load uses atomic
+replacement of the registration table, preserving the last good table on
+parse failure. The event callback can receive an owned dictionary snapshot.
 
-**Host entry-point contract:** `script`, `hotkey`, and `event` are the
-only source constructs that register entry points. Loading a source file does not
-execute handler bodies. The script's other declared functions are helpers; they
-run only when invoked by a registered handler or another function. A function
-definition is not an event subscription.
+The interpreter currently evaluates basic declarations, literals, numeric
+expressions, string concatenation, dictionaries, function calls to registered
+native functions, and braced `if`/`else`. It is an **initial executable
+subset**, not a full language implementation. In particular, it does **not**
+yet support script-defined functions, global/persistent declarations, arrays,
+type enforcement on assignments/returns, SQLite, async/await, exceptions,
+subprocess control or audio/pipeline APIs. A registration body is checked for
+balanced braces at load time; comprehensive body syntax checking is still
+pending.
 
-- `script("/name", { ... });` installs a handler in the host's normal command
-  dispatcher. Arguments and originating user/window/session context will be
-  supplied when that command is invoked; normal permissions still apply.
-- `hotkey _&^X { ... }` installs a keyboard callback in hosts with a frontend.
-  `_` = Shift, `&` = Alt, `^` = Control.
-- `event irc.privmsg { ... }` subscribes to the named event and receives a
-  copy of its payload through the event bus. Subscriptions must be removed when
-  the script is unloaded.
+Run `make -C rustyscript test` or the repository's normal `make test`.
+The shared library can be built separately with `make -C rustyscript`.
+Root `make install` installs `librustyscript` and its pkg-config metadata.
+Debian packages are `librustyscript0` and `librustyscript-dev`.
 
-Host availability is separate from syntax validity: a headless host may report
-a hotkey registration as unsupported, without rejecting an otherwise valid
-script. Registration/unregistration must be transactional on reload: never
-leave duplicate handlers or stale callbacks after a failed reload.
-
-Top-level declarations and persistent variables are initialized at load; the
-language will not allow arbitrary top-level executable statements. Host
-integration must use the registration callback in this syntax foundation, not
-reparse script body text itself.
-
-All control blocks must use braces. Semicolon after a registration is optional.
-The callback gets the kind, original name, body source span, and line.
-
-**Not implemented:** executing script bodies, declarations/functions, typed
-values/JSON, the event bridge, hotkey registration, command registration,
-threaded scheduler, persistent variables, database host adapters, and the
-`security.scripting.allow-unsafe-exec` enforcement point. Do not load
-untrusted scripts or treat this parser as a complete language validator.
-
-Build/test the independent syntax module with `make test` from this directory.
-It uses only the C standard library; subsequent runtime integration may link
-to librustyaxe and librustyirc.
+The runtime does not depend on GTK or librrprotocol. The host integrations
+provide event subscriptions, slash-command dispatch (rrclient), and GTK hotkey
+dispatch. Server-side script management and remote slash-command invocation
+need their own authorized administrative API.
