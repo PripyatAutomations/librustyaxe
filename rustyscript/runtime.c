@@ -31,7 +31,10 @@ struct rrs_vm {
    native_t *native;
    binding_t *bindings;
    size_t count;
-   char error[256];
+   char error[512];
+   const char *active_body;
+   size_t active_offset;
+   unsigned active_line;
 };
 typedef struct variable {
    char *name;
@@ -147,7 +150,15 @@ bool rrs_vm_register_native(rrs_vm_t *vm,const char *name,rrs_native_fn fn,void 
 void rrs_vm_raise(rrs_vm_t *vm,const char *message) {
    /* Preserve the primary failure. Secondary parser unwinding errors such as
     * "expected )" must not conceal the actual missing property or bad native. */
-   if(vm && !vm->error[0])snprintf(vm->error,sizeof(vm->error),"%s",message?message:"runtime error");
+   if(vm && !vm->error[0]) {
+      if(vm->active_body) {
+         unsigned column=1;
+         for(size_t i=vm->active_offset;i>0 && vm->active_body[i-1]!='\n';i--)
+            column++;
+         snprintf(vm->error,sizeof(vm->error),"line %u:%u: %s",
+            vm->active_line,column,message?message:"runtime error");
+      } else snprintf(vm->error,sizeof(vm->error),"%s",message?message:"runtime error");
+   }
 }
 const char *rrs_vm_error(const rrs_vm_t *vm) {return vm?vm->error:"invalid VM";}
 static int collect(const rrscript_binding_t *b,void *arg) {
@@ -209,7 +220,13 @@ static bool set_var(eval_t *e,const char *name,const rrs_value_t *value,bool dec
    return true;
 }
 static char ep(eval_t *e){return e->text[e->pos];}
-static char advance(eval_t *e) {char c=ep(e);if(c){e->pos++;if(c=='\n')e->line++;}return c;}
+static char advance(eval_t *e) {
+   char c=ep(e);
+   if(c){e->pos++;if(c=='\n')e->line++;}
+   e->vm->active_offset=e->pos;
+   e->vm->active_line=e->line;
+   return c;
+}
 static void ws(eval_t *e) {
    for(;;) {
       while(isspace((unsigned char)ep(e))||ep(e)==';')advance(e);
@@ -576,12 +593,16 @@ bool rrs_vm_invoke(rrs_vm_t *vm,rrscript_binding_kind_t kind,
                    const char *name,const rrs_value_t *event) {
    if(!vm||!name)return false;
    vm->error[0]=0;
-   bool found=false;
+    vm->active_body=NULL;
+    bool found=false;
    for(size_t i=0;i<vm->count;i++) {
       binding_t *b=&vm->bindings[i];
       if(b->info.kind!=kind||strcmp(b->name,name))continue;
       found=true;
       eval_t e={.text=b->body,.line=b->info.line,.vm=vm};
+       vm->active_body=e.text;
+       vm->active_offset=0;
+       vm->active_line=e.line;
       rrs_value_t *input=event?rrs_value_copy(event):rrs_dictionary();
       if(!input||!set_var(&e,"event",input,true)){
          rrs_value_free(input);free_vars(e.vars);
@@ -591,6 +612,7 @@ bool rrs_vm_invoke(rrs_vm_t *vm,rrscript_binding_kind_t kind,
       rrs_value_free(input);
       bool ok=statements(&e,false);
       free_vars(e.vars);
+       vm->active_body=NULL;
       if(!ok||vm->error[0])return false;
       /* A name can have multiple event handlers. Command/hotkey names
        * are single dispatch points; the host resolves cross-file collisions. */
