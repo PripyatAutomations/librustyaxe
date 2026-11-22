@@ -67,6 +67,11 @@ int main(void) {
    bad("script(\"test\", { print(1) })");
    bad("event irc.privmsg { print(1)");
    bad("event irc.privmsg { /* unfinished");
+   assert(rrscript_parse_registrations(
+      "int increment(int value) { value++; return value; }\n"
+      "void notify(const char message) { log.info(message); }\n"
+      "event test.event { increment(10) }\n",NULL,NULL,&e)==0);
+   bad("int missing(int value) return value;");
    bad("event foo.bar { print(1) } garbage");
    puts("RustyScript registration syntax tests passed");
    return 0;
