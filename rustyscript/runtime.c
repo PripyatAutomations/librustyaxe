@@ -26,6 +26,7 @@ typedef struct binding {
    rrscript_binding_t info;
    char *name;
    char *body;
+   unsigned body_line;
 } binding_t;
 struct rrs_vm {
    native_t *native;
@@ -35,6 +36,7 @@ struct rrs_vm {
    const char *active_body;
    size_t active_offset;
    unsigned active_line;
+   const char *loading_source;
 };
 typedef struct variable {
    char *name;
@@ -183,6 +185,12 @@ static int collect(const rrscript_binding_t *b,void *arg) {
    dst->name=strndup(b->name,b->name_length);
    dst->body=strndup(b->body,b->body_length);
    if(!dst->name||!dst->body){free(dst->name);free(dst->body);return -1;}
+   dst->body_line=b->line;
+   if(v->loading_source && b->body>=v->loading_source) {
+      dst->body_line=1;
+      for(const char *p=v->loading_source;p<b->body;p++)
+         if(*p=='\n')dst->body_line++;
+   }
    dst->info=*b;
    dst->info.name=dst->name;dst->info.body=dst->body;
    dst->info.name_length=strlen(dst->name);
@@ -193,7 +201,7 @@ static int collect(const rrscript_binding_t *b,void *arg) {
 bool rrs_vm_load(rrs_vm_t *vm,const char *source) {
    if(!vm)return false;
    vm->error[0]=0;
-   rrs_vm_t candidate={0};
+   rrs_vm_t candidate={.loading_source=source};
    rrscript_error_t err;
    if(rrscript_parse_registrations(source,collect,&candidate,&err)) {
       free_bindings(candidate.bindings,candidate.count);
@@ -611,7 +619,7 @@ bool rrs_vm_invoke(rrs_vm_t *vm,rrscript_binding_kind_t kind,
       binding_t *b=&vm->bindings[i];
       if(b->info.kind!=kind||strcmp(b->name,name))continue;
       found=true;
-      eval_t e={.text=b->body,.line=b->info.line,.vm=vm};
+      eval_t e={.text=b->body,.line=b->body_line,.vm=vm};
        vm->active_body=e.text;
        vm->active_offset=0;
        vm->active_line=e.line;
