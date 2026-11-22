@@ -43,3 +43,19 @@ Multi-Arch: same
 Depends: librustyirc0 (= ${binary:Version}), librustyaxe-dev, ${misc:Depends}
 Description: Development headers for librustyirc
  Headers, linker symlink and pkg-config metadata for the IRC library.
+
+Package: librustyscript0
+Architecture: any
+Multi-Arch: same
+Depends: librustyaxe0 (= ${binary:Version}), librustyirc0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: RustyScript interpreter runtime
+ Embeddable typed scripting runtime with host-registered command,
+ hotkey and event entry points.
+
+Package: librustyscript-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: librustyscript0 (= ${binary:Version}), librustyaxe-dev, librustyirc-dev, ${misc:Depends}
+Description: Development headers for librustyscript
+ Public interpreter and host integration headers and pkg-config metadata.
