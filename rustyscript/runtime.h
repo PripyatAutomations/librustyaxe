@@ -8,7 +8,7 @@
 typedef struct rrs_vm rrs_vm_t;
 typedef struct rrs_value rrs_value_t;
 typedef enum {
-   RRS_NULL, RRS_INT, RRS_FLOAT, RRS_BOOL, RRS_CHAR, RRS_STRING, RRS_DICT
+   RRS_NULL, RRS_INT, RRS_FLOAT, RRS_BOOL, RRS_CHAR, RRS_STRING, RRS_DICT, RRS_ARRAY
 } rrs_type_t;
 /* Returned strings and dictionaries are borrowed; copy if retaining. */
 rrs_type_t rrs_value_type(const rrs_value_t *value);
@@ -29,6 +29,10 @@ rrs_value_t *rrs_floating(double value);
 rrs_value_t *rrs_boolean(bool value);
 rrs_value_t *rrs_string(const char *value);
 rrs_value_t *rrs_dictionary(void);
+rrs_value_t *rrs_array(void);
+bool rrs_array_append(rrs_value_t *array, const rrs_value_t *value);
+size_t rrs_array_length(const rrs_value_t *array);
+const rrs_value_t *rrs_array_get(const rrs_value_t *array, size_t index);
 bool rrs_dict_put(rrs_value_t *dict, const char *key, const rrs_value_t *value);
 rrs_value_t *rrs_value_copy(const rrs_value_t *value);
 /* Human-readable representation of any value, including nested dictionaries.
