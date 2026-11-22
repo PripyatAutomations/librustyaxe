@@ -134,7 +134,8 @@ static void original_parser_error(void) {
    assert(rrs_vm_load(vm,"event irc.privmsg { if (event.room == \"#room\") { } }"));
    rrs_value_t *event=rrs_dictionary(); /* Missing room must be identified. */
    assert(!rrs_vm_invoke(vm,RRSCRIPT_EVENT,"irc.privmsg",event));
-   assert(!strcmp(rrs_vm_error(vm),"unknown variable"));
+   assert(strstr(rrs_vm_error(vm),"unknown variable"));
+   assert(strstr(rrs_vm_error(vm),"line "));
    rrs_value_free(event);
    rrs_vm_free(vm);
 }
