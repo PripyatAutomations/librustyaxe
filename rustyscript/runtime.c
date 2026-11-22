@@ -127,6 +127,77 @@ bool rrs_dict_put(rrs_value_t *v,const char *key,const rrs_value_t *value) {
    f->value=copy;f->next=v->as.fields;v->as.fields=f;
    return true;
 }
+/* Recursive, bounded representation of values for the interactive console. */
+typedef struct {char *data;size_t length,capacity;} repr_buf_t;
+static bool repr_add(repr_buf_t *b,const char *text,size_t n) {
+   if(n>65536||b->length>65536-n)return false;
+   size_t needed=b->length+n+1;
+   if(needed>b->capacity) {
+      size_t capacity=b->capacity?b->capacity:64;
+      while(capacity<needed)capacity*=2;
+      char *new_data=realloc(b->data,capacity);
+      if(!new_data)return false;
+      b->data=new_data;b->capacity=capacity;
+   }
+   memcpy(b->data+b->length,text,n);
+   b->length+=n;b->data[b->length]=0;
+   return true;
+}
+static bool repr_str(repr_buf_t *b,const char *s) {
+   return repr_add(b,s,strlen(s));
+}
+static bool repr_quote(repr_buf_t *b,const char *text) {
+   if(!repr_str(b,"\""))return false;
+   for(const unsigned char *p=(const unsigned char*)(text?text:"");*p;p++) {
+      char buf[8];
+      if(*p=='"'||*p=='\\') {
+         buf[0]='\\';buf[1]=(char)*p;buf[2]=0;
+      } else if(*p=='\n')strcpy(buf,"\\n");
+      else if(*p=='\r')strcpy(buf,"\\r");
+      else if(*p=='\t')strcpy(buf,"\\t");
+      else if(*p<32)snprintf(buf,sizeof(buf),"\\u%04x",*p);
+      else {buf[0]=(char)*p;buf[1]=0;}
+      if(!repr_str(b,buf))return false;
+   }
+   return repr_str(b,"\"");
+}
+static bool repr_inner(repr_buf_t *b,const rrs_value_t *v,int depth) {
+   if(depth>12)return repr_str(b,"\"<depth limit>\"");
+   if(!v||v->type==RRS_NULL)return repr_str(b,"null");
+   char number[96];
+   switch(v->type) {
+      case RRS_BOOL:return repr_str(b,v->as.boolean?"true":"false");
+      case RRS_INT:
+         snprintf(number,sizeof(number),"%lld",(long long)v->as.integer);
+         return repr_str(b,number);
+      case RRS_FLOAT:
+         snprintf(number,sizeof(number),"%.17g",v->as.real);
+         return repr_str(b,number);
+      case RRS_CHAR:{
+         char chars[2]={v->as.character,0};
+         return repr_quote(b,chars);
+      }
+      case RRS_STRING:return repr_quote(b,v->as.string);
+      case RRS_DICT:
+         if(!repr_str(b,"{"))return false;
+         for(field_t *item=v->as.fields;item;item=item->next) {
+            if(item!=v->as.fields&&!repr_str(b,", "))return false;
+            if(!repr_quote(b,item->name)||!repr_str(b,": ")||
+               !repr_inner(b,item->value,depth+1))return false;
+         }
+         return repr_str(b,"}");
+      default:return repr_str(b,"null");
+   }
+}
+char *rrs_value_repr(const rrs_value_t *value) {
+   repr_buf_t output={0};
+   if(!repr_inner(&output,value,0)) {
+      free(output.data);
+      return strdup("<value too large>");
+   }
+   return output.data?output.data:strdup("null");
+}
+
 rrs_vm_t *rrs_vm_new(void) {return calloc(1,sizeof(rrs_vm_t));}
 static void free_bindings(binding_t *b,size_t n) {
    for(size_t i=0;i<n;i++){free(b[i].name);free(b[i].body);}
@@ -656,8 +727,10 @@ bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result) {
    vm->active_offset=0;
    vm->active_line=1;
    ws(&e);
-   bool declaration=false;
+   bool declaration=strchr(source,';')!=NULL || strchr(source,'\n')!=NULL;
    const char *start=e.text+e.pos;
+   if(!strncmp(start,"if",2) &&
+      (isspace((unsigned char)start[2])||start[2]=='('))declaration=true;
    const char *types[]={"int","float","bool","char","dict",NULL};
    for(int i=0;types[i];i++) {
       size_t n=strlen(types[i]);
