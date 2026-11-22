@@ -56,6 +56,17 @@ subprocess control or audio/pipeline APIs. A registration body is checked for
 balanced braces at load time; comprehensive body syntax checking is still
 pending.
 
+### Arrays
+
+RustyScript supports bounded array literals such as
+`["#hamradio-test@efnet", "#test@station"]` and string-array declarations
+such as `char[][] rooms = ["#hamradio-test@efnet"]`.
+A single array may contain up to 256 entries. The embedding host can inspect
+array entries using `rrs_array_length()` and `rrs_array_get()`; the latter
+returns a borrowed value. Arrays are copied when assigned to values or passed
+to host functions. RustyRig's `chat.send` accepts a configured array of up to
+32 room destinations and routes each through its named connection profile.
+
 ### Interactive evaluation and diagnostics
 
 `rrs_vm_eval(vm, source, &result)` evaluates expressions and simple statements
