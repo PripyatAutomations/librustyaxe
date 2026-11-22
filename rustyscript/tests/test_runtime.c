@@ -139,6 +139,38 @@ static void original_parser_error(void) {
    rrs_value_free(event);
    rrs_vm_free(vm);
 }
+static void console_evaluation(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   assert(vm);
+   rrs_value_t *value=NULL;
+   assert(rrs_vm_eval(vm,"int count = 7",&value));
+   assert(rrs_value_type(value)==RRS_NULL);
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"count",&value));
+   assert(rrs_value_int(value)==7);
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"count = count + 2\ncount = count + 3",&value));
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"count",&value));
+   assert(rrs_value_int(value)==12);
+   char *shown=rrs_value_repr(value);
+   assert(shown&&!strcmp(shown,"12"));
+   free(shown);rrs_value_free(value);
+   assert(!rrs_vm_eval(vm,"missing",&value));
+   assert(strstr(rrs_vm_error(vm),"line "));
+   rrs_value_t *dict=rrs_dictionary();
+   rrs_value_t *nested=rrs_dictionary();
+   value=rrs_string("hello\nworld");
+   assert(rrs_dict_put(nested,"message",value));
+   rrs_value_free(value);
+   assert(rrs_dict_put(dict,"nested",nested));
+   rrs_value_free(nested);
+   shown=rrs_value_repr(dict);
+   assert(shown && strstr(shown,"\"nested\"") &&
+      strstr(shown,"\"message\"") && strstr(shown,"hello\\nworld"));
+   free(shown);rrs_value_free(dict);
+   rrs_vm_free(vm);
+}
 static void values(void) {
    rrs_value_t *d=rrs_dictionary();
    rrs_value_t *n=rrs_integer(9);
@@ -157,6 +189,7 @@ int main(void) {
    repeated_events();
    panel_script();
    original_parser_error();
+   console_evaluation();
    values();
    puts("RustyScript runtime tests passed");
    return 0;
