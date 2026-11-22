@@ -47,6 +47,17 @@ static void syntax_and_invocation(void) {
    assert(!rrs_vm_invoke(vm,RRSCRIPT_COMMAND,"/missing",NULL));
    rrs_vm_free(vm);
 }
+static void repeated_events(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   fixture_t f={0};
+   assert(rrs_vm_register_native(vm,"test.record",record,&f));
+   assert(rrs_vm_load(vm,
+      "event sample.update { test.record(1) }\n"
+      "event sample.update { test.record(2) }\n"));
+   assert(rrs_vm_invoke(vm,RRSCRIPT_EVENT,"sample.update",NULL));
+   assert(f.calls==2 && f.last==2);
+   rrs_vm_free(vm);
+}
 static void values(void) {
    rrs_value_t *d=rrs_dictionary();
    rrs_value_t *n=rrs_integer(9);
@@ -61,6 +72,7 @@ static void values(void) {
 }
 int main(void) {
    syntax_and_invocation();
+   repeated_events();
    values();
    puts("RustyScript runtime tests passed");
    return 0;
