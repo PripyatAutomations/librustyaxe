@@ -168,6 +168,9 @@ int rrscript_parse_registrations(const char *source, rrscript_register_fn cb,
          b.name_length = s.pos-p;
          if (block(&s,&b.body,&b.body_length)) return -1;
       } else return fail(&s,"expected script(...), hotkey, or event registration");
+      /* A registration's optional terminator may follow whitespace,
+       * including a newline. Never mistake it for a new registration. */
+      if (skip_space(&s)) return -1;
       if (peek(&s) == ';') next(&s);
       if (cb && cb(&b,user)) return fail(&s,"registration callback rejected binding");
    }
