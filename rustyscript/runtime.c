@@ -43,7 +43,7 @@ struct rrs_vm {
    function_def_t *functions;
    size_t function_count;
    unsigned call_depth;
-   size_t live_cells,peak_cells,cell_allocations,reference_bindings,gc_collections;
+   size_t live_cells,peak_cells,cell_allocations,cell_releases,reference_bindings,gc_collections;
    char error[512];
    const char *active_body;
    size_t active_offset;
@@ -254,6 +254,25 @@ char *rrs_value_repr(const rrs_value_t *value) {
 }
 
 rrs_vm_t *rrs_vm_new(void) {return calloc(1,sizeof(rrs_vm_t));}
+void rrs_vm_memory_stats(const rrs_vm_t *vm,rrs_memory_stats_t *stats) {
+   if(!stats)return;
+   memset(stats,0,sizeof(*stats));
+   if(!vm)return;
+   stats->live_cells=vm->live_cells;
+   stats->peak_cells=vm->peak_cells;
+   stats->cell_allocations=vm->cell_allocations;
+   stats->cell_releases=vm->cell_releases;
+   stats->reference_bindings=vm->reference_bindings;
+   stats->collection_requests=vm->gc_collections;
+}
+size_t rrs_vm_gc_collect(rrs_vm_t *vm) {
+   if(!vm)return 0;
+   vm->gc_collections++;
+   /* Variable cells cannot contain references to other cells yet, so
+    * reference counting reclaims every unreachable cell immediately. */
+   return 0;
+}
+
 static void free_functions(function_def_t *f,size_t n) {
    for(size_t i=0;i<n;i++){free(f[i].name);free(f[i].body);free(f[i].signature);free(f[i].return_type);}
    free(f);
@@ -375,7 +394,7 @@ static void release_cell(value_cell_t *c) {
    if(!c)return;
    if(c->vm&&c->vm->reference_bindings)c->vm->reference_bindings--;
    if(--c->owners==0){
-      if(c->vm&&c->vm->live_cells)c->vm->live_cells--;
+      if(c->vm&&c->vm->live_cells){c->vm->live_cells--;c->vm->cell_releases++;}
       rrs_value_free(c->value);free(c);
    }
 }
@@ -486,6 +505,7 @@ static rrs_value_t *call_script(eval_t *caller,function_def_t *fn,int argc,
       bool read_only=keyword(&signature,"const");
       char type[64],name[192];
       if(!ident(&signature,type,sizeof(type))){rrs_vm_raise(caller->vm,"expected parameter type");break;}
+      ws(&signature);
       if(!strcmp(type,"void")&&index==0&&!ep(&signature))break;
       if(strcmp(type,"int")&&strcmp(type,"float")&&strcmp(type,"bool")&&
          strcmp(type,"char")&&strcmp(type,"dict")&&strcmp(type,"auto")) {
@@ -551,6 +571,26 @@ static rrs_value_t *call_script(eval_t *caller,function_def_t *fn,int argc,
    free_vars(execution.vars);
    if(caller->vm->error[0]){rrs_value_free(execution.return_value);return NULL;}
    return execution.return_value?execution.return_value:rrs_null();
+}
+static bool memory_field(rrs_value_t *d,const char *name,size_t number) {
+   rrs_value_t *v=rrs_integer((int64_t)number);
+   if(!v)return false;
+   bool ok=rrs_dict_put(d,name,v);
+   rrs_value_free(v);
+   return ok;
+}
+static rrs_value_t *memory_value(rrs_vm_t *vm) {
+   rrs_value_t *d=rrs_dictionary();
+   if(!d)return NULL;
+   if(!memory_field(d,"live_cells",vm->live_cells)||
+      !memory_field(d,"peak_cells",vm->peak_cells)||
+      !memory_field(d,"allocations",vm->cell_allocations)||
+      !memory_field(d,"releases",vm->cell_releases)||
+      !memory_field(d,"references",vm->reference_bindings)||
+      !memory_field(d,"collections",vm->gc_collections)) {
+      rrs_value_free(d);return NULL;
+   }
+   return d;
 }
 static rrs_value_t *primary(eval_t *e) {
    ws(e);
@@ -682,6 +722,10 @@ static rrs_value_t *primary(eval_t *e) {
          for(size_t i=0;i<e->vm->function_count;i++)
             if(!strcmp(e->vm->functions[i].name,name)){fn=&e->vm->functions[i];break;}
          if(fn)result=call_script(e,fn,argc,args,origins);
+         else if(!strcmp(name,"runtime.memory")&&argc==0)
+            result=memory_value(e->vm);
+         else if(!strcmp(name,"runtime.gc.collect")&&argc==0)
+            result=rrs_integer((int64_t)rrs_vm_gc_collect(e->vm));
          else {
             native_t *n=e->vm->native;
             while(n&&strcmp(n->name,name))n=n->next;
