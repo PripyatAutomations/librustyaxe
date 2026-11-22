@@ -38,6 +38,8 @@ void rrs_vm_free(rrs_vm_t *vm);
 bool rrs_vm_register_native(rrs_vm_t *vm, const char *name, rrs_native_fn fn, void *user);
 void rrs_vm_raise(rrs_vm_t *vm, const char *message);
 const char *rrs_vm_error(const rrs_vm_t *vm);
+/* Position of the currently executing statement/native callback (1-based). */
+void rrs_vm_position(const rrs_vm_t *vm, unsigned *line, unsigned *column);
 /* Load and compile registration envelope atomically. Old handlers survive a
  * failure. Handler bodies are executed only by invoke(). */
 bool rrs_vm_load(rrs_vm_t *vm, const char *source);
