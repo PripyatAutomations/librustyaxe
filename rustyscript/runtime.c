@@ -616,18 +616,22 @@ static bool memory_field(rrs_value_t *d,const char *name,size_t number) {
    return ok;
 }
 static rrs_value_t *memory_value(rrs_vm_t *vm) {
-   rrs_value_t *d=rrs_dictionary();
-   if(!d)return NULL;
-   if(!memory_field(d,"used",managed_bytes(vm))||
-      !memory_field(d,"peak",vm->peak_bytes)||
-      !memory_field(d,"live_cells",vm->live_cells)||
-      !memory_field(d,"peak_cells",vm->peak_cells)||
-      !memory_field(d,"allocations",vm->cell_allocations)||
-      !memory_field(d,"releases",vm->cell_releases)||
-      !memory_field(d,"references",vm->reference_bindings)||
-      !memory_field(d,"collections",vm->gc_collections)) {
-      rrs_value_free(d);return NULL;
-   }
+   rrs_value_t *d=rrs_dictionary(),*gc=rrs_dictionary();
+   if(!d||!gc){rrs_value_free(d);rrs_value_free(gc);return NULL;}
+   bool ok=memory_field(d,"used",managed_bytes(vm))&&
+      memory_field(d,"peak",vm->peak_bytes)&&
+      memory_field(d,"objects",vm->live_cells)&&
+      memory_field(d,"live_cells",vm->live_cells)&&
+      memory_field(d,"peak_cells",vm->peak_cells)&&
+      memory_field(d,"allocations",vm->cell_allocations)&&
+      memory_field(d,"releases",vm->cell_releases)&&
+      memory_field(d,"references",vm->reference_bindings)&&
+      memory_field(gc,"collections",0)&&
+      memory_field(gc,"requests",vm->gc_collections)&&
+      memory_field(gc,"reclaimed",vm->cell_releases);
+   if(ok)ok=rrs_dict_put(d,"gc",gc);
+   rrs_value_free(gc);
+   if(!ok){rrs_value_free(d);return NULL;}
    return d;
 }
 static rrs_value_t *primary(eval_t *e) {
