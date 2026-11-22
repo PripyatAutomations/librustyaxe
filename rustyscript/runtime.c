@@ -44,6 +44,8 @@ struct rrs_vm {
    size_t function_count;
    unsigned call_depth;
    size_t live_cells,peak_cells,cell_allocations,cell_releases,reference_bindings,gc_collections;
+   size_t peak_bytes;
+   struct value_cell *cells;
    char error[512];
    const char *active_body;
    size_t active_offset;
@@ -55,6 +57,7 @@ typedef struct value_cell {
    rrs_value_t *value;
    size_t owners;
    rrs_vm_t *vm;
+   struct value_cell *next;
 } value_cell_t;
 typedef struct variable {
    char *name;
@@ -253,11 +256,36 @@ char *rrs_value_repr(const rrs_value_t *value) {
    return output.data?output.data:strdup("null");
 }
 
+static size_t managed_value_bytes(const rrs_value_t *v,int depth) {
+   if(!v||depth>64)return 0;
+   size_t bytes=sizeof(*v);
+   if(v->type==RRS_STRING)bytes+=strlen(v->as.string)+1;
+   else if(v->type==RRS_ARRAY)
+      for(array_item_t *a=v->as.array.head;a;a=a->next)
+         bytes+=sizeof(*a)+managed_value_bytes(a->value,depth+1);
+   else if(v->type==RRS_DICT)
+      for(field_t *f=v->as.fields;f;f=f->next)
+         bytes+=sizeof(*f)+strlen(f->name)+1+managed_value_bytes(f->value,depth+1);
+   return bytes;
+}
+static size_t managed_bytes(const rrs_vm_t *vm) {
+   if(!vm)return 0;
+   size_t bytes=0;
+   for(const value_cell_t *c=vm->cells;c;c=c->next)
+      bytes+=sizeof(*c)+managed_value_bytes(c->value,0);
+   return bytes;
+}
+static void update_peak_bytes(rrs_vm_t *vm) {
+   size_t bytes=managed_bytes(vm);
+   if(bytes>vm->peak_bytes)vm->peak_bytes=bytes;
+}
 rrs_vm_t *rrs_vm_new(void) {return calloc(1,sizeof(rrs_vm_t));}
 void rrs_vm_memory_stats(const rrs_vm_t *vm,rrs_memory_stats_t *stats) {
    if(!stats)return;
    memset(stats,0,sizeof(*stats));
    if(!vm)return;
+   stats->used_bytes=managed_bytes(vm);
+   stats->peak_bytes=vm->peak_bytes;
    stats->live_cells=vm->live_cells;
    stats->peak_cells=vm->peak_cells;
    stats->cell_allocations=vm->cell_allocations;
@@ -394,7 +422,12 @@ static void release_cell(value_cell_t *c) {
    if(!c)return;
    if(c->vm&&c->vm->reference_bindings)c->vm->reference_bindings--;
    if(--c->owners==0){
-      if(c->vm&&c->vm->live_cells){c->vm->live_cells--;c->vm->cell_releases++;}
+      if(c->vm&&c->vm->live_cells) {
+         value_cell_t **link=&c->vm->cells;
+         while(*link&&*link!=c)link=&(*link)->next;
+         if(*link)*link=c->next;
+         c->vm->live_cells--;c->vm->cell_releases++;
+      }
       rrs_value_free(c->value);free(c);
    }
 }
@@ -404,8 +437,10 @@ static value_cell_t *new_cell(rrs_vm_t *vm,const rrs_value_t *value) {
    c->value=rrs_value_copy(value);
    if(!c->value){free(c);return NULL;}
    c->owners=1;c->vm=vm;
+   c->next=vm->cells;vm->cells=c;
    vm->live_cells++;vm->cell_allocations++;vm->reference_bindings++;
    if(vm->live_cells>vm->peak_cells)vm->peak_cells=vm->live_cells;
+   update_peak_bytes(vm);
    return c;
 }
 static void free_vars(variable_t *v) {
@@ -430,6 +465,7 @@ static bool set_var(eval_t *e,const char *name,const rrs_value_t *value,bool dec
       v->next=e->vars;e->vars=v;
    }
    rrs_value_free(v->cell->value);v->cell->value=copy;
+   update_peak_bytes(e->vm);
    return true;
 }
 static bool bind_var(eval_t *e,const char *name,const char *target,bool declare,bool read_only) {
@@ -582,7 +618,9 @@ static bool memory_field(rrs_value_t *d,const char *name,size_t number) {
 static rrs_value_t *memory_value(rrs_vm_t *vm) {
    rrs_value_t *d=rrs_dictionary();
    if(!d)return NULL;
-   if(!memory_field(d,"live_cells",vm->live_cells)||
+   if(!memory_field(d,"used",managed_bytes(vm))||
+      !memory_field(d,"peak",vm->peak_bytes)||
+      !memory_field(d,"live_cells",vm->live_cells)||
       !memory_field(d,"peak_cells",vm->peak_cells)||
       !memory_field(d,"allocations",vm->cell_allocations)||
       !memory_field(d,"releases",vm->cell_releases)||
