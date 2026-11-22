@@ -46,15 +46,13 @@ are registered through `rrs_vm_register_native`. Script load uses atomic
 replacement of the registration table, preserving the last good table on
 parse failure. The event callback can receive an owned dictionary snapshot.
 
-The interpreter currently evaluates basic declarations, literals, numeric
-expressions, string concatenation, dictionaries, function calls to registered
-native functions, and braced `if`/`else`. It is an **initial executable
-subset**, not a full language implementation. In particular, it does **not**
-yet support script-defined functions, global/persistent declarations,
-type enforcement on assignments/returns, SQLite, async/await, exceptions,
-subprocess control or audio/pipeline APIs. A registration body is checked for
-balanced braces at load time; comprehensive body syntax checking is still
-pending.
+The interpreter evaluates basic declarations, literals, numeric
+expressions, string concatenation, dictionaries, script-defined typed functions,
+native functions, and braced `if`/`else`. It remains a limited executable
+subset: global/persistent variable declarations, full type checking,
+SQLite, async/await, exceptions, and subprocess control are not yet supported.
+The loader checks registration/function braces, but still defers most body
+expression errors until execution.
 
 ### Arrays
 
@@ -91,10 +89,56 @@ view = 50;       // error
 Mutable references cannot bind to const sources; const references cannot
 be rebound. No pointers or addresses are exposed.
 
-**Not yet available:** script-defined functions (and therefore default
-by-reference parameters), cyclic garbage collection, GC statistics,
-or nested member mutation and recursively enforced const. Host-native
-function arguments are currently evaluated as value copies.
+**Still unavailable:** cyclic garbage collection and recursive const
+enforcement on nested member mutation. Host-native arguments remain value
+copies; script-defined functions pass caller variables by reference.
+
+### Functions, reference parameters, and memory
+
+Typed functions can be defined at the top level of a `.rrs` script. Their
+function bodies run when called, not when the script loads.
+
+```c
+void increment(int value) {
+    value++;
+}
+
+int square(const int value) {
+    return value * value;
+}
+
+script("/example", {
+    int counter = 5;
+    increment(counter);       // counter is now 6
+    log.info(string.str(square(counter)));
+});
+```
+
+**An existing variable passed to a script-defined function is passed by
+managed reference by default.** Expressions and literals receive temporary
+parameter storage. Assignments to ordinary parameters write back to the
+caller's variable. Const parameters cannot modify their arguments, and const
+variables cannot be passed to mutable parameters. The `:=` operator explicitly
+aliases existing variables, and `=` copies values unless assigning through a
+reference. User functions can return values and call other functions, with a
+64-call recursion limit. Host-native functions retain the existing borrowed,
+value-copy argument API.
+
+Single-quoted character literals and double-quoted one-character strings
+are both strings; binary data should use separate byte-oriented host APIs.
+
+`runtime.memory()` returns a dictionary with `used` and `peak` managed
+bytes, `objects` (live managed cells), `allocations`, `releases`,
+`references`, and `gc` fields (`collections`, `requests`, `reclaimed`).
+`runtime.gc.collect()` returns the number of unreachable cells collected.
+
+**Current memory model:** cells use reference counting. Arrays and dictionaries
+contain copied values, not references to cells, so managed reference cycles
+cannot currently be created. Consequently `runtime.gc.collect()` returns
+zero and `gc.collections` is zero; `gc.requests` counts explicit calls,
+and `gc.reclaimed` counts immediate reference-count releases. Used/peak bytes
+cover managed cell storage and nested values, not all native host allocations.
+This is not yet a tracing or cycle-collecting GC.
 
 ### Interactive evaluation and diagnostics
 
