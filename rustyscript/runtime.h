@@ -41,6 +41,8 @@ char *rrs_value_repr(const rrs_value_t *value);
 void rrs_value_free(rrs_value_t *value);
 
 typedef struct {
+   size_t used_bytes; /* managed cells and their recursively-owned values */
+   size_t peak_bytes;
    size_t live_cells;
    size_t peak_cells;
    size_t cell_allocations;
