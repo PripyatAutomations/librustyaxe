@@ -30,8 +30,8 @@ typedef struct {
    unsigned line, column;
    char message[160];
 } rrscript_error_t;
-/* v0: parse top-level registrations only. Bodies are balanced and retained,
- * but deliberately not executed or expression-checked yet.
+/* Parse registrations and typed top-level function definitions. Bodies are
+ * balanced and retained, but not executed or fully expression-checked here.
  * Returns 0 on success, -1 on invalid input/callback failure. */
 int rrscript_parse_registrations(const char *source, rrscript_register_fn register_fn,
                                 void *user, rrscript_error_t *error);
