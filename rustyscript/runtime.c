@@ -211,7 +211,7 @@ static char advance(eval_t *e) {char c=ep(e);if(c){e->pos++;if(c=='\n')e->line++
 static void ws(eval_t *e) {
    for(;;) {
       while(isspace((unsigned char)ep(e))||ep(e)==';')advance(e);
-      if(ep(e)=='/'&&e->text[e->pos+1]=='/') {
+      if(ep(e)=='#'||(ep(e)=='/'&&e->text[e->pos+1]=='/')) {
          while(ep(e)&&ep(e)!='\n')advance(e);
       } else if(ep(e)=='/'&&e->text[e->pos+1]=='*') {
          advance(e);advance(e);
@@ -464,15 +464,24 @@ static rrs_value_t *expression(eval_t *e){return expr_prec(e,1);}
 static bool skip_block(eval_t *e) {
    ws(e);
    if(ep(e)!='{'){rrs_vm_raise(e->vm,"expected mandatory {");return false;}
-   int depth=0;char quote=0;
+   int depth=0;
+   char quote=0;
    do {
       char c=advance(e);
       if(!c){rrs_vm_raise(e->vm,"unclosed control block");return false;}
       if(quote) {
          if(c=='\\'&&ep(e))advance(e);
          else if(c==quote)quote=0;
-      } else if(c=='"'||c=='\'')quote=c;
-      else if(c=='{')depth++;
+      } else if(c=='"'||c=='\'') {
+         quote=c;
+      } else if(c=='#'||(c=='/'&&ep(e)=='/')) {
+         while(ep(e)&&ep(e)!='\n')advance(e);
+      } else if(c=='/'&&ep(e)=='*') {
+         advance(e);
+         while(ep(e)&&!(ep(e)=='*'&&e->text[e->pos+1]=='/'))advance(e);
+         if(!ep(e)){rrs_vm_raise(e->vm,"unterminated block comment");return false;}
+         advance(e);advance(e);
+      } else if(c=='{')depth++;
       else if(c=='}')depth--;
    } while(depth);
    return true;

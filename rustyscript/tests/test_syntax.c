@@ -46,6 +46,22 @@ int main(void) {
       "event sample.one {}  ;\n"
       "hotkey ^X {} /* comment */ ;\n"
       "script(\"/example\", {})\n ;\n",NULL,NULL,&e)==0);
+   /* All three comment styles work outside registrations and inside
+    * handler blocks; punctuation in quoted strings is never a comment. */
+   assert(rrscript_parse_registrations(
+      "# initial configuration comment\n"
+      "script(\"/hash\", { # } ignored brace\n"
+      "  print(\"# // /* not comments\") // } ignored brace\n"
+      "  /* { ignored brace } */ print(1)\n"
+      "}) # trailing registration comment\n"
+      "// between registrations\n"
+      "event sample.two { /* } */ print(\"// and #\") }\n",
+      NULL,NULL,&e)==0);
+   assert(rrscript_parse_registrations(
+      "hotkey ^X {} # inline comment\n"
+      "event sample.three {} /* comment */ ; # after terminator\n",
+      NULL,NULL,&e)==0);
+   bad("# opening comment\n event sample.bad { /* never ends");
    bad("event irc.privmsg print(1)");
    bad("hotkey ^^X { print(1) }");
    bad("script(\"test\", { print(1) })");

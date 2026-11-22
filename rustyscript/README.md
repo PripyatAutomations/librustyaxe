@@ -21,6 +21,19 @@ event irc.privmsg {
 ```
 
 `_` = Shift, `&` = Alt, `^` = Control. Braces are mandatory.
+
+Comments may use `//` or `#` to end the current line, or `/* ... */`
+to span multiple lines. They are allowed between registrations and within
+handler blocks. Comment markers inside quoted strings/characters are literal.
+Block comments must be terminated before the end of the script.
+
+```c
+# My custom script
+script("/hello", {
+    // This executes when the command is invoked
+    log.info("Hello # not a comment") /* another comment */
+});
+```
 The script loader owns registrations but does not execute handler bodies.
 The host invokes handlers through `rrs_vm_invoke`. Native host functions
 are registered through `rrs_vm_register_native`. Script load uses atomic

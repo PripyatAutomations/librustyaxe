@@ -47,6 +47,31 @@ static void syntax_and_invocation(void) {
    assert(!rrs_vm_invoke(vm,RRSCRIPT_COMMAND,"/missing",NULL));
    rrs_vm_free(vm);
 }
+static void comment_forms(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   fixture_t f={0};
+   assert(vm && rrs_vm_register_native(vm,"test.record",record,&f));
+   assert(rrs_vm_load(vm,
+      "# file header\n"
+      "script(\"/comments\", {\n"
+      "  // single-line comment }\n"
+      "  /* multiline comment {\n"
+      "     still inside comment } */\n"
+      "  # hash comment }\n"
+      "  if (false) { # } ignored while skipping branch\n"
+      "    /* } */ test.record(99)\n"
+      "  } else { test.record(7) }\n"
+      "  if (true) { test.record(8) } else {\n"
+      "    // } in an unexecuted branch\n"
+      "    /* } inside comment */\n"
+      "    test.record(99) # }\n"
+      "  }\n"
+      "  test.record(9) # inline trailing comment\n"
+      "}) # end registration\n"));
+   assert(rrs_vm_invoke(vm,RRSCRIPT_COMMAND,"/comments",NULL));
+   assert(f.calls==3 && f.last==9);
+   rrs_vm_free(vm);
+}
 static void repeated_events(void) {
    rrs_vm_t *vm=rrs_vm_new();
    fixture_t f={0};
@@ -117,6 +142,7 @@ static void values(void) {
 }
 int main(void) {
    syntax_and_invocation();
+   comment_forms();
    repeated_events();
    panel_script();
    values();
