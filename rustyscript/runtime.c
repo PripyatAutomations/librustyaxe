@@ -161,6 +161,18 @@ void rrs_vm_raise(rrs_vm_t *vm,const char *message) {
    }
 }
 const char *rrs_vm_error(const rrs_vm_t *vm) {return vm?vm->error:"invalid VM";}
+void rrs_vm_position(const rrs_vm_t *vm,unsigned *line,unsigned *column) {
+   if(line)*line=vm&&vm->active_body?vm->active_line:0;
+   if(column) {
+      unsigned col=1;
+      if(vm&&vm->active_body) {
+         for(size_t i=vm->active_offset;i>0 && vm->active_body[i-1]!='\n';i--)
+            col++;
+      } else col=0;
+      *column=col;
+   }
+}
+
 static int collect(const rrscript_binding_t *b,void *arg) {
    rrs_vm_t *v=arg;
    binding_t *grown=realloc(v->bindings,(v->count+1)*sizeof(*grown));
