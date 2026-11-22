@@ -147,7 +147,7 @@ deb:
 distclean: clean
 	@if command -v dh_clean >/dev/null 2>&1; then dh_clean; fi
 	rm -rf debian/tmp debian/.debhelper debian/files debian/debhelper-build-stamp
-	rm -rf debian/librustyaxe0 debian/librustyaxe-dev debian/librustyirc0 debian/librustyirc-dev
+	rm -rf debian/librustyaxe0 debian/librustyaxe-dev debian/librustyirc0 debian/librustyirc-dev debian/librustyscript0 debian/librustyscript-dev
 
 # Debian source packages are optional outputs, separate from normal builds.
 # dpkg-source's quilt format needs an upstream orig tarball. Create it from
