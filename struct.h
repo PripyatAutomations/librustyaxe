@@ -209,9 +209,9 @@ struct rrconn {
    char user_ip[256];           // string containing the user's IP
    int user_port;               // the local port of the tcp connection
    char *cli_version;           // Client version
-#if     defined(USE_MONGOOSE)
-   struct mg_connection *conn;  // Connection pointer (HTTP or WebSocket)
-#endif
+/* Public ABI must not change with a consumer's USE_MONGOOSE setting:
+ * independently packaged librrprotocol/librustyaxe share this structure. */
+   struct mg_connection *conn;  // Optional legacy Mongoose HTTP/WebSocket pointer
    time_t ghost_time;           // When did the session become a ghost?
 
    // These contain arrays of audio channel IDs
@@ -263,9 +263,7 @@ struct rrconn {
       tx_packets;               // Packets we've sent
    size_t rx_bytes,             // Bytes we've received
       rx_packets;               // Packets we've received
-#ifdef  USE_MONGOOSE
-   struct mg_connection *mg;
-#endif
+   struct mg_connection *mg;   // Optional legacy Mongoose association
 };
 typedef struct rrconn rrconn_t;
 
