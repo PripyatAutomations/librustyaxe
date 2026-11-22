@@ -72,11 +72,13 @@ static rrs_value_t *fake_find(rrs_vm_t *vm,int argc,const rrs_value_t *const arg
 static rrs_value_t *fake_move(rrs_vm_t *vm,int argc,const rrs_value_t *const args[],void *user) {
    (void)vm;
    fixture_t *state=user;
-   assert(argc==4);
+   assert(argc==2 || argc==4);
    assert(!strcmp(rrs_value_string(args[0]),"rf-spectrum"));
    assert(!strcmp(rrs_value_string(args[1]),"E"));
-   assert(rrs_value_int(args[2])==20);
-   assert(rrs_value_int(args[3])==40);
+   if(argc==4) {
+      assert(rrs_value_int(args[2])==20);
+      assert(rrs_value_int(args[3])==40);
+   }
    state->calls++;
    return rrs_boolean(true);
 }
@@ -91,9 +93,14 @@ static void panel_script(void) {
       "  if (w != null) {\n"
       "    window.move(w.id, \"E\", 20, 40)\n"
       "  }\n"
+      "});\n"
+      "script(\"/dock-restore\", {\n"
+      "  dict w = window.find(\"Spectrum\", \"W\")\n"
+      "  window.move(w.id, \"E\")\n"
       "});\n"));
    assert(rrs_vm_invoke(vm,RRSCRIPT_COMMAND,"/dock",NULL));
-   assert(state.calls==1);
+   assert(rrs_vm_invoke(vm,RRSCRIPT_COMMAND,"/dock-restore",NULL));
+   assert(state.calls==2);
    rrs_vm_free(vm);
 }
 static void values(void) {
