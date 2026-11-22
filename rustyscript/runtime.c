@@ -853,15 +853,17 @@ static bool statement(eval_t *e) {
       return true;
    }
    if(keyword(e,"return")) {
-      /* The current initial VM supports only handler blocks, which have null
-       * return type. Reject returning values until typed functions arrive. */
       ws(e);
-      if(ep(e)&&ep(e)!='}'&&ep(e)!=';') {
-         rrs_vm_raise(e->vm,"handler cannot return a value");
-         return false;
+      if(!e->in_function) {
+         if(ep(e)&&ep(e)!='}'&&ep(e)!=';') {
+            rrs_vm_raise(e->vm,"handler cannot return a value");return false;
+         }
+         e->returning=true;return true;
       }
-      e->returning=true;
-      return true;
+      if(ep(e)=='}')e->return_value=rrs_null();
+      else e->return_value=expression(e);
+      if(!e->return_value)return false;
+      e->returning=true;return true;
    }
    bool read_only=keyword(e,"const");
    bool declaration=false;
@@ -879,6 +881,17 @@ static bool statement(eval_t *e) {
          if(!match(e,']')){rrs_vm_raise(e->vm,"expected ]");return false;}
    }
    ws(e);
+   if(!declaration&&((ep(e)=='+'&&e->text[e->pos+1]=='+')||
+                     (ep(e)=='-'&&e->text[e->pos+1]=='-'))) {
+      char sign=advance(e);advance(e);
+      variable_t *v=find_var(e,name);
+      if(!v||!v->cell->value||v->cell->value->type!=RRS_INT) {
+         rrs_vm_raise(e->vm,"increment requires integer variable");return false;
+      }
+      rrs_value_t *next=rrs_integer(v->cell->value->as.integer+(sign=='+'?1:-1));
+      if(!next)return false;
+      bool ok=set_var(e,name,next,false);rrs_value_free(next);return ok;
+   }
    if(ep(e)==':'&&e->text[e->pos+1]=='=') {
       advance(e);advance(e);
       char target[192];
