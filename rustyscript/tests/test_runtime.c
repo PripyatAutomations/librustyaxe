@@ -140,6 +140,27 @@ static void original_parser_error(void) {
    rrs_value_free(event);
    rrs_vm_free(vm);
 }
+static void arrays(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   assert(vm);
+   rrs_value_t *value=NULL;
+   assert(rrs_vm_eval(vm,"char[][] rooms = [\"#hamradio-test@efnet\", \"#ops@rustyrig\"]",&value));
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"rooms",&value));
+   assert(rrs_value_type(value)==RRS_ARRAY && rrs_array_length(value)==2);
+   assert(!strcmp(rrs_value_string(rrs_array_get(value,0)),"#hamradio-test@efnet"));
+   assert(!strcmp(rrs_value_string(rrs_array_get(value,1)),"#ops@rustyrig"));
+   rrs_value_t *copy=rrs_value_copy(value);
+   assert(copy && rrs_array_length(copy)==2);
+   char *repr=rrs_value_repr(copy);
+   assert(repr && strstr(repr,"#ops@rustyrig"));
+   free(repr);
+   rrs_value_free(copy);rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"[]",&value));
+   assert(rrs_array_length(value)==0);
+   rrs_value_free(value);
+   rrs_vm_free(vm);
+}
 static void console_evaluation(void) {
    rrs_vm_t *vm=rrs_vm_new();
    assert(vm);
@@ -191,6 +212,7 @@ int main(void) {
    panel_script();
    original_parser_error();
    console_evaluation();
+   arrays();
    values();
    puts("RustyScript runtime tests passed");
    return 0;
