@@ -627,7 +627,7 @@ static rrs_value_t *primary(eval_t *e) {
    if(ep(e)=='\'' ) {
       advance(e);char c=advance(e);
       if(!c||!match(e,'\'')){rrs_vm_raise(e->vm,"invalid character");return NULL;}
-      rrs_value_t *v=val(RRS_CHAR);if(v)v->as.character=c;return v;
+      char text[2]={c,0};return rrs_string(text);
    }
    if(isdigit((unsigned char)ep(e))) {
       const char *start=e->text+e->pos;
