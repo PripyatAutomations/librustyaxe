@@ -659,9 +659,17 @@ static rrs_value_t *primary(eval_t *e) {
    }
    if(match(e,'(')) {
       const rrs_value_t *args[16]={0};
+      variable_t *origins[16]={0};
       int argc=0;
       while(!match(e,')')) {
          if(argc>=16){rrs_vm_raise(e->vm,"too many arguments");break;}
+         eval_t probe=*e;
+         char source_name[192];
+         if(ident(&probe,source_name,sizeof(source_name))) {
+            ws(&probe);
+            if(ep(&probe)==','||ep(&probe)==')')
+               origins[argc]=find_var(e,source_name);
+         }
          args[argc]=expression(e);
          if(!args[argc])break;
          argc++;
@@ -670,12 +678,19 @@ static rrs_value_t *primary(eval_t *e) {
       }
       rrs_value_t *result=NULL;
       if(!e->vm->error[0]) {
-         native_t *n=e->vm->native;
-         while(n&&strcmp(n->name,name))n=n->next;
-         if(!n)rrs_vm_raise(e->vm,"unknown function");
-         else result=n->call(e->vm,argc,args,n->user);
+         function_def_t *fn=NULL;
+         for(size_t i=0;i<e->vm->function_count;i++)
+            if(!strcmp(e->vm->functions[i].name,name)){fn=&e->vm->functions[i];break;}
+         if(fn)result=call_script(e,fn,argc,args,origins);
+         else {
+            native_t *n=e->vm->native;
+            while(n&&strcmp(n->name,name))n=n->next;
+            if(!n)rrs_vm_raise(e->vm,"unknown function");
+            else result=n->call(e->vm,argc,args,n->user);
+         }
       }
       for(int i=0;i<argc;i++)rrs_value_free((rrs_value_t *)args[i]);
+      if(e->vm->error[0]){rrs_value_free(result);return NULL;}
       return result?result:rrs_null();
    }
    variable_t *v=find_var(e,name);
