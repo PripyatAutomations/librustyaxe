@@ -36,16 +36,16 @@ int main(void) {
       "event irc.privmsg { /* } ignored */ print(event.text) }\n";
    int result=rrscript_parse_registrations(code,collect,&s,&e);
    if(result != 0)
-      fprintf(stderr,"RustyScript parse failed at %u:%u: %s\\n",
+      fprintf(stderr,"RustyScript parse failed at %u:%u: %s\n",
               e.line,e.column,e.message);
    assert(result==0);
    assert(s.count==3);
    /* Terminators may be separated from the registration by spaces,
     * newlines or comments; the semicolon itself is optional. */
    assert(rrscript_parse_registrations(
-      "event sample.one {}  ;\\n"
-      "hotkey ^X {} /* comment */ ;\\n"
-      "script(\\\"/example\\\", {})\\n ;\\n",NULL,NULL,&e)==0);
+      "event sample.one {}  ;\n"
+      "hotkey ^X {} /* comment */ ;\n"
+      "script(\"/example\", {})\n ;\n",NULL,NULL,&e)==0);
    bad("event irc.privmsg print(1)");
    bad("hotkey ^^X { print(1) }");
    bad("script(\"test\", { print(1) })");
