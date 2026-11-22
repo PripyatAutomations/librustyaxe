@@ -43,9 +43,11 @@ struct rrs_vm {
    const char *loading_source;
    struct variable *console_vars;
 };
+typedef struct value_cell { rrs_value_t *value; size_t owners; } value_cell_t;
 typedef struct variable {
    char *name;
-   rrs_value_t *value;
+   struct value_cell *cell;
+   bool read_only;
    struct variable *next;
 } variable_t;
 typedef struct {
@@ -329,8 +331,11 @@ size_t rrs_vm_binding_count(const rrs_vm_t *vm){return vm?vm->count:0;}
 const rrscript_binding_t *rrs_vm_binding(const rrs_vm_t *vm,size_t i) {
    return vm&&i<vm->count?&vm->bindings[i].info:NULL;
 }
+static void release_cell(value_cell_t *c) {
+   if(c && --c->owners==0){rrs_value_free(c->value);free(c);}
+}
 static void free_vars(variable_t *v) {
-   while(v){variable_t *next=v->next;free(v->name);rrs_value_free(v->value);free(v);v=next;}
+   while(v){variable_t *next=v->next;free(v->name);release_cell(v->cell);free(v);v=next;}
 }
 static variable_t *find_var(eval_t *e,const char *name) {
    for(variable_t *v=e->vars;v;v=v->next)if(!strcmp(v->name,name))return v;
@@ -338,18 +343,38 @@ static variable_t *find_var(eval_t *e,const char *name) {
 }
 static bool set_var(eval_t *e,const char *name,const rrs_value_t *value,bool declare) {
    variable_t *v=find_var(e,name);
-   if(declare && v){rrs_vm_raise(e->vm,"duplicate declaration");return false;}
+   if(declare&&v){rrs_vm_raise(e->vm,"duplicate declaration");return false;}
    if(!v&&!declare){rrs_vm_raise(e->vm,"assignment to undeclared variable");return false;}
+   if(v&&v->read_only){rrs_vm_raise(e->vm,"assignment to const variable");return false;}
+   rrs_value_t *copy=rrs_value_copy(value);
+   if(!copy)return false;
    if(!v) {
       v=calloc(1,sizeof(*v));
-      if(!v)return false;
-      v->name=strdup(name);
-      if(!v->name){free(v);return false;}
-      v->next=e->vars;e->vars=v;
+      if(!v){rrs_value_free(copy);return false;}
+      v->name=strdup(name);v->cell=calloc(1,sizeof(*v->cell));
+      if(!v->name||!v->cell){free(v->name);free(v->cell);free(v);rrs_value_free(copy);return false;}
+      v->cell->owners=1;v->next=e->vars;e->vars=v;
    }
-   rrs_value_t *c=rrs_value_copy(value);
-   if(!c)return false;
-   rrs_value_free(v->value);v->value=c;
+   rrs_value_free(v->cell->value);v->cell->value=copy;
+   return true;
+}
+static bool bind_var(eval_t *e,const char *name,const char *target,bool declare,bool read_only) {
+   variable_t *src=find_var(e,target),*dst=find_var(e,name);
+   if(!src){rrs_vm_raise(e->vm,"reference requires an existing variable");return false;}
+   if(src->read_only&&!read_only){rrs_vm_raise(e->vm,"cannot bind mutable reference to const");return false;}
+   if(declare&&dst){rrs_vm_raise(e->vm,"duplicate declaration");return false;}
+   if(!declare&&!dst){rrs_vm_raise(e->vm,"reference assignment to undeclared variable");return false;}
+   if(dst&&dst->read_only){rrs_vm_raise(e->vm,"cannot rebind const");return false;}
+   if(!dst) {
+      dst=calloc(1,sizeof(*dst));
+      if(!dst)return false;
+      dst->name=strdup(name);
+      if(!dst->name){free(dst);return false;}
+      dst->next=e->vars;e->vars=dst;
+   }
+   src->cell->owners++;
+   release_cell(dst->cell);
+   dst->cell=src->cell;dst->read_only=read_only;
    return true;
 }
 static char ep(eval_t *e){return e->text[e->pos];}
@@ -520,7 +545,7 @@ static rrs_value_t *primary(eval_t *e) {
       return result?result:rrs_null();
    }
    variable_t *v=find_var(e,name);
-   if(v)return rrs_value_copy(v->value);
+   if(v)return rrs_value_copy(v->cell->value);
    /* Dot paths traverse nested objects first, then flatten from longest prefix. */
    for(size_t len=strlen(name);len>0;len--) {
       if(len!=strlen(name)&&name[len]!='.')continue;
@@ -689,31 +714,40 @@ static bool statement(eval_t *e) {
       e->returning=true;
       return true;
    }
+   bool read_only=keyword(e,"const");
    bool declaration=false;
    if(keyword(e,"int")||keyword(e,"float")||keyword(e,"bool")||
-      keyword(e,"char")||keyword(e,"dict"))declaration=true;
+      keyword(e,"char")||keyword(e,"dict")||keyword(e,"auto"))declaration=true;
+   if(read_only&&!declaration){rrs_vm_raise(e->vm,"const requires a type");return false;}
    if(declaration) {
-      /* char[] is our string declaration, char alone is a character. */
-      if(match(e,'[')) {
+      for(int i=0;i<2 && match(e,'[');i++)
          if(!match(e,']')){rrs_vm_raise(e->vm,"expected ]");return false;}
-         /* char[][] for string-array configuration. */
-         if(match(e,'[')&&!match(e,']')) {
-            rrs_vm_raise(e->vm,"expected ]");return false;
-         }
-      }
    }
    char name[192];
    if(!ident(e,name,sizeof(name))){rrs_vm_raise(e->vm,"expected statement");return false;}
+   if(declaration) {
+      for(int i=0;i<2 && match(e,'[');i++)
+         if(!match(e,']')){rrs_vm_raise(e->vm,"expected ]");return false;}
+   }
    ws(e);
+   if(ep(e)==':'&&e->text[e->pos+1]=='=') {
+      advance(e);advance(e);
+      char target[192];
+      if(!ident(e,target,sizeof(target))){rrs_vm_raise(e->vm,"reference requires a variable");return false;}
+      return bind_var(e,name,target,declaration,read_only);
+   }
    if(ep(e)=='='&&e->text[e->pos+1]!='=') {
       advance(e);
       rrs_value_t *value=expression(e);
       if(!value)return false;
       bool ok=set_var(e,name,value,declaration);
-      rrs_value_free(value);
-      return ok;
+      if(ok&&read_only)find_var(e,name)->read_only=true;
+      rrs_value_free(value);return ok;
    }
-   if(declaration){rrs_value_t *v=rrs_null();bool ok=set_var(e,name,v,true);rrs_value_free(v);return ok;}
+   if(declaration) {
+      if(read_only){rrs_vm_raise(e->vm,"const requires an initializer");return false;}
+      rrs_value_t *v=rrs_null();bool ok=set_var(e,name,v,true);rrs_value_free(v);return ok;
+   }
    /* Function call: rewind and parse full expression */
    e->pos-=strlen(name);
    rrs_value_t *result=expression(e);
@@ -794,7 +828,7 @@ bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result) {
    const char *start=e.text+e.pos;
    if(!strncmp(start,"if",2) &&
       (isspace((unsigned char)start[2])||start[2]=='('))declaration=true;
-   const char *types[]={"int","float","bool","char","dict",NULL};
+   const char *types[]={"const","int","float","bool","char","dict","auto",NULL};
    for(int i=0;types[i];i++) {
       size_t n=strlen(types[i]);
       if(!strncmp(start,types[i],n) &&
@@ -808,7 +842,8 @@ bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result) {
       char name[192];
       if(ident(&probe,name,sizeof(name))) {
          ws(&probe);
-         if(ep(&probe)=='='&&probe.text[probe.pos+1]!='=')
+         if((ep(&probe)=='='&&probe.text[probe.pos+1]!='=') ||
+            (ep(&probe)==':'&&probe.text[probe.pos+1]=='='))
             declaration=true;
       }
       e.pos=0;e.line=1;
