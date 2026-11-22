@@ -235,6 +235,50 @@ static void references_and_const(void) {
    rrs_value_free(value);
    rrs_vm_free(vm);
 }
+static void functions_and_memory(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   assert(vm);
+   assert(rrs_vm_load(vm,
+      "int increment(int value) { value++; return value; }\n"
+      "int read(const int value) { return value; }\n"
+      "int fact(int n) { if (n <= 1) { return 1; } else { return n * fact(n - 1); } }\n"
+      "void change(int value) { value = 73; }\n"
+      "script(\"/function-test\", { int x = 4; increment(x); if (x == 5) { change(x); } })\n"));
+   assert(rrs_vm_binding_count(vm)==1);
+   rrs_value_t *value=NULL;
+   assert(rrs_vm_eval(vm,"int number = 5",&value));
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"increment(number)",&value));
+   assert(rrs_value_int(value)==6);rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"number",&value));
+   assert(rrs_value_int(value)==6);rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"fact(5)",&value));
+   assert(rrs_value_int(value)==120);rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"const int fixed = 10",&value));rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"read(fixed)",&value));
+   assert(rrs_value_int(value)==10);rrs_value_free(value);
+   assert(!rrs_vm_eval(vm,"increment(fixed)",&value));
+   assert(strstr(rrs_vm_error(vm),"const"));
+   assert(rrs_vm_eval(vm,"increment(9)",&value));
+   assert(rrs_value_int(value)==10);rrs_value_free(value);
+   assert(rrs_vm_invoke(vm,RRSCRIPT_COMMAND,"/function-test",NULL));
+   rrs_memory_stats_t stats;
+   rrs_vm_memory_stats(vm,&stats);
+   assert(stats.live_cells>=2);
+   assert(stats.reference_bindings>=stats.live_cells);
+   assert(stats.peak_cells>=stats.live_cells);
+   assert(stats.cell_allocations>=stats.live_cells);
+   assert(rrs_vm_gc_collect(vm)==0);
+   rrs_vm_memory_stats(vm,&stats);
+   assert(stats.collection_requests==1);
+   assert(rrs_vm_eval(vm,"runtime.memory()",&value));
+   assert(rrs_value_type(value)==RRS_DICT);
+   assert(rrs_value_int(rrs_value_field(value,"live_cells"))>=2);
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"runtime.gc.collect()",&value));
+   assert(rrs_value_int(value)==0);rrs_value_free(value);
+   rrs_vm_free(vm);
+}
 int main(void) {
    syntax_and_invocation();
    comment_forms();
@@ -244,6 +288,7 @@ int main(void) {
    console_evaluation();
    arrays();
    references_and_const();
+   functions_and_memory();
    values();
    puts("RustyScript runtime tests passed");
    return 0;
