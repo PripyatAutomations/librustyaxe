@@ -277,6 +277,17 @@ static void functions_and_memory(void) {
    rrs_value_free(value);
    assert(rrs_vm_eval(vm,"runtime.gc.collect()",&value));
    assert(rrs_value_int(value)==0);rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"runtime.memory()",&value));
+   const rrs_value_t *gc=rrs_value_field(value,"gc");
+   assert(rrs_value_type(gc)==RRS_DICT);
+   assert(rrs_value_int(rrs_value_field(gc,"requests"))==2);
+   assert(rrs_value_int(rrs_value_field(gc,"collections"))==0);
+   assert(rrs_value_int(rrs_value_field(value,"used"))>0);
+   assert(rrs_value_int(rrs_value_field(value,"peak"))>=
+          rrs_value_int(rrs_value_field(value,"used")));
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"'A' == \"A\"",&value));
+   assert(rrs_value_bool(value));rrs_value_free(value);
    rrs_vm_free(vm);
 }
 int main(void) {
