@@ -26,6 +26,10 @@ typedef struct native {
    void *user;
    struct native *next;
 } native_t;
+typedef struct function_def {
+   char *name,*body,*signature,*return_type;
+   unsigned line;
+} function_def_t;
 typedef struct binding {
    rrscript_binding_t info;
    char *name;
@@ -36,6 +40,10 @@ struct rrs_vm {
    native_t *native;
    binding_t *bindings;
    size_t count;
+   function_def_t *functions;
+   size_t function_count;
+   unsigned call_depth;
+   size_t live_cells,peak_cells,cell_allocations,reference_bindings,gc_collections;
    char error[512];
    const char *active_body;
    size_t active_offset;
@@ -43,7 +51,11 @@ struct rrs_vm {
    const char *loading_source;
    struct variable *console_vars;
 };
-typedef struct value_cell { rrs_value_t *value; size_t owners; } value_cell_t;
+typedef struct value_cell {
+   rrs_value_t *value;
+   size_t owners;
+   rrs_vm_t *vm;
+} value_cell_t;
 typedef struct variable {
    char *name;
    struct value_cell *cell;
@@ -57,6 +69,8 @@ typedef struct {
    rrs_vm_t *vm;
    variable_t *vars;
    bool returning;
+   bool in_function;
+   rrs_value_t *return_value;
    int depth;
 } eval_t;
 
@@ -240,6 +254,10 @@ char *rrs_value_repr(const rrs_value_t *value) {
 }
 
 rrs_vm_t *rrs_vm_new(void) {return calloc(1,sizeof(rrs_vm_t));}
+static void free_functions(function_def_t *f,size_t n) {
+   for(size_t i=0;i<n;i++){free(f[i].name);free(f[i].body);free(f[i].signature);free(f[i].return_type);}
+   free(f);
+}
 static void free_bindings(binding_t *b,size_t n) {
    for(size_t i=0;i<n;i++){free(b[i].name);free(b[i].body);}
    free(b);
@@ -248,6 +266,7 @@ static void free_vars(variable_t *v);
 void rrs_vm_free(rrs_vm_t *vm) {
    if(!vm)return;
    free_bindings(vm->bindings,vm->count);
+   free_functions(vm->functions,vm->function_count);
    free_vars(vm->console_vars);
    native_t *n=vm->native;
    while(n){native_t *next=n->next;free(n->name);free(n);n=next;}
@@ -292,6 +311,24 @@ void rrs_vm_position(const rrs_vm_t *vm,unsigned *line,unsigned *column) {
 
 static int collect(const rrscript_binding_t *b,void *arg) {
    rrs_vm_t *v=arg;
+   if(b->kind==RRSCRIPT_FUNCTION) {
+      for(size_t i=0;i<v->function_count;i++)
+         if(strlen(v->functions[i].name)==b->name_length &&
+            !strncmp(v->functions[i].name,b->name,b->name_length))return -1;
+      function_def_t *grown=realloc(v->functions,(v->function_count+1)*sizeof(*grown));
+      if(!grown)return -1;
+      v->functions=grown;
+      function_def_t *fn=&v->functions[v->function_count];
+      memset(fn,0,sizeof(*fn));
+      fn->name=strndup(b->name,b->name_length);
+      fn->body=strndup(b->body,b->body_length);
+      fn->signature=strndup(b->params?b->params:"",b->params_length);
+      fn->return_type=strndup(b->return_type,b->return_type_length);
+      fn->line=b->line;
+      if(!fn->name||!fn->body||!fn->signature||!fn->return_type)return -1;
+      v->function_count++;
+      return 0;
+   }
    binding_t *grown=realloc(v->bindings,(v->count+1)*sizeof(*grown));
    if(!grown)return -1;
    v->bindings=grown;
@@ -320,11 +357,14 @@ bool rrs_vm_load(rrs_vm_t *vm,const char *source) {
    rrscript_error_t err;
    if(rrscript_parse_registrations(source,collect,&candidate,&err)) {
       free_bindings(candidate.bindings,candidate.count);
+      free_functions(candidate.functions,candidate.function_count);
       snprintf(vm->error,sizeof(vm->error),"line %u:%u: %.150s",err.line,err.column,err.message);
       return false;
    }
    free_bindings(vm->bindings,vm->count);
+   free_functions(vm->functions,vm->function_count);
    vm->bindings=candidate.bindings;vm->count=candidate.count;
+   vm->functions=candidate.functions;vm->function_count=candidate.function_count;
    return true;
 }
 size_t rrs_vm_binding_count(const rrs_vm_t *vm){return vm?vm->count:0;}
@@ -332,7 +372,22 @@ const rrscript_binding_t *rrs_vm_binding(const rrs_vm_t *vm,size_t i) {
    return vm&&i<vm->count?&vm->bindings[i].info:NULL;
 }
 static void release_cell(value_cell_t *c) {
-   if(c && --c->owners==0){rrs_value_free(c->value);free(c);}
+   if(!c)return;
+   if(c->vm&&c->vm->reference_bindings)c->vm->reference_bindings--;
+   if(--c->owners==0){
+      if(c->vm&&c->vm->live_cells)c->vm->live_cells--;
+      rrs_value_free(c->value);free(c);
+   }
+}
+static value_cell_t *new_cell(rrs_vm_t *vm,const rrs_value_t *value) {
+   value_cell_t *c=calloc(1,sizeof(*c));
+   if(!c)return NULL;
+   c->value=rrs_value_copy(value);
+   if(!c->value){free(c);return NULL;}
+   c->owners=1;c->vm=vm;
+   vm->live_cells++;vm->cell_allocations++;vm->reference_bindings++;
+   if(vm->live_cells>vm->peak_cells)vm->peak_cells=vm->live_cells;
+   return c;
 }
 static void free_vars(variable_t *v) {
    while(v){variable_t *next=v->next;free(v->name);release_cell(v->cell);free(v);v=next;}
@@ -351,9 +406,9 @@ static bool set_var(eval_t *e,const char *name,const rrs_value_t *value,bool dec
    if(!v) {
       v=calloc(1,sizeof(*v));
       if(!v){rrs_value_free(copy);return false;}
-      v->name=strdup(name);v->cell=calloc(1,sizeof(*v->cell));
-      if(!v->name||!v->cell){free(v->name);free(v->cell);free(v);rrs_value_free(copy);return false;}
-      v->cell->owners=1;v->next=e->vars;e->vars=v;
+      v->name=strdup(name);v->cell=new_cell(e->vm,value);
+      if(!v->name||!v->cell){free(v->name);release_cell(v->cell);free(v);rrs_value_free(copy);return false;}
+      v->next=e->vars;e->vars=v;
    }
    rrs_value_free(v->cell->value);v->cell->value=copy;
    return true;
@@ -373,6 +428,7 @@ static bool bind_var(eval_t *e,const char *name,const char *target,bool declare,
       dst->next=e->vars;e->vars=dst;
    }
    src->cell->owners++;
+   e->vm->reference_bindings++;
    release_cell(dst->cell);
    dst->cell=src->cell;dst->read_only=read_only;
    return true;
@@ -553,7 +609,7 @@ static rrs_value_t *primary(eval_t *e) {
       memcpy(prefix,name,len);prefix[len]=0;
       variable_t *root=find_var(e,prefix);
       if(!root)continue;
-      const rrs_value_t *value=root->value;
+      const rrs_value_t *value=root->cell->value;
       const char *tail=name+len;
       if(*tail=='.')tail++;
       while(*tail&&value) {
