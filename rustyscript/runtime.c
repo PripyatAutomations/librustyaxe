@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct array_item {
+   rrs_value_t *value;
+   struct array_item *next;
+} array_item_t;
 typedef struct field {
    char *name;
    rrs_value_t *value;
@@ -14,7 +18,7 @@ typedef struct field {
 struct rrs_value {
    rrs_type_t type;
    union { int64_t integer; double real; bool boolean; char character;
-           char *string; field_t *fields; } as;
+           char *string; field_t *fields; struct {array_item_t *head,*tail;size_t length;} array; } as;
 };
 typedef struct native {
    char *name;
@@ -69,6 +73,27 @@ rrs_value_t *rrs_string(const char *s) {
    return v;
 }
 rrs_value_t *rrs_dictionary(void) {return val(RRS_DICT);}
+rrs_value_t *rrs_array(void) {return val(RRS_ARRAY);}
+bool rrs_array_append(rrs_value_t *array,const rrs_value_t *value) {
+   if(!array||array->type!=RRS_ARRAY)return false;
+   array_item_t *item=calloc(1,sizeof(*item));
+   if(!item)return false;
+   item->value=rrs_value_copy(value);
+   if(!item->value){free(item);return false;}
+   if(array->as.array.tail)array->as.array.tail->next=item;
+   else array->as.array.head=item;
+   array->as.array.tail=item;array->as.array.length++;
+   return true;
+}
+size_t rrs_array_length(const rrs_value_t *v) {
+   return v&&v->type==RRS_ARRAY?v->as.array.length:0;
+}
+const rrs_value_t *rrs_array_get(const rrs_value_t *v,size_t index) {
+   if(!v||v->type!=RRS_ARRAY||index>=v->as.array.length)return NULL;
+   array_item_t *item=v->as.array.head;
+   while(index--)item=item->next;
+   return item->value;
+}
 rrs_type_t rrs_value_type(const rrs_value_t *v) {return v?v->type:RRS_NULL;}
 int64_t rrs_value_int(const rrs_value_t *v) {return v&&v->type==RRS_INT?v->as.integer:0;}
 double rrs_value_float(const rrs_value_t *v) {return v&&v->type==RRS_FLOAT?v->as.real:0;}
@@ -89,6 +114,10 @@ const char *rrs_value_string(const rrs_value_t *v) {
 void rrs_value_free(rrs_value_t *v) {
    if(!v)return;
    if(v->type==RRS_STRING)free(v->as.string);
+   if(v->type==RRS_ARRAY) {
+      array_item_t *item=v->as.array.head;
+      while(item) {array_item_t *next=item->next;rrs_value_free(item->value);free(item);item=next;}
+   }
    if(v->type==RRS_DICT) {
       field_t *f=v->as.fields;
       while(f) {field_t *next=f->next;free(f->name);rrs_value_free(f->value);free(f);f=next;}
@@ -107,6 +136,9 @@ rrs_value_t *rrs_value_copy(const rrs_value_t *v) {
    if(v->type==RRS_STRING) {
       c->as.string=strdup(v->as.string);
       if(!c->as.string){free(c);return NULL;}
+   } else if(v->type==RRS_ARRAY) {
+      for(array_item_t *item=v->as.array.head;item;item=item->next)
+         if(!rrs_array_append(c,item->value)){rrs_value_free(c);return NULL;}
    } else if(v->type==RRS_DICT) {
       for(field_t *f=v->as.fields;f;f=f->next)
          if(!rrs_dict_put(c,f->name,f->value)){rrs_value_free(c);return NULL;}
@@ -178,6 +210,13 @@ static bool repr_inner(repr_buf_t *b,const rrs_value_t *v,int depth) {
          return repr_quote(b,chars);
       }
       case RRS_STRING:return repr_quote(b,v->as.string);
+      case RRS_ARRAY:
+         if(!repr_str(b,"["))return false;
+         for(array_item_t *item=v->as.array.head;item;item=item->next) {
+            if(item!=v->as.array.head&&!repr_str(b,", "))return false;
+            if(!repr_inner(b,item->value,depth+1))return false;
+         }
+         return repr_str(b,"]");
       case RRS_DICT:
          if(!repr_str(b,"{"))return false;
          for(field_t *item=v->as.fields;item;item=item->next) {
@@ -406,6 +445,24 @@ static rrs_value_t *primary(eval_t *e) {
       while(e->text+e->pos<end)advance(e);
       if(errno==ERANGE)rrs_vm_raise(e->vm,"integer literal out of range");
       return rrs_integer(integer);
+   }
+   if(match(e,'[')) {
+      rrs_value_t *array=rrs_array();
+      if(!array)return NULL;
+      while(!match(e,']')) {
+         if(rrs_array_length(array)>=256) {
+            rrs_vm_raise(e->vm,"array has too many entries");break;
+         }
+         rrs_value_t *item=expression(e);
+         if(!item){rrs_vm_raise(e->vm,"invalid array element");break;}
+         bool ok=rrs_array_append(array,item);
+         rrs_value_free(item);
+         if(!ok){rrs_vm_raise(e->vm,"array allocation failed");break;}
+         if(match(e,']'))return array;
+         if(!match(e,',')){rrs_vm_raise(e->vm,"expected , or ]");break;}
+      }
+      if(!e->vm->error[0])return array;
+      rrs_value_free(array);return NULL;
    }
    if(match(e,'{')) {
       rrs_value_t *d=rrs_dictionary();
@@ -637,7 +694,13 @@ static bool statement(eval_t *e) {
       keyword(e,"char")||keyword(e,"dict"))declaration=true;
    if(declaration) {
       /* char[] is our string declaration, char alone is a character. */
-      if(match(e,'[')&&!match(e,']')){rrs_vm_raise(e->vm,"expected ]");return false;}
+      if(match(e,'[')) {
+         if(!match(e,']')){rrs_vm_raise(e->vm,"expected ]");return false;}
+         /* char[][] for string-array configuration. */
+         if(match(e,'[')&&!match(e,']')) {
+            rrs_vm_raise(e->vm,"expected ]");return false;
+         }
+      }
    }
    char name[192];
    if(!ident(e,name,sizeof(name))){rrs_vm_raise(e->vm,"expected statement");return false;}
