@@ -31,9 +31,9 @@ $(PC_FILE): GNUmakefile | $(BUILD_DIR)
 	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' \
 	 'Name: librustyscript' 'Description: RustyScript scripting runtime' \
 	 'Version: $(VERSION)' 'Requires: librustyaxe librustyirc' \
-	 'Libs: -L${libdir} -lrustyscript' 'Cflags: -I${includedir}' > $@
-	@grep -Fqx 'Libs: -L${libdir} -lrustyscript' $(PC_FILE)
-	@grep -Fqx 'Cflags: -I${includedir}' $(PC_FILE)
+	 'Libs: -L$${libdir} -lrustyscript' 'Cflags: -I$${includedir}' > $@
+	@grep -Fqx 'Libs: -L$${libdir} -lrustyscript' $(PC_FILE)
+	@grep -Fqx 'Cflags: -I$${includedir}' $(PC_FILE)
 $(BUILD_DIR)/test_syntax: rrscript.c tests/test_syntax.c rrscript.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) rrscript.c tests/test_syntax.c -o $@
 $(BUILD_DIR)/test_runtime: runtime.c rrscript.c tests/test_runtime.c runtime.h rrscript.h | $(BUILD_DIR)
