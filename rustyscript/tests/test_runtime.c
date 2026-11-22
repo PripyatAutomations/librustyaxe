@@ -58,6 +58,44 @@ static void repeated_events(void) {
    assert(f.calls==2 && f.last==2);
    rrs_vm_free(vm);
 }
+static rrs_value_t *fake_find(rrs_vm_t *vm,int argc,const rrs_value_t *const args[],void *user) {
+   (void)vm;(void)user;
+   assert(argc==2);
+   assert(!strcmp(rrs_value_string(args[0]),"Spectrum"));
+   assert(!strcmp(rrs_value_string(args[1]),"W"));
+   rrs_value_t *d=rrs_dictionary();
+   rrs_value_t *v=rrs_string("rf-spectrum");
+   assert(rrs_dict_put(d,"id",v));
+   rrs_value_free(v);
+   return d;
+}
+static rrs_value_t *fake_move(rrs_vm_t *vm,int argc,const rrs_value_t *const args[],void *user) {
+   (void)vm;
+   fixture_t *state=user;
+   assert(argc==4);
+   assert(!strcmp(rrs_value_string(args[0]),"rf-spectrum"));
+   assert(!strcmp(rrs_value_string(args[1]),"E"));
+   assert(rrs_value_int(args[2])==20);
+   assert(rrs_value_int(args[3])==40);
+   state->calls++;
+   return rrs_boolean(true);
+}
+static void panel_script(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   fixture_t state={0};
+   assert(rrs_vm_register_native(vm,"window.find",fake_find,NULL));
+   assert(rrs_vm_register_native(vm,"window.move",fake_move,&state));
+   assert(rrs_vm_load(vm,
+      "script(\"/dock\", {\n"
+      "  dict w = window.find(\"Spectrum\", \"W\")\n"
+      "  if (w != null) {\n"
+      "    window.move(w.id, \"E\", 20, 40)\n"
+      "  }\n"
+      "});\n"));
+   assert(rrs_vm_invoke(vm,RRSCRIPT_COMMAND,"/dock",NULL));
+   assert(state.calls==1);
+   rrs_vm_free(vm);
+}
 static void values(void) {
    rrs_value_t *d=rrs_dictionary();
    rrs_value_t *n=rrs_integer(9);
@@ -73,6 +111,7 @@ static void values(void) {
 int main(void) {
    syntax_and_invocation();
    repeated_events();
+   panel_script();
    values();
    puts("RustyScript runtime tests passed");
    return 0;
