@@ -8,7 +8,8 @@ extern "C" {
 typedef enum {
    RRSCRIPT_COMMAND = 1,
    RRSCRIPT_HOTKEY,
-   RRSCRIPT_EVENT
+   RRSCRIPT_EVENT,
+   RRSCRIPT_FUNCTION
 } rrscript_binding_kind_t;
 /* Body/source spans are borrowed from the source passed to parse(). The host
  * must copy them if it stores them beyond the parse callback. */
@@ -18,6 +19,10 @@ typedef struct {
    size_t name_length;
    const char *body;
    size_t body_length;
+   const char *params;
+   size_t params_length;
+   const char *return_type;
+   size_t return_type_length;
    unsigned line;
 } rrscript_binding_t;
 typedef int (*rrscript_register_fn)(const rrscript_binding_t *, void *);
