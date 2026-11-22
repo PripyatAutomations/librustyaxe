@@ -145,7 +145,9 @@ bool rrs_vm_register_native(rrs_vm_t *vm,const char *name,rrs_native_fn fn,void 
    return true;
 }
 void rrs_vm_raise(rrs_vm_t *vm,const char *message) {
-   if(vm)snprintf(vm->error,sizeof(vm->error),"%s",message?message:"runtime error");
+   /* Preserve the primary failure. Secondary parser unwinding errors such as
+    * "expected )" must not conceal the actual missing property or bad native. */
+   if(vm && !vm->error[0])snprintf(vm->error,sizeof(vm->error),"%s",message?message:"runtime error");
 }
 const char *rrs_vm_error(const rrs_vm_t *vm) {return vm?vm->error:"invalid VM";}
 static int collect(const rrscript_binding_t *b,void *arg) {
