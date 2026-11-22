@@ -565,20 +565,26 @@ bool rrs_vm_invoke(rrs_vm_t *vm,rrscript_binding_kind_t kind,
                    const char *name,const rrs_value_t *event) {
    if(!vm||!name)return false;
    vm->error[0]=0;
+   bool found=false;
    for(size_t i=0;i<vm->count;i++) {
       binding_t *b=&vm->bindings[i];
       if(b->info.kind!=kind||strcmp(b->name,name))continue;
+      found=true;
       eval_t e={.text=b->body,.line=b->info.line,.vm=vm};
       rrs_value_t *input=event?rrs_value_copy(event):rrs_dictionary();
       if(!input||!set_var(&e,"event",input,true)){
-         rrs_value_free(input);free_vars(e.vars);rrs_vm_raise(vm,"unable to initialize event");
+         rrs_value_free(input);free_vars(e.vars);
+         rrs_vm_raise(vm,"unable to initialize event");
          return false;
       }
       rrs_value_free(input);
       bool ok=statements(&e,false);
       free_vars(e.vars);
-      return ok&&!vm->error[0];
+      if(!ok||vm->error[0])return false;
+      /* A name can have multiple event handlers. Command/hotkey names
+       * are single dispatch points; the host resolves cross-file collisions. */
+      if(kind!=RRSCRIPT_EVENT)return true;
    }
-   rrs_vm_raise(vm,"handler not registered");
-   return false;
+   if(!found)rrs_vm_raise(vm,"handler not registered");
+   return found;
 }
