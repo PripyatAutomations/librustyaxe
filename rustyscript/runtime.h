@@ -48,6 +48,10 @@ bool rrs_vm_load(rrs_vm_t *vm, const char *source);
  * must dispatch onto their script execution context. */
 bool rrs_vm_invoke(rrs_vm_t *vm, rrscript_binding_kind_t kind,
                    const char *name, const rrs_value_t *event);
+/* Evaluate console code in a persistent, VM-local scope. The REPL accepts
+ * expressions and RustyScript statements; result is an owned value (null
+ * for statements). On error, use rrs_vm_error(). No script registrations. */
+bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result);
 size_t rrs_vm_binding_count(const rrs_vm_t *vm);
 /* Enumerate current registrations to attach/unattach host command, key and
  * event hooks. Borrowed pointers live until next load or VM destruction. */
