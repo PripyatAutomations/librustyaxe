@@ -40,6 +40,20 @@ rrs_value_t *rrs_value_copy(const rrs_value_t *value);
 char *rrs_value_repr(const rrs_value_t *value);
 void rrs_value_free(rrs_value_t *value);
 
+typedef struct {
+   size_t live_cells;
+   size_t peak_cells;
+   size_t cell_allocations;
+   size_t cell_releases;
+   size_t reference_bindings;
+   size_t collection_requests;
+} rrs_memory_stats_t;
+/* Managed variable cells are reference-counted; their current graph is
+ * acyclic because composite values contain copies, not references.
+ * A collection request reports zero unreachable cycles in this VM version. */
+void rrs_vm_memory_stats(const rrs_vm_t *vm,rrs_memory_stats_t *stats);
+size_t rrs_vm_gc_collect(rrs_vm_t *vm);
+
 rrs_vm_t *rrs_vm_new(void);
 void rrs_vm_free(rrs_vm_t *vm);
 bool rrs_vm_register_native(rrs_vm_t *vm, const char *name, rrs_native_fn fn, void *user);
