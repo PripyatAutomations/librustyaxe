@@ -31,6 +31,9 @@ rrs_value_t *rrs_string(const char *value);
 rrs_value_t *rrs_dictionary(void);
 bool rrs_dict_put(rrs_value_t *dict, const char *key, const rrs_value_t *value);
 rrs_value_t *rrs_value_copy(const rrs_value_t *value);
+/* Human-readable representation of any value, including nested dictionaries.
+ * Returns a malloc-allocated string; free() it after use. */
+char *rrs_value_repr(const rrs_value_t *value);
 void rrs_value_free(rrs_value_t *value);
 
 rrs_vm_t *rrs_vm_new(void);
