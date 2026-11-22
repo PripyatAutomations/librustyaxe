@@ -167,7 +167,38 @@ int rrscript_parse_registrations(const char *source, rrscript_register_fn cb,
          b.name = s.src+p;
          b.name_length = s.pos-p;
          if (block(&s,&b.body,&b.body_length)) return -1;
-      } else return fail(&s,"expected script(...), hotkey, or event registration");
+      } else {
+         /* C-like function declaration: return-type name(type argument, ...) { } */
+         size_t type_start=s.pos;
+         if(identifier(&s))return fail(&s,"expected function return type");
+         size_t type_len=s.pos-type_start;
+         const char *type=s.src+type_start;
+         if(!((type_len==3&&!strncmp(type,"int",3)) ||
+              (type_len==4&&!strncmp(type,"void",4)) ||
+              (type_len==4&&!strncmp(type,"bool",4)) ||
+              (type_len==4&&!strncmp(type,"char",4)) ||
+              (type_len==5&&!strncmp(type,"float",5)) ||
+              (type_len==4&&!strncmp(type,"dict",4)) ||
+              (type_len==4&&!strncmp(type,"auto",4))))
+            return fail(&s,"expected script(...), hotkey, event, or typed function");
+         b.kind=RRSCRIPT_FUNCTION;
+         b.return_type=type;b.return_type_length=type_len;
+         if(skip_space(&s))return -1;
+         size_t name_start=s.pos;
+         if(identifier(&s))return -1;
+         b.name=s.src+name_start;b.name_length=s.pos-name_start;
+         if(expect(&s,'('))return -1;
+         size_t params_start=s.pos;
+         while(peek(&s)&&peek(&s)!=')') {
+            if(peek(&s)=='('||peek(&s)=='{'||peek(&s)=='}')
+               return fail(&s,"invalid function parameter list");
+            next(&s);
+         }
+         if(!peek(&s))return fail(&s,"unterminated function parameters");
+         b.params=s.src+params_start;b.params_length=s.pos-params_start;
+         next(&s);
+         if(block(&s,&b.body,&b.body_length))return -1;
+      }
       /* A registration's optional terminator may follow whitespace,
        * including a newline. Never mistake it for a new registration. */
       if (skip_space(&s)) return -1;
