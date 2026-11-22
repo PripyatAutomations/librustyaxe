@@ -1,4 +1,10 @@
-# RustyScript (early implementation)
+# RustyScript interpreter (November 22, 2026)
+
+For the complete current **RustyRig scripting API reference**, including
+host-native functions, file operations, shared state, timers, and GTK script
+console, see [RustyRig's RustyScript reference](https://github.com/PripyatAutomations/rustyrig-fw/blob/main/doc/RUSTYSCRIPT.md)
+and [UI reference](https://github.com/PripyatAutomations/rustyrig-fw/blob/main/doc/RUSTYSCRIPT-UI.md).
+This README describes the standalone interpreter, not host-specific APIs.
 
 RustyScript is a separately built and packaged C library inside the
 librustyaxe repository. The initial host integration is in rustyrig-fw
@@ -50,6 +56,23 @@ subprocess control or audio/pipeline APIs. A registration body is checked for
 balanced braces at load time; comprehensive body syntax checking is still
 pending.
 
+### Interactive evaluation and diagnostics
+
+`rrs_vm_eval(vm, source, &result)` evaluates expressions and simple statements
+in a persistent **per-VM console scope**, independent of registered handlers.
+The caller owns the result. `rrs_value_repr(result)` formats scalar values
+and nested dictionaries into a bounded, printable representation; free the
+returned string after use. `rrs_vm_error(vm)` reports a failed evaluation,
+including line/column when available. `rrs_vm_position()` exposes the current
+source location to native callbacks for warnings and diagnostic messages.
+
+Shared `global` and named `state.*` namespaces are implemented by
+the RustyRig host, **not** in the standalone interpreter. Separate script VMs
+remain isolated unless they use those host bindings. A console snippet cannot
+directly inspect another VM's handler-local variables; RustyRig exposes
+read-only `debug.scripts()`, `debug.keys()`, and `debug.state()`
+helpers for published script state.
+
 Run `make -C rustyscript test` or the repository's normal `make test`.
 The shared library can be built separately with `make -C rustyscript`.
 Root `make install` installs `librustyscript` and its pkg-config metadata.
@@ -57,5 +80,6 @@ Debian packages are `librustyscript0` and `librustyscript-dev`.
 
 The runtime does not depend on GTK or librrprotocol. The host integrations
 provide event subscriptions, slash-command dispatch (rrclient), and GTK hotkey
-dispatch. Server-side script management and remote slash-command invocation
-need their own authorized administrative API.
+dispatch. Server-side script management is implemented by RustyRig through its
+admin-authorized command channel. Remote invocation of script-defined
+slash commands remains unsupported.
