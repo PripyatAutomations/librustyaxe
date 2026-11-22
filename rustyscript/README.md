@@ -50,7 +50,7 @@ The interpreter currently evaluates basic declarations, literals, numeric
 expressions, string concatenation, dictionaries, function calls to registered
 native functions, and braced `if`/`else`. It is an **initial executable
 subset**, not a full language implementation. In particular, it does **not**
-yet support script-defined functions, global/persistent declarations, arrays,
+yet support script-defined functions, global/persistent declarations,
 type enforcement on assignments/returns, SQLite, async/await, exceptions,
 subprocess control or audio/pipeline APIs. A registration body is checked for
 balanced braces at load time; comprehensive body syntax checking is still
@@ -60,12 +60,41 @@ pending.
 
 RustyScript supports bounded array literals such as
 `["#hamradio-test@efnet", "#test@station"]` and string-array declarations
-such as `char[][] rooms = ["#hamradio-test@efnet"]`.
+such as `char rooms[][] = ["#hamradio-test@efnet"]` (the older `char[][] rooms` spelling remains accepted).
 A single array may contain up to 256 entries. The embedding host can inspect
 array entries using `rrs_array_length()` and `rrs_array_get()`; the latter
-returns a borrowed value. Arrays are copied when assigned to values or passed
-to host functions. RustyRig's `chat.send` accepts a configured array of up to
+returns a borrowed value. Arrays are copied by `=` and when passed to host-native functions. RustyRig's `chat.send` accepts a configured array of up to
 32 room destinations and routes each through its named connection profile.
+
+### Assignment, managed references, and const
+
+`=` copies a value; `:=` binds a managed reference to an existing
+variable. Writing `=` through a reference updates its target. Reusing `:=`
+on a mutable binding rebinds it to another variable. References use
+reference-counted storage, so an aliased local value remains valid while
+another binding holds it.
+
+```c
+int a = 10;
+int b = a;
+int c := a;
+b = 20;          // a remains 10
+c = 30;          // a becomes 30
+
+const int limit = 100;
+const int view := a;
+a = 40;          // allowed
+view = 50;       // error
+```
+
+`const` makes a binding read-only, not its target globally immutable.
+Mutable references cannot bind to const sources; const references cannot
+be rebound. No pointers or addresses are exposed.
+
+**Not yet available:** script-defined functions (and therefore default
+by-reference parameters), cyclic garbage collection, GC statistics,
+or nested member mutation and recursively enforced const. Host-native
+function arguments are currently evaluated as value copies.
 
 ### Interactive evaluation and diagnostics
 
