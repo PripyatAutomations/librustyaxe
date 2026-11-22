@@ -128,6 +128,16 @@ static void panel_script(void) {
    assert(state.calls==2);
    rrs_vm_free(vm);
 }
+static void original_parser_error(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   assert(vm);
+   assert(rrs_vm_load(vm,"event irc.privmsg { if (event.room == \"#room\") { } }"));
+   rrs_value_t *event=rrs_dictionary(); /* Missing room must be identified. */
+   assert(!rrs_vm_invoke(vm,RRSCRIPT_EVENT,"irc.privmsg",event));
+   assert(!strcmp(rrs_vm_error(vm),"unknown variable"));
+   rrs_value_free(event);
+   rrs_vm_free(vm);
+}
 static void values(void) {
    rrs_value_t *d=rrs_dictionary();
    rrs_value_t *n=rrs_integer(9);
@@ -145,6 +155,7 @@ int main(void) {
    comment_forms();
    repeated_events();
    panel_script();
+   original_parser_error();
    values();
    puts("RustyScript runtime tests passed");
    return 0;
