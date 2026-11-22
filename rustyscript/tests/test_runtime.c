@@ -205,6 +205,36 @@ static void values(void) {
    assert(rrs_value_int(rrs_value_field(d,"a.b"))==9);
    rrs_value_free(n);rrs_value_free(copy);rrs_value_free(d);
 }
+static void references_and_const(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   rrs_value_t *value=NULL;
+   assert(vm);
+   assert(rrs_vm_eval(vm,"int a = 10; int b = a; int c := a; b = 20; c = 30",&value));
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"a",&value) && rrs_value_int(value)==30);
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"b",&value) && rrs_value_int(value)==20);
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"int other = 100; c := other; c = 200",&value));
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"other",&value) && rrs_value_int(value)==200);
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"const int frozen = 4",&value));
+   rrs_value_free(value);
+   assert(!rrs_vm_eval(vm,"frozen = 5",&value));
+   assert(strstr(rrs_vm_error(vm),"const"));
+   assert(!rrs_vm_eval(vm,"int escaped := frozen",&value));
+   assert(strstr(rrs_vm_error(vm),"const"));
+   assert(rrs_vm_eval(vm,"const int view := a",&value));
+   rrs_value_free(value);
+   assert(!rrs_vm_eval(vm,"view = 6",&value));
+   assert(!rrs_vm_eval(vm,"view := other",&value));
+   assert(rrs_vm_eval(vm,"char rooms[][] = [\"one\", \"two\"]",&value));
+   rrs_value_free(value);
+   assert(rrs_vm_eval(vm,"rooms",&value) && rrs_array_length(value)==2);
+   rrs_value_free(value);
+   rrs_vm_free(vm);
+}
 int main(void) {
    syntax_and_invocation();
    comment_forms();
@@ -213,6 +243,7 @@ int main(void) {
    original_parser_error();
    console_evaluation();
    arrays();
+   references_and_const();
    values();
    puts("RustyScript runtime tests passed");
    return 0;
