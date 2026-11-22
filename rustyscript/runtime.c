@@ -474,6 +474,84 @@ static bool ident(eval_t *e,char *buf,size_t cap) {
    buf[i]=0;return true;
 }
 static rrs_value_t *expression(eval_t *e);
+static bool statements(eval_t *e,bool stop_on_brace);
+static rrs_value_t *call_script(eval_t *caller,function_def_t *fn,int argc,
+                                 const rrs_value_t *const args[],variable_t *origins[]) {
+   if(caller->vm->call_depth>=64){rrs_vm_raise(caller->vm,"maximum function call depth exceeded");return NULL;}
+   eval_t signature={.text=fn->signature,.line=fn->line,.vm=caller->vm};
+   eval_t execution={.text=fn->body,.line=fn->line,.vm=caller->vm,.in_function=true};
+   int index=0;
+   ws(&signature);
+   while(ep(&signature)) {
+      bool read_only=keyword(&signature,"const");
+      char type[64],name[192];
+      if(!ident(&signature,type,sizeof(type))){rrs_vm_raise(caller->vm,"expected parameter type");break;}
+      if(!strcmp(type,"void")&&index==0&&!ep(&signature))break;
+      if(strcmp(type,"int")&&strcmp(type,"float")&&strcmp(type,"bool")&&
+         strcmp(type,"char")&&strcmp(type,"dict")&&strcmp(type,"auto")) {
+         rrs_vm_raise(caller->vm,"unknown parameter type");break;
+      }
+      for(int dim=0;dim<2&&match(&signature,'[');dim++) {
+         if(!match(&signature,']')){rrs_vm_raise(caller->vm,"invalid array parameter");break;}
+      }
+      if(caller->vm->error[0])break;
+      if(!ident(&signature,name,sizeof(name))){rrs_vm_raise(caller->vm,"expected parameter name");break;}
+      for(int dim=0;dim<2&&match(&signature,'[');dim++) {
+         if(!match(&signature,']')){rrs_vm_raise(caller->vm,"invalid array parameter");break;}
+      }
+      if(caller->vm->error[0])break;
+      if(index>=argc){rrs_vm_raise(caller->vm,"too few function arguments");break;}
+      variable_t *arg=calloc(1,sizeof(*arg));
+      if(!arg){rrs_vm_raise(caller->vm,"parameter allocation failed");break;}
+      arg->name=strdup(name);arg->read_only=read_only;
+      if(origins[index]) {
+         if(origins[index]->read_only&&!read_only) {
+            free(arg->name);free(arg);
+            rrs_vm_raise(caller->vm,"cannot pass const variable to mutable parameter");break;
+         }
+         arg->cell=origins[index]->cell;
+         arg->cell->owners++;caller->vm->reference_bindings++;
+      } else arg->cell=new_cell(caller->vm,args[index]);
+      if(!arg->name||!arg->cell) {
+         free(arg->name);release_cell(arg->cell);free(arg);
+         rrs_vm_raise(caller->vm,"parameter allocation failed");break;
+      }
+      for(variable_t *v=execution.vars;v;v=v->next)
+         if(!strcmp(v->name,name)){rrs_vm_raise(caller->vm,"duplicate parameter");break;}
+      if(caller->vm->error[0]){free(arg->name);release_cell(arg->cell);free(arg);break;}
+      arg->next=execution.vars;execution.vars=arg;
+      index++;
+      if(!match(&signature,',')) {
+         ws(&signature);
+         if(ep(&signature))rrs_vm_raise(caller->vm,"expected comma in parameters");
+         break;
+      }
+   }
+   if(!caller->vm->error[0]&&index!=argc)
+      rrs_vm_raise(caller->vm,"wrong function argument count");
+   const char *old_body=caller->vm->active_body;
+   size_t old_offset=caller->vm->active_offset;
+   unsigned old_line=caller->vm->active_line;
+   if(!caller->vm->error[0]) {
+      caller->vm->call_depth++;
+      caller->vm->active_body=execution.text;
+      caller->vm->active_offset=0;
+      caller->vm->active_line=execution.line;
+      statements(&execution,false);
+      caller->vm->call_depth--;
+      if(!caller->vm->error[0]&&!strcmp(fn->return_type,"void")&&
+         execution.return_value&&execution.return_value->type!=RRS_NULL)
+         rrs_vm_raise(caller->vm,"void function returned a value");
+      if(!caller->vm->error[0]&&strcmp(fn->return_type,"void")&&
+         !execution.returning)rrs_vm_raise(caller->vm,"function missing return");
+   }
+   caller->vm->active_body=old_body;
+   caller->vm->active_offset=old_offset;
+   caller->vm->active_line=old_line;
+   free_vars(execution.vars);
+   if(caller->vm->error[0]){rrs_value_free(execution.return_value);return NULL;}
+   return execution.return_value?execution.return_value:rrs_null();
+}
 static rrs_value_t *primary(eval_t *e) {
    ws(e);
    if(match(e,'(')) {
