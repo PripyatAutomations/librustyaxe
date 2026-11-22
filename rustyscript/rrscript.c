@@ -32,7 +32,7 @@ static int fail(scanner *s, const char *reason) {
 static int skip_space(scanner *s) {
    for (;;) {
       while (isspace((unsigned char)peek(s))) next(s);
-      if (peek(s) == '/' && s->src[s->pos+1] == '/') {
+      if (peek(s) == '#' || (peek(s) == '/' && s->src[s->pos+1] == '/')) {
          while (peek(s) && peek(s) != '\n') next(s);
       } else if (peek(s) == '/' && s->src[s->pos+1] == '*') {
          next(s); next(s);
@@ -95,7 +95,7 @@ static int block(scanner *s, const char **start, size_t *len) {
          continue;
       }
       if (c == '"' || c == '\'') { quoted_char = c; continue; }
-      if (c == '/' && peek(s) == '/') {
+      if (c == '#' || (c == '/' && peek(s) == '/')) {
          while (peek(s) && peek(s) != '\n') next(s);
          continue;
       }
