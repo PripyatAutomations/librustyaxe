@@ -37,6 +37,7 @@ struct rrs_vm {
    size_t active_offset;
    unsigned active_line;
    const char *loading_source;
+   struct variable *console_vars;
 };
 typedef struct variable {
    char *name;
@@ -131,9 +132,11 @@ static void free_bindings(binding_t *b,size_t n) {
    for(size_t i=0;i<n;i++){free(b[i].name);free(b[i].body);}
    free(b);
 }
+static void free_vars(variable_t *v);
 void rrs_vm_free(rrs_vm_t *vm) {
    if(!vm)return;
    free_bindings(vm->bindings,vm->count);
+   free_vars(vm->console_vars);
    native_t *n=vm->native;
    while(n){native_t *next=n->next;free(n->name);free(n);n=next;}
    free(vm);
@@ -640,4 +643,58 @@ bool rrs_vm_invoke(rrs_vm_t *vm,rrscript_binding_kind_t kind,
    }
    if(!found)rrs_vm_raise(vm,"handler not registered");
    return found;
+}
+
+/* Persistent console scope: statements and expressions share variables, but
+ * never inherit a loaded script's handler locals. Each console VM is separate. */
+bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result) {
+   if(result)*result=NULL;
+   if(!vm||!source)return false;
+   vm->error[0]=0;
+   eval_t e={.text=source,.line=1,.vm=vm,.vars=vm->console_vars};
+   vm->active_body=source;
+   vm->active_offset=0;
+   vm->active_line=1;
+   ws(&e);
+   bool declaration=false;
+   const char *start=e.text+e.pos;
+   const char *types[]={"int","float","bool","char","dict",NULL};
+   for(int i=0;types[i];i++) {
+      size_t n=strlen(types[i]);
+      if(!strncmp(start,types[i],n) &&
+         (isspace((unsigned char)start[n])||start[n]=='[')) {
+         declaration=true;break;
+      }
+   }
+   /* Assignment is a statement; everything else evaluates to a value. */
+   if(!declaration) {
+      eval_t probe=e;
+      char name[192];
+      if(ident(&probe,name,sizeof(name))) {
+         ws(&probe);
+         if(ep(&probe)=='='&&probe.text[probe.pos+1]!='=')
+            declaration=true;
+      }
+      e.pos=0;e.line=1;
+   }
+   rrs_value_t *value=NULL;
+   bool ok=true;
+   if(declaration) {
+      ok=statements(&e,false);
+      value=rrs_null();
+   } else {
+      value=expression(&e);
+      ws(&e);
+      if(value&&ep(&e))rrs_vm_raise(vm,"unexpected trailing input");
+      ok=value&&!vm->error[0];
+   }
+   vm->console_vars=e.vars;
+   vm->active_body=NULL;
+   if(!ok||vm->error[0]) {
+      rrs_value_free(value);
+      return false;
+   }
+   if(result)*result=value;
+   else rrs_value_free(value);
+   return true;
 }
