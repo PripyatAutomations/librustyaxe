@@ -1,0 +1,17 @@
+name: RustyScript
+on:
+  push:
+    paths:
+      - 'rustyscript/**'
+      - '.github/workflows/rustyscript.yml'
+  pull_request:
+    paths:
+      - 'rustyscript/**'
+      - '.github/workflows/rustyscript.yml'
+jobs:
+  syntax-and-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run runtime tests
+        run: make -C rustyscript test
