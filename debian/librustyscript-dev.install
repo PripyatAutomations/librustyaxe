@@ -1,0 +1,3 @@
+usr/lib/*/librustyscript.so
+usr/lib/*/pkgconfig/librustyscript.pc
+usr/include/librustyscript/*.h
