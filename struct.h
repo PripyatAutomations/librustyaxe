@@ -25,7 +25,7 @@
 #define HTTP_TOKEN_LEN 14       // session-id / nonce length,
                                 // longer moar secure
 #define HTTP_UA_LEN 512         // allow 128 bytes
-#define USER_PRIV_LEN 100       // privileges list
+#define USER_PRIV_LEN 4096      // maximum privilege-list bytes (excluding NUL)
 #define USER_EMAIL_LEN 128      // email address
 
 #define HTTP_MAX_SESSIONS 32    // max sessions total
