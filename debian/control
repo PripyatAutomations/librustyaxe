@@ -9,10 +9,10 @@ Homepage: https://github.com/PripyatAutomations/librustyaxe
 Vcs-Git: https://github.com/PripyatAutomations/librustyaxe.git
 Vcs-Browser: https://github.com/PripyatAutomations/librustyaxe
 
-Package: librustyaxe0
+Package: librustyaxe1
 Architecture: any
 Multi-Arch: same
-Recommends: librustyirc0
+Recommends: librustyirc1
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Breaks: librustyaxe (<< 1.0.3~)
 Replaces: librustyaxe (<< 1.0.3~)
@@ -23,16 +23,16 @@ Package: librustyaxe-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: librustyaxe0 (= ${binary:Version}), libbsd-dev, libglib2.0-dev, ${misc:Depends}
+Depends: librustyaxe1 (= ${binary:Version}), libbsd-dev, libglib2.0-dev, ${misc:Depends}
 Description: Development files for librustyaxe
  Public headers, linker symlink and pkg-config metadata.
 
-Package: librustyirc0
+Package: librustyirc1
 Architecture: any
 Multi-Arch: same
 Breaks: librustyirc (<< 1.0.3~)
 Replaces: librustyirc (<< 1.0.3~)
-Depends: librustyaxe0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: librustyaxe1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: Reusable IRC wire protocol library
  MIT-licensed IRC messaging, registration, capabilities and DCC support.
 
@@ -40,14 +40,14 @@ Package: librustyirc-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: librustyirc0 (= ${binary:Version}), librustyaxe-dev, ${misc:Depends}
+Depends: librustyirc1 (= ${binary:Version}), librustyaxe-dev, ${misc:Depends}
 Description: Development headers for librustyirc
  Headers, linker symlink and pkg-config metadata for the IRC library.
 
-Package: librustyscript0
+Package: librustyscript1
 Architecture: any
 Multi-Arch: same
-Depends: librustyaxe0 (= ${binary:Version}), librustyirc0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: librustyaxe1 (= ${binary:Version}), librustyirc1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: RustyScript interpreter runtime
  Embeddable typed scripting runtime with host-registered command,
  hotkey and event entry points.
@@ -56,6 +56,6 @@ Package: librustyscript-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: librustyscript0 (= ${binary:Version}), librustyaxe-dev, librustyirc-dev, ${misc:Depends}
+Depends: librustyscript1 (= ${binary:Version}), librustyaxe-dev, librustyirc-dev, ${misc:Depends}
 Description: Development headers for librustyscript
  Public interpreter and host integration headers and pkg-config metadata.
