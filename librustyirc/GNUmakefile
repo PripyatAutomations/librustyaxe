@@ -11,7 +11,7 @@ DESTDIR ?=
 BUILD_DIR ?= $(REPO_ROOT)/build/irc
 AXE_BUILD_DIR ?= $(REPO_ROOT)/build
 VERSION ?= $(strip $(shell cat $(REPO_ROOT)/.version))
-SOVERSION ?= 0
+SOVERSION ?= 1
 SOURCES := irc.c connection.c irc.channel.c irc.modes.c irc.user.c irc.capab.c irc.commands.c irc.numerics.c irc.event.c irc.dispatch.c irc.audio.c irc.dcc.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
 HEADERS := $(filter-out internal.h,$(notdir $(wildcard *.h)))
