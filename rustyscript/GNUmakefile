@@ -8,7 +8,7 @@ INCLUDEDIR ?= $(PREFIX)/include
 DESTDIR ?=
 BUILD_DIR ?= $(REPO_ROOT)/build/script
 VERSION ?= $(strip $(shell cat $(REPO_ROOT)/.version))
-SOVERSION ?= 0
+SOVERSION ?= 1
 AXE_BUILD_DIR ?= $(REPO_ROOT)/build
 IRC_BUILD_DIR ?= $(AXE_BUILD_DIR)/irc
 CFLAGS += -std=gnu23 -Wall -Wextra -Werror -pedantic
