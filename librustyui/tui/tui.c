@@ -445,12 +445,14 @@ void tui_redraw_screen(void) {
    if (!topline) {
       topline = tui_colorize_string(w->status_line);
    }
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
    putchar(' ');
    tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
    free(topline);
 
    /* Structured tabs may own the full viewport below the top line. */
    if (w->view_draw) {
+      rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
       for (int r = 2 ; r <= (w->view_full_height ? term_rows : term_rows - 2) ; r++) {
          clear_line(r);
       }
@@ -1107,6 +1109,7 @@ void tui_update_input_line(void) {
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_INPUT);
    for(int j=0;j<width;j++)putchar(' ');
    printf("\033[%d;%dH",input_row,input_col);
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_INPUT);
    if(prompt_len<width){surface_write(color_prompt,strlen(color_prompt),RRUI_THEME_INPUT);surface_write(slice,strlen(slice),RRUI_THEME_INPUT);}
    else fputs("> ",stdout);   // prompt includes space now
 
@@ -1117,7 +1120,7 @@ void tui_update_input_line(void) {
    }
    // --- move cursor ---
    int cursor_screen = cursor_screen_pos - start_col + prompt_len;
-   fputs("\033[0m",stdout);
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_INPUT);
    printf("\033[%d;%dH",input_row,input_col-1+CLAMP(cursor_screen,1,width));
 
    free(color_prompt);
