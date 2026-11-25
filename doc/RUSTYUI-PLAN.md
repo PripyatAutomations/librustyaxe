@@ -254,3 +254,11 @@ while tile says No active VFO. Next implementation: fix binding, theme model
 and terminal rendering (filled headers, Main frame, input area, focus styling,
 frequency emphasis), then expose workspace placement and persistent geometry.
 This section records design decisions, not completed features.
+
+### Preview implementation checkpoint
+
+Added backend-neutral RGB theme roles, keyfile parser, terminal palette mapping
+and themed panel backgrounds, title bars, selection and footer. List rows
+can carry a typed RGB foreground without accepting terminal escape codes.
+Full Main frame, inline layout, tab strips in TUI and live reload still pending.
+No build or interactive testing performed yet.

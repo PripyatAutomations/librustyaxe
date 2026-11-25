@@ -23,7 +23,7 @@ int main(void) {
    assert(!rrui_form_set_value(f,"e","\033[2J"));
    assert(rrui_form_next(f,1)&&rrui_form_focus(f)==2);
    assert(rrui_form_activate(f)&&rrui_form_checked(f,"c"));
-   assert(rrui_form_list_append(f,"l","one","One"));assert(rrui_form_list_append(f,"l","two","Two"));
+   assert(rrui_form_list_append_color(f,"l","one","One",0x123456));assert(rrui_form_list_color(f,3,0)==0x123456);assert(rrui_form_list_color(f,3,99)==UINT32_MAX);assert(rrui_form_list_append(f,"l","two","Two"));
    assert(rrui_form_select(f,3,1));assert(!strcmp(rrui_form_value(f,"l"),"two"));
    assert(rrui_form_list_clear(f,"l"));assert(rrui_form_list_append(f,"l","two","Two"));
    rrui_field_t field;assert(rrui_form_field(f,3,&field)&&field.selected==0);

@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <librustyaxe/core.h>
 #include <librustyui/tui.h>
+#include <librustyui/theme.h>
 #include "tui.internal.h"
 
 extern void tui_keys_init(void); // tui.keys.c
@@ -392,6 +393,7 @@ void tui_redraw_screen(void) {
    update_term_size();
    if(rrui_tui_draw(term_rows,term_cols)){tui_render_unlock();return;}
 
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
    printf("\033[H\033[2J");     // clear screen
 
    tui_window_t *w = tui_active_window();
@@ -561,7 +563,7 @@ void tui_redraw_screen(void) {
             }
 
             // Reset attributes so colors don't bleed into the next line
-            fputs("\033[0m", stdout);
+            rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
             term_clrtoeol();
          }
 
@@ -575,6 +577,7 @@ void tui_redraw_screen(void) {
       }
    }
 
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
    // Fill remaining log space with blanks
    while (row < term_rows - 1) {
       printf("\033[%d;1H", row++);
@@ -582,8 +585,10 @@ void tui_redraw_screen(void) {
    }
 draw_footer:
    // --- Bottom status line ---
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
    printf("\033[%d;1H", term_rows - 1);
    printf("%-*s", term_cols, status_line);
+   fputs("\033[0m",stdout);
 
    tui_redraw_clock();
    tui_update_input_line();
@@ -640,7 +645,8 @@ void tui_redraw_statusline(void) {
 
       return;
    }
-   printf("\033[s\033[%d;1H%-*s\033[u", term_rows - 1, term_cols, status_line);
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
+   printf("\033[s\033[%d;1H%-*s\033[0m\033[u", term_rows - 1, term_cols, status_line);
    tui_redraw_clock();
    fflush(stdout);
    tui_render_unlock();

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include <librustyui/form.h>
+#include <librustyui/theme.h>
 #include <librustyui/tui.workspace.h>
 #include <librustyui/tui.h>
 #include "termkey.h"
@@ -79,15 +80,11 @@ static int clipped(const char *s,int width) {
    return initial-width;
 }
 static void line(int row,int cols,bool focus,const char *prefix,const char *value) {
-   printf("\033[%d;%dH%s",row+oy,ox,focus?"\033[7m":"\033[0m");
+   printf("\033[%d;%dH",row+oy,ox);
+   rrui_tui_theme_style(RRUI_THEME_TEXT,focus?RRUI_THEME_SELECTION:RRUI_THEME_PANEL);
+   if(focus&&!cfg_tui_colors)fputs("\033[7m",stdout);
    if(!overlay)fputs("\033[2K",stdout);
-   if(cfg_tui_colors&&!focus&&row_color<=0xffffff){
-      unsigned r=row_color>>16,g=(row_color>>8)&255,b=row_color&255;
-      const char *ct=g_getenv("COLORTERM"),*term=g_getenv("TERM");
-      if(ct&&(!strcmp(ct,"truecolor")||!strcmp(ct,"24bit")))printf("\033[38;2;%u;%u;%um",r,g,b);
-      else if(term&&strstr(term,"256color"))printf("\033[38;5;%um",16+36*((r*5+127)/255)+6*((g*5+127)/255)+(b*5+127)/255);
-      else printf("\033[%um",90+((r>=128)?1:0)+((g>=128)?2:0)+((b>=128)?4:0));
-   }
+   if(!focus&&row_color<=0xffffff)rrui_tui_theme_rgb(row_color,false);
    int remain=cols-1-clipped(prefix,cols-1);
    if(remain>0)remain-=clipped(value,remain);
    if(overlay)while(remain-->0)putchar(' ');
@@ -188,7 +185,7 @@ void rrui_tui_draw_panels(int rows,int cols) {
       p->scroll=scroll;p->hits=hits;hits=NULL;
       /* Bright cyan for keyboard focus; ordinary cyan for inactive panels.
        * ANSI 16-color SGR works without true-color terminal support. */
-      printf("\033[0m%s",selected?"\033[96m":"\033[36m");
+      rrui_tui_theme_style(selected?RRUI_THEME_FOCUS:RRUI_THEME_BORDER,RRUI_THEME_PANEL);
       printf("\033[%d;%dH┌",r.y,r.x);
       for(int j=0;j<r.width-2;j++)fputs("─",stdout);
       fputs("┐",stdout);
@@ -200,9 +197,11 @@ void rrui_tui_draw_panels(int rows,int cols) {
       for(int j=0;j<r.width-5;j++)fputs("─",stdout);
       fputs(p->tiled?"───┘":"[+]┘",stdout);
       rrui_field_t root={0};rrui_form_field(p->form,0,&root);
-      printf("\033[%d;%dH ",r.y,r.x+2);
-      clipped(root.widget?root.widget->label:"Panel",r.width-5);
-      fputs(" \033[0m",stdout);
+      printf("\033[%d;%dH",r.y,r.x+1);
+      rrui_tui_theme_style(selected?RRUI_THEME_FOCUS:RRUI_THEME_TEXT,RRUI_THEME_HEADER);
+      putchar(' ');int used=clipped(root.widget?root.widget->label:"Panel",r.width-4);
+      for(int k=used+1;k<r.width-2;k++)putchar(' ');
+      fputs("\033[0m",stdout);
    }
    overlay=false;ox=1;oy=0;
    fputs("\033[u",stdout);
