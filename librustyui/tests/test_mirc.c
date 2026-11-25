@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <librustyaxe/irc.format.h>
 #include <librustyui/tui.h>
 int main(void) {
    cfg_tui_colors = true;
