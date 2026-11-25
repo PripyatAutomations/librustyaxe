@@ -12,7 +12,6 @@ Vcs-Browser: https://github.com/PripyatAutomations/librustyaxe
 Package: librustyaxe1
 Architecture: any
 Multi-Arch: same
-Recommends: librustyirc1
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Breaks: librustyaxe (<< 1.0.3~)
 Replaces: librustyaxe (<< 1.0.3~)
@@ -47,7 +46,7 @@ Description: Development headers for librustyirc
 Package: librustyscript1
 Architecture: any
 Multi-Arch: same
-Depends: librustyaxe1 (= ${binary:Version}), librustyirc1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: librustyaxe1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: RustyScript interpreter runtime
  Embeddable typed scripting runtime with host-registered command,
  hotkey and event entry points.
@@ -56,7 +55,7 @@ Package: librustyscript-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: librustyscript1 (= ${binary:Version}), librustyaxe-dev, librustyirc-dev, ${misc:Depends}
+Depends: librustyscript1 (= ${binary:Version}), librustyaxe-dev, ${misc:Depends}
 Description: Development headers for librustyscript
  Public interpreter and host integration headers and pkg-config metadata.
 
@@ -64,7 +63,7 @@ Package: librustyui1
 Architecture: any
 Multi-Arch: same
 Build-Profiles: <!pkg.librustyaxe.noui>
-Depends: librustyaxe1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: librustyaxe1 (= ${binary:Version}), librustyscript1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: RustyUI reusable terminal presentation library
  Terminal windows, input handling, completion and theme rendering.
  No GTK runtime dependency.
@@ -74,6 +73,6 @@ Section: libdevel
 Architecture: any
 Multi-Arch: same
 Build-Profiles: <!pkg.librustyaxe.noui>
-Depends: librustyui1 (= ${binary:Version}), librustyaxe-dev, ${misc:Depends}
+Depends: librustyui1 (= ${binary:Version}), librustyaxe-dev, librustyscript-dev, ${misc:Depends}
 Description: Development files for RustyUI
  Public terminal UI headers, linker symlink and pkg-config metadata.

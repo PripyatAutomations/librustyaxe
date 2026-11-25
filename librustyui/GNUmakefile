@@ -18,27 +18,32 @@ ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error RustyUI TUI requires development packages: $(DEPS))
 endif
 endif
-SOURCES := tui/tui.c tui/tui.completion.c tui/tui.keys.c tui/tui.theme.c tui/tui.window.c vendor/libtermkey/termkey.c vendor/libtermkey/driver-csi.c vendor/libtermkey/driver-ti.c
+SOURCES := core/layout.c tui/tui.c tui/tui.completion.c tui/tui.keys.c tui/tui.theme.c tui/tui.window.c vendor/libtermkey/termkey.c vendor/libtermkey/driver-csi.c vendor/libtermkey/driver-ti.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
 HEADERS := $(wildcard *.h) vendor/libtermkey/termkey.h
+SCRIPT_BUILD_DIR ?= $(AXE_BUILD_DIR)/script
+SCRIPT_LIB := $(SCRIPT_BUILD_DIR)/librustyscript.so.$(SOVERSION).$(VERSION)
 AXE_LIB := $(AXE_BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 REAL_LIB := $(BUILD_DIR)/librustyui.so.$(SOVERSION).$(VERSION)
 SONAME := librustyui.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyui.pc
-UI_CFLAGS := -std=gnu23 -I$(REPO_ROOT) -I$(CURDIR)/vendor/libtermkey -I$(AXE_BUILD_DIR)/include -I$(AXE_BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))
-UI_LIBS := -L$(AXE_BUILD_DIR) -lrustyaxe $(shell $(PKG_CONFIG) --libs $(DEPS)) -lbsd -pthread -lm
-TESTS := $(addprefix $(BUILD_DIR)/,test_mirc test_completion_labels)
+UI_CFLAGS := -std=gnu23 -I$(REPO_ROOT) -I$(REPO_ROOT)/rustyscript -I$(CURDIR)/vendor/libtermkey -I$(AXE_BUILD_DIR)/include -I$(AXE_BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))
+UI_LIBS := -L$(SCRIPT_BUILD_DIR) -lrustyscript -L$(AXE_BUILD_DIR) -lrustyaxe $(shell $(PKG_CONFIG) --libs $(DEPS)) -lbsd -pthread -lm
+TESTS := $(addprefix $(BUILD_DIR)/,test_mirc test_completion_labels test_layout)
 .PHONY: all test tests install uninstall clean
 all: $(REAL_LIB) $(PC_FILE)
 
 $(AXE_LIB):
 	$(MAKE) -C "$(REPO_ROOT)" WITH_UI=false BUILD_DIR="$(abspath $(AXE_BUILD_DIR))" VERSION="$(VERSION)" SOVERSION="$(SOVERSION)" "$(abspath $@)"
 
-$(BUILD_DIR)/%.o: %.c $(HEADERS) $(wildcard tui/*.h) $(wildcard vendor/libtermkey/*.h) | $(AXE_LIB)
+$(SCRIPT_LIB): $(AXE_LIB)
+	$(MAKE) -C "$(REPO_ROOT)/rustyscript" BUILD_DIR="$(abspath $(SCRIPT_BUILD_DIR))" AXE_BUILD_DIR="$(abspath $(AXE_BUILD_DIR))" VERSION="$(VERSION)" SOVERSION="$(SOVERSION)"
+
+$(BUILD_DIR)/%.o: %.c $(HEADERS) $(wildcard tui/*.h) $(wildcard vendor/libtermkey/*.h) $(wildcard $(REPO_ROOT)/rustyscript/*.h) | $(AXE_LIB) $(SCRIPT_LIB)
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(UI_CFLAGS) $(CFLAGS) -fPIC -c $< -o $@
 
-$(REAL_LIB): $(OBJECTS) $(AXE_LIB)
+$(REAL_LIB): $(OBJECTS) $(AXE_LIB) $(SCRIPT_LIB)
 	$(CC) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(OBJECTS) $(UI_LIBS)
 	ln -sfn $(notdir $@) $(BUILD_DIR)/$(SONAME)
 	ln -sfn $(SONAME) $(BUILD_DIR)/librustyui.so
@@ -47,14 +52,14 @@ $(PC_FILE): GNUmakefile
 	@mkdir -p $(BUILD_DIR)
 	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' \
 	 'Name: librustyui' 'Description: RustyUI reusable terminal presentation' \
-	 'Version: $(VERSION)' 'Requires: librustyaxe' \
+	 'Version: $(VERSION)' 'Requires: librustyaxe librustyscript' \
 	 'Libs: -L$${libdir} -lrustyui' 'Cflags: -I$${includedir}' > $@
 
 $(BUILD_DIR)/test_%: tests/test_%.c $(REAL_LIB)
 	$(CC) $(CPPFLAGS) $(UI_CFLAGS) $(CFLAGS) -o $@ $< -L$(BUILD_DIR) -lrustyui $(UI_LIBS)
 
 test tests: all $(TESTS)
-	@set -e; for t in $(TESTS); do LD_LIBRARY_PATH="$(abspath $(BUILD_DIR)):$(abspath $(AXE_BUILD_DIR)):$$LD_LIBRARY_PATH" "$$t"; done
+	@set -e; for t in $(TESTS); do LD_LIBRARY_PATH="$(abspath $(BUILD_DIR)):$(abspath $(AXE_BUILD_DIR)):$(abspath $(SCRIPT_BUILD_DIR)):$LD_LIBRARY_PATH" "$$t"; done
 	@! readelf -d $(REAL_LIB) | grep -E 'NEEDED.*libgtk'
 
 install: all

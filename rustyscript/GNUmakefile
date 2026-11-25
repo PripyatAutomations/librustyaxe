@@ -10,7 +10,6 @@ BUILD_DIR ?= $(REPO_ROOT)/build/script
 VERSION ?= $(strip $(shell cat $(REPO_ROOT)/.version))
 SOVERSION ?= 1
 AXE_BUILD_DIR ?= $(REPO_ROOT)/build
-IRC_BUILD_DIR ?= $(AXE_BUILD_DIR)/irc
 CFLAGS += -std=gnu23 -Wall -Wextra -Werror -pedantic
 SOURCES := rrscript.c runtime.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
@@ -24,13 +23,13 @@ $(BUILD_DIR):
 $(BUILD_DIR)/%.o: %.c rrscript.h runtime.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -fPIC -c $< -o $@
 $(REAL_LIB): $(OBJECTS)
-	$(CC) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(OBJECTS) -L$(AXE_BUILD_DIR) -L$(IRC_BUILD_DIR) -lrustyaxe -lrustyirc
+	$(CC) $(LDFLAGS) -shared -Wl,-soname,$(SONAME) -o $@ $(OBJECTS) -L$(AXE_BUILD_DIR) -lrustyaxe
 	ln -sfn $(notdir $@) $(BUILD_DIR)/$(SONAME)
 	ln -sfn $(SONAME) $(BUILD_DIR)/librustyscript.so
 $(PC_FILE): GNUmakefile | $(BUILD_DIR)
 	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' \
 	 'Name: librustyscript' 'Description: RustyScript scripting runtime' \
-	 'Version: $(VERSION)' 'Requires: librustyaxe librustyirc' \
+	 'Version: $(VERSION)' 'Requires: librustyaxe' \
 	 'Libs: -L$${libdir} -lrustyscript' 'Cflags: -I$${includedir}' > $@
 	@grep -Fqx 'Libs: -L$${libdir} -lrustyscript' $(PC_FILE)
 	@grep -Fqx 'Cflags: -I$${includedir}' $(PC_FILE)

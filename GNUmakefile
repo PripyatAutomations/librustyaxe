@@ -69,14 +69,14 @@ ifeq ($(WITH_UI),true)
 all: ui-build
 endif
 .PHONY: ui-build
-ui-build: $(REAL_LIB)
+ui-build: script-build
 	$(UI_MAKE) all
 
 irc-build: $(REAL_LIB)
 	$(MAKE) -C librustyirc all BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
 
-script-build: irc-build
-	$(MAKE) -C rustyscript all BUILD_DIR="$(abspath $(BUILD_DIR))/script" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" IRC_BUILD_DIR="$(abspath $(BUILD_DIR))/irc" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
+script-build: $(REAL_LIB)
+	$(MAKE) -C rustyscript all BUILD_DIR="$(abspath $(BUILD_DIR))/script" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
 
 # The generated public header describes this library, never its consumers.
 # Recalculate on each invocation but preserve timestamps when unchanged.
@@ -121,7 +121,7 @@ test tests: all
 ifeq ($(WITH_UI),true)
 	$(UI_MAKE) test
 endif
-	$(MAKE) -C rustyscript test BUILD_DIR="$(abspath $(BUILD_DIR))/script" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" IRC_BUILD_DIR="$(abspath $(BUILD_DIR))/irc" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
+	$(MAKE) -C rustyscript test BUILD_DIR="$(abspath $(BUILD_DIR))/script" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
 	$(MAKE) -C librustyirc test BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
 	$(MAKE) -C tests test TEST_BUILD_DIR="$(abspath $(BUILD_DIR))/tests" \
 	    INCLUDES="-I$(abspath $(BUILD_DIR))/generated -I$(abspath $(BUILD_DIR))/include $(shell $(PKG_CONFIG) --cflags $(DEPS))" \
@@ -138,7 +138,7 @@ endif
 	@for h in $(PUBLIC_HEADERS); do install -m644 "$$h" "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/$$h"; done
 	install -m644 $(BUILD_DIR)/generated/librustyaxe/build_config.h "$(DESTDIR)$(INCLUDEDIR)/librustyaxe/build_config.h"
 	install -Dm644 $(PC_FILE) "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
-	$(MAKE) -C rustyscript install BUILD_DIR="$(abspath $(BUILD_DIR))/script" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" IRC_BUILD_DIR="$(abspath $(BUILD_DIR))/irc" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
+	$(MAKE) -C rustyscript install BUILD_DIR="$(abspath $(BUILD_DIR))/script" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 	$(MAKE) -C librustyirc install BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 
 uninstall:
