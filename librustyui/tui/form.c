@@ -1,3 +1,4 @@
+#include "render.h"
 /* SPDX-License-Identifier: MIT */
 #include <librustyui/form.h>
 #include <librustyui/theme.h>
@@ -81,33 +82,33 @@ static int clipped(const char *s,int width) {
    if(!s)return 0;
    for(const char *p=s;*p&&width>0;) {
       gunichar c=g_utf8_get_char_validated(p,-1);
-      if(c==(gunichar)-1||c==(gunichar)-2){putchar('?');p++;width--;continue;}
+      if(c==(gunichar)-1||c==(gunichar)-2){rrui_render_char('?');p++;width--;continue;}
       const char *q=g_utf8_next_char(p);
       int cells=g_unichar_iswide(c)?2:1;
       if(cells>width)break;
-      if(g_unichar_iscntrl(c)||g_unichar_type(c)==G_UNICODE_FORMAT)putchar('?');
-      else fwrite(p,1,q-p,stdout);
+      if(g_unichar_iscntrl(c)||g_unichar_type(c)==G_UNICODE_FORMAT)rrui_render_char('?');
+      else rrui_render_write(p,q-p);
       width-=cells;p=q;
    }
    return initial-width;
 }
 static void line(int row,int cols,bool focus,const char *prefix,const char *value) {
-   printf("\033[%d;%dH",row+oy,ox);
+   rrui_render_printf("\033[%d;%dH",row+oy,ox);
    rrui_tui_theme_style(RRUI_THEME_TEXT,focus?RRUI_THEME_SELECTION:RRUI_THEME_PANEL);
-   if(focus&&!cfg_tui_colors)fputs("\033[7m",stdout);
-   if(!overlay)fputs("\033[2K",stdout);
+   if(focus&&!cfg_tui_colors)rrui_render_write("\033[7m",strlen("\033[7m"));
+   if(!overlay)rrui_render_write("\033[2K",strlen("\033[2K"));
    if(!focus&&row_color<=0xffffff)rrui_tui_theme_rgb(row_color,false);
    int remain=cols-1-clipped(prefix,cols-1);
    if(remain>0)remain-=clipped(value,remain);
-   if(overlay)while(remain-->0)putchar(' ');
-   fputs("\033[0m",stdout);
+   if(overlay)while(remain-->0)rrui_render_char(' ');
+   rrui_render_write("\033[0m",strlen("\033[0m"));
 }
 static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
    if(!form)return false;
    if(!hits)hits=g_array_new(FALSE,FALSE,sizeof(hit_t));
    g_array_set_size(hits,0);
-   if(!overlay)fputs("\033[0m\033[r\033[?25l\033[H\033[2J",stdout);
-   if(rows<4||cols<12){clipped("Terminal too small",cols-1);fflush(stdout);return true;}
+   if(!overlay)rrui_render_write("\033[0m\033[r\033[?25l\033[H\033[2J",strlen("\033[0m\033[r\033[?25l\033[H\033[2J"));
+   if(rows<4||cols<12){clipped("Terminal too small",cols-1);rrui_render_flush();return true;}
    size_t focus=rrui_form_focus(form),count=rrui_form_count(form);
    if(focus<scroll)scroll=focus;
    /* Keep focus in view: containers don't consume lines; list rows do. */
@@ -166,7 +167,7 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
       else line(row++,cols,false,"  ",w->label);
    }
    if(!overlay)line(rows,cols,false,"","Tab / Shift-Tab  Arrows  Enter  Esc");
-   fflush(stdout);return true;
+   rrui_render_flush();return true;
 }
 bool rrui_tui_draw(int rows,int cols) {
    if(!active)return false;
@@ -177,7 +178,7 @@ bool rrui_tui_draw(int rows,int cols) {
 void rrui_tui_draw_panels(int rows,int cols) {
    workspace_rows=rows;workspace_cols=cols;
    if(active||rows<8||cols<14)return;
-   fputs("\033[s",stdout);
+   rrui_render_write("\033[s",strlen("\033[s"));
    overlay=true;
    for(size_t i=0;i<npanels;i++) {
       panel_t *p=&panels[i];rrui_rect_t r=p->tiled?p->rect:p->requested;
@@ -198,28 +199,28 @@ void rrui_tui_draw_panels(int rows,int cols) {
       /* Bright cyan for keyboard focus; ordinary cyan for inactive panels.
        * ANSI 16-color SGR works without true-color terminal support. */
       rrui_tui_theme_style(selected?RRUI_THEME_FOCUS:RRUI_THEME_BORDER,RRUI_THEME_PANEL);
-      printf("\033[%d;%dH┌",r.y,r.x);
-      for(int j=0;j<r.width-2;j++)fputs("─",stdout);
-      fputs("┐",stdout);
+      rrui_render_printf("\033[%d;%dH┌",r.y,r.x);
+      for(int j=0;j<r.width-2;j++)rrui_render_write("─",strlen("─"));
+      rrui_render_write("┐",strlen("┐"));
       for(int j=1;j<r.height-1;j++){
-         printf("\033[%d;%dH│",r.y+j,r.x);
-         printf("\033[%d;%dH│",r.y+j,r.x+r.width-1);
+         rrui_render_printf("\033[%d;%dH│",r.y+j,r.x);
+         rrui_render_printf("\033[%d;%dH│",r.y+j,r.x+r.width-1);
       }
-      printf("\033[%d;%dH└",r.y+r.height-1,r.x);
-      for(int j=0;j<r.width-5;j++)fputs("─",stdout);
-      fputs(p->tiled?"───┘":"[+]┘",stdout);
+      rrui_render_printf("\033[%d;%dH└",r.y+r.height-1,r.x);
+      for(int j=0;j<r.width-5;j++)rrui_render_write("─",strlen("─"));
+      rrui_render_write(p->tiled?"───┘":"[+]┘",strlen(p->tiled?"───┘":"[+]┘"));
       rrui_field_t root={0};rrui_form_field(p->form,0,&root);
-      printf("\033[%d;%dH",r.y,r.x+1);
+      rrui_render_printf("\033[%d;%dH",r.y,r.x+1);
       rrui_tui_theme_style(selected?RRUI_THEME_WORKSPACE:RRUI_THEME_TEXT,selected?RRUI_THEME_ACTIVE_HEADER:RRUI_THEME_HEADER);
-      putchar(' ');int used=clipped(root.widget?root.widget->label:"Panel",r.width-4);
-      for(int k=used+1;k<r.width-2;k++)putchar(' ');
-      fputs("\033[0m",stdout);
+      rrui_render_char(' ');int used=clipped(root.widget?root.widget->label:"Panel",r.width-4);
+      for(int k=used+1;k<r.width-2;k++)rrui_render_char(' ');
+      rrui_render_write("\033[0m",strlen("\033[0m"));
    }
    overlay=false;ox=1;oy=0;
-   fputs("\033[u",stdout);
-   if(focused)fputs("\033[?25l",stdout);
-   else fputs("\033[?25h",stdout);
-   fflush(stdout);
+   rrui_render_write("\033[u",strlen("\033[u"));
+   if(focused)rrui_render_write("\033[?25l",strlen("\033[?25l"));
+   else rrui_render_write("\033[?25h",strlen("\033[?25h"));
+   rrui_render_flush();
 }
 /* Resize in tile order rather than z-order, preserving all other visible
  * tile heights. Store ratios as weights so terminal resize remains adaptive. */

@@ -1,3 +1,4 @@
+#include "render.h"
 /* SPDX-License-Identifier: MIT */
 #include <librustyui/theme.h>
 #include <librustyui/tui.theme.h>
@@ -13,7 +14,7 @@ void rrui_tui_theme_rgb(uint32_t rgb,bool bg){
    unsigned r=rgb>>16,g=(rgb>>8)&255,b=rgb&255;
    const char *ct=g_getenv("COLORTERM"),*term=g_getenv("TERM");
    if(ct&&(!strcmp(ct,"truecolor")||!strcmp(ct,"24bit")))
-      printf("\033[%d;2;%u;%u;%um",bg?48:38,r,g,b);
+      rrui_render_printf("\033[%d;2;%u;%u;%um",bg?48:38,r,g,b);
    else if(term&&strstr(term,"256color")){
       /* Actual xterm cube levels are not evenly spaced. Include grayscale
        * entries, which are especially important for dark UI surfaces. */
@@ -26,7 +27,7 @@ void rrui_tui_theme_rgb(uint32_t rgb,bool bg){
          long dr=(long)r-pr,dg=(long)g-pg,db=(long)b-pb;
          long d=dr*dr+dg*dg+db*db;if(d<dist){dist=d;best=i;}
       }
-      printf("\033[%d;5;%um",bg?48:38,best);
+      rrui_render_printf("\033[%d;5;%um",bg?48:38,best);
    }
    else {
       static const unsigned pal[16]={0x000000,0x800000,0x008000,0x808000,0x000080,0x800080,0x008080,0xc0c0c0,
@@ -36,12 +37,12 @@ void rrui_tui_theme_rgb(uint32_t rgb,bool bg){
          long dr=(long)r-(pal[i]>>16),dg=(long)g-((pal[i]>>8)&255),db=(long)b-(pal[i]&255);
          long d=dr*dr+dg*dg+db*db;if(d<dist){best=i;dist=d;}
       }
-      printf("\033[%um",(bg?40u:30u)+(best&7)+(best>=8?60u:0u));
+      rrui_render_printf("\033[%um",(bg?40u:30u)+(best&7)+(best>=8?60u:0u));
    }
 }
 void rrui_tui_theme_style(rrui_theme_role_t fg,rrui_theme_role_t bg){
    if(!initialized)rrui_tui_theme_set(NULL);
-   fputs("\033[0m",stdout);
+   rrui_render_write("\033[0m",strlen("\033[0m"));
    if((unsigned)fg<RRUI_THEME_COUNT)rrui_tui_theme_rgb(theme.rgb[fg],false);
    if((unsigned)bg<RRUI_THEME_COUNT)rrui_tui_theme_rgb(theme.rgb[bg],true);
 }

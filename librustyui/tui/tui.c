@@ -1,3 +1,4 @@
+#include "render.h"
 #include <glib.h>
 // tui.c
 //    This is part of rustyrig-fw.
@@ -118,15 +119,15 @@ static void surface_sgr(const char *s,size_t n,rrui_theme_role_t bg){
          bool valid=true;
          for(size_t j=2;j<=extra;j++)if(params[i+j]>255)valid=false;
          if(valid&&cfg_tui_colors){
-            printf("\033[%d",k);
-            for(size_t j=1;j<=extra;j++)printf(";%d",params[i+j]);
-            putchar('m');
+            rrui_render_printf("\033[%d",k);
+            for(size_t j=1;j<=extra;j++)rrui_render_printf(";%d",params[i+j]);
+            rrui_render_char('m');
          }
          i+=extra;
       }else if(cfg_tui_colors&&((k>=1&&k<=9)||(k>=21&&k<=29)||
                (k>=30&&k<=37)||(k>=40&&k<=47)||(k>=90&&k<=97)||
                (k>=100&&k<=107)||k==59)){
-         printf("\033[%dm",k);
+         rrui_render_printf("\033[%dm",k);
       }
    }
 }
@@ -140,7 +141,7 @@ static void surface_text(const char *s,size_t n,rrui_theme_role_t bg,bool emit_t
          if(p<end){if(*p=='m')surface_sgr(s,p-s+1,bg);s=p+1;continue;}
          break;
       }
-      if(emit_text&&(unsigned char)*s>=32&&*s!=127)putchar(*s);
+      if(emit_text&&(unsigned char)*s>=32&&*s!=127)rrui_render_char(*s);
       s++;
    }
 }
@@ -169,7 +170,7 @@ static void tui_print_topline(const char *text, int columns) {
       }
 
       if (*p < 32 || *p == 127) {
-         putchar(' ');
+         rrui_render_char(' ');
          p++;
          columns--;
          continue;
@@ -191,13 +192,13 @@ static void tui_print_topline(const char *text, int columns) {
       if (len > (size_t)columns) {
          break;
       }
-      fwrite(p, 1, len, stdout);
+      rrui_render_write(p,len);
       p += len;
       columns -= (int)len;
    }
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
-   while(columns-->0)putchar(' ');
-   fputs("\033[0m",stdout);
+   while(columns-->0)rrui_render_char(' ');
+   rrui_render_write("\033[0m",strlen("\033[0m"));
 }
 
 // SSH_TTY is set when we're running over an SSH session: remote terminals
@@ -272,6 +273,7 @@ static void update_term_size(void) {
    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != -1) {
       term_rows = ws.ws_row;
       term_cols = ws.ws_col;
+      rrui_render_resize(term_rows,term_cols);
    } else {
       fprintf(stderr, "failed TIOCGWINSZ %d: %s\n", errno, strerror(errno));
    }
@@ -279,16 +281,16 @@ static void update_term_size(void) {
 
 // Move cursor to row,col (1-based!)
 static void term_move(int row, int col) {
-   printf("\033[%d;%dH", row, col);
+   rrui_render_printf("\033[%d;%dH", row, col);
 }
 
 // Clear to end of line
 static void term_clrtoeol(void) {
-   printf("\033[K");
+   rrui_render_printf("\033[K");
 }
 
 static void clear_line(int row) {
-   printf("\033[%d;1H\033[2K", row);   // move to row, clear entire line
+   rrui_render_printf("\033[%d;1H\033[2K", row);   // move to row, clear entire line
 }
 
 // Handle window size changes
@@ -332,6 +334,10 @@ bool tui_init(void) {
       // Detect an SSH session: HH:MM clock & fewer repaints (see tui_over_ssh)
       tui_over_ssh = (getenv("SSH_TTY") != NULL);
    }
+   if(!rrui_render_init()){
+      fprintf(stderr,"RustyUI: unable to initialize ncursesw terminal\n");
+      tui_is_enabled=false;return true;
+   }
    // set SIGnal WINdow CHange handler
    previous_sigwinch_handler = signal(SIGWINCH, sigwinch_handler);
    tui_sigwinch_installed = (previous_sigwinch_handler != SIG_ERR);
@@ -353,16 +359,11 @@ bool tui_init(void) {
    // draw the initial screen
    tui_redraw_screen();
 
-   // Enable mouse support
-   if (cfg_tui_use_mouse) {
-      printf("\033[?1000h");    /* mouse button reporting */
-      printf("\033[?1002h");    /* button + drag reporting */
-      printf("\033[?1006h");    /* SGR extended mouse encoding */
+   /* libtermkey owns mouse input; only terminal mode negotiation is raw. */
+   if(cfg_tui_use_mouse){
+      fputs("\033[?1000h\033[?1002h\033[?1006h",stdout);
       fflush(stdout);
    }
-   printf("\033[%d;1H", term_rows);
-   fflush(stdout);
-
    return false;
 }
 
@@ -391,27 +392,9 @@ bool tui_fini(void) {
 
    /* termkey must stop before termios is restored.  Older shutdown ordering restored cooked mode first, then termkey restored its raw-mode snapshot. */
    tui_keys_fini();
+   if(cfg_tui_use_mouse){fputs("\033[?1006l\033[?1002l\033[?1000l",stdout);fflush(stdout);}
+   rrui_render_fini();
    tui_raw_mode(false);
-
-   /* Restore modes which can make the caller's shell appear broken.  Disable mouse/focus/paste/application modes even when configuration says they were off:
-    * these reset sequences are harmless and make partial init safe. */
-   fputs("\033[0m"              /* reset colors and attributes */
-      "\033[?25h"               /* show cursor */
-      "\033[0 q"                /* default cursor style */
-      "\033[?1l"                /* normal cursor keys */
-      "\033>"                   /* normal keypad */
-      "\033[?1000l"             /* mouse click reporting */
-      "\033[?1002l"             /* mouse drag reporting */
-      "\033[?1003l"             /* all-motion mouse reporting */
-      "\033[?1004l"             /* focus reporting */
-      "\033[?1006l"             /* SGR mouse reporting */
-      "\033[?2004l"             /* bracketed paste */
-      "\033[?6l"                /* absolute cursor origin */
-      "\033[?7h"                /* automatic margins */
-      "\033[r"                  /* full-screen scrolling region */
-      "\033[999;1H"             /* place output below the TUI */
-      "\033[2K\r\n", stdout);
-   fflush(stdout);
 
    tui_window_fini();
    tui_render_unlock();
@@ -462,21 +445,23 @@ void tui_redraw_screen(void) {
    }
    tui_redraw_pending = 0;
    update_term_size();
-   if(rrui_tui_draw(term_rows,term_cols)){tui_render_unlock();return;}
+   rrui_render_begin();
+   if(rrui_tui_draw(term_rows,term_cols)){rrui_render_end();tui_render_unlock();return;}
 
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
-   printf("\033[H\033[2J");     // clear screen
+   rrui_render_printf("\033[H\033[2J");     // clear screen
 
    tui_window_t *w = tui_active_window();
 
    if (!w) {
+      rrui_render_end();
       tui_render_unlock();
 
       return;
    }
    int chat_cols=rrui_tui_chat_width(term_rows,term_cols,w->view_draw!=NULL);
    // --- Top status line ---
-   printf("\033[1;1H");
+   rrui_render_printf("\033[1;1H");
 
    char *topline = topline_renderer ? topline_renderer(w) : NULL;
 
@@ -484,7 +469,7 @@ void tui_redraw_screen(void) {
       topline = tui_colorize_string(w->status_line);
    }
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
-   putchar(' ');
+   rrui_render_char(' ');
    tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
    free(topline);
 
@@ -496,11 +481,11 @@ void tui_redraw_screen(void) {
       }
 
       w->view_draw(w, term_rows, term_cols, w->view_data);
-      fputs("\033[0m", stdout);
+      rrui_render_write("\033[0m",strlen("\033[0m"));
 
       if (w->view_full_height) {
          rrui_tui_draw_panels(term_rows,term_cols);
-         fflush(stdout);
+         rrui_render_end();
          tui_render_unlock();
 
          return;
@@ -620,7 +605,7 @@ void tui_redraw_screen(void) {
             skip_rows--;
             if(explicit_newline)p++;
          } else {
-            printf("\033[%d;%dH", row++,framed?2:1);
+            rrui_render_printf("\033[%d;%dH", row++,framed?2:1);
             rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
 
             // Continuation of a wrapped row: restore the active color first
@@ -636,7 +621,7 @@ void tui_redraw_screen(void) {
 
             // Reset attributes so colors don't bleed into the next line
             rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
-            if(framed){while(col++<chat_cols)putchar(' ');}else term_clrtoeol();
+            if(framed){while(col++<chat_cols)rrui_render_char(' ');}else term_clrtoeol();
          }
 
          rows_done++;
@@ -652,35 +637,36 @@ void tui_redraw_screen(void) {
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
    // Fill remaining log space with blanks
    while (row < log_end) {
-      printf("\033[%d;%dH", row++,framed?2:1);
-      if(framed){for(int j=0;j<chat_cols;j++)putchar(' ');}else term_clrtoeol();
+      rrui_render_printf("\033[%d;%dH", row++,framed?2:1);
+      if(framed){for(int j=0;j<chat_cols;j++)rrui_render_char(' ');}else term_clrtoeol();
    }
    if(framed){
       rrui_tui_theme_style(RRUI_THEME_BORDER,RRUI_THEME_WORKSPACE);
-      printf("\033[2;1H┌");
+      rrui_render_printf("\033[2;1H┌");
       rrui_tui_theme_style(rrui_tui_main_focused()?RRUI_THEME_WORKSPACE:RRUI_THEME_TEXT,rrui_tui_main_focused()?RRUI_THEME_ACTIVE_HEADER:RRUI_THEME_HEADER);
-      fputs(" Main ",stdout);
-      for(int j=6;j<chat_cols;j++)putchar(' ');
+      rrui_render_write(" Main ",strlen(" Main "));
+      for(int j=6;j<chat_cols;j++)rrui_render_char(' ');
       rrui_tui_theme_style(RRUI_THEME_BORDER,RRUI_THEME_WORKSPACE);
-      fputs("┐",stdout);
+      rrui_render_write("┐",strlen("┐"));
       for(int r=3;r<term_rows-1;r++){
-         printf("\033[%d;1H│\033[%d;%dH│",r,r,main_width);
+         rrui_render_printf("\033[%d;1H│\033[%d;%dH│",r,r,main_width);
       }
-      printf("\033[%d;1H└",term_rows-2);
-      for(int j=0;j<chat_cols;j++)fputs("─",stdout);
-      fputs("┘",stdout);
-      fputs("\033[0m",stdout);
+      rrui_render_printf("\033[%d;1H└",term_rows-2);
+      for(int j=0;j<chat_cols;j++)rrui_render_write("─",strlen("─"));
+      rrui_render_write("┘",strlen("┘"));
+      rrui_render_write("\033[0m",strlen("\033[0m"));
    }
 draw_footer:
    // --- Bottom status line ---
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
-   printf("\033[%d;1H", term_rows - 1);
+   rrui_render_printf("\033[%d;1H", term_rows - 1);
    tui_print_topline(status_line,MAX(0,term_cols-(tui_over_ssh?7:10)));
-   fputs("\033[0m",stdout);
+   rrui_render_write("\033[0m",strlen("\033[0m"));
 
    tui_redraw_clock();
    tui_update_input_line();
    rrui_tui_draw_panels(term_rows,term_cols);
+   rrui_render_end();
    tui_render_unlock();
 }
 
@@ -707,12 +693,12 @@ void tui_redraw_topline(void) {
    if (!topline) {
       topline = tui_colorize_string(w->status_line);
    }
-   printf("\033[s\033[1;1H");
-   putchar(' ');
+   rrui_render_printf("\033[s\033[1;1H");
+   rrui_render_char(' ');
    tui_print_topline(topline, term_cols > 1 ? term_cols - 1 : 0);
-   printf("\033[u");
+   rrui_render_printf("\033[u");
    free(topline);
-   fflush(stdout);
+   rrui_render_flush();
    tui_render_unlock();
 }
 
@@ -734,11 +720,11 @@ void tui_redraw_statusline(void) {
       return;
    }
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
-   printf("\033[s\033[%d;1H",term_rows-1);
+   rrui_render_printf("\033[s\033[%d;1H",term_rows-1);
    tui_print_topline(status_line,MAX(0,term_cols-(tui_over_ssh?7:10)));
-   fputs("\033[u",stdout);
+   rrui_render_write("\033[u",strlen("\033[u"));
    tui_redraw_clock();
-   fflush(stdout);
+   rrui_render_flush();
    tui_render_unlock();
 }
 
@@ -765,13 +751,13 @@ void tui_redraw_clock(void) {
    if (col > 0) {
       char clock_text[32];
       strftime(clock_text,sizeof(clock_text),tui_over_ssh?"[%H:%M]":"[%H:%M:%S]",&tm);
-      fputs("\033[s",stdout);
-      printf("\033[%d;%dH",term_rows-1,col+1);
+      rrui_render_write("\033[s",strlen("\033[s"));
+      rrui_render_printf("\033[%d;%dH",term_rows-1,col+1);
       rrui_tui_theme_style(RRUI_THEME_ACCENT,RRUI_THEME_HEADER);
-      fputs(clock_text,stdout);
-      fputs("\033[0m\033[u",stdout);
+      rrui_render_write(clock_text,strlen(clock_text));
+      rrui_render_write("\033[0m\033[u",strlen("\033[0m\033[u"));
    }
-   fflush(stdout);
+   rrui_render_flush();
    tui_render_unlock();
 }
 
@@ -912,12 +898,12 @@ void tui_window_update_topline(const char *line) {
       return;
    }
    // Move cursor to the top-left
-   printf("\033[1;1H");
+   rrui_render_printf("\033[1;1H");
 
    tui_print_topline(line,term_cols);
 
    // Make sure output is flushed
-   fflush(stdout);
+   rrui_render_flush();
    tui_render_unlock();
 }
 
@@ -1128,13 +1114,13 @@ void tui_update_input_line(void) {
    char *color_prompt = tui_colorize_string(prompt);
 
    // --- redraw line ---
-   printf("\033[%d;%dH",input_row,input_col);
+   rrui_render_printf("\033[%d;%dH",input_row,input_col);
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_INPUT);
-   for(int j=0;j<width;j++)putchar(' ');
-   printf("\033[%d;%dH",input_row,input_col);
+   for(int j=0;j<width;j++)rrui_render_char(' ');
+   rrui_render_printf("\033[%d;%dH",input_row,input_col);
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_INPUT);
    if(prompt_len<width){surface_write(color_prompt,strlen(color_prompt),RRUI_THEME_INPUT);surface_write(slice,strlen(slice),RRUI_THEME_INPUT);}
-   else fputs("> ",stdout);   // prompt includes space now
+   else rrui_render_write("> ",strlen("> "));   // prompt includes space now
 
    // if there's nothing typed by the user, skip forward one character, to leave
    // a space
@@ -1144,10 +1130,10 @@ void tui_update_input_line(void) {
    // --- move cursor ---
    int cursor_screen = cursor_screen_pos - start_col + prompt_len;
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_INPUT);
-   printf("\033[%d;%dH",input_row,input_col-1+CLAMP(cursor_screen,1,width));
+   rrui_render_printf("\033[%d;%dH",input_row,input_col-1+CLAMP(cursor_screen,1,width));
 
    free(color_prompt);
    free(colorized_line);
-   fflush(stdout);
+   rrui_render_flush();
    tui_render_unlock();
 }
