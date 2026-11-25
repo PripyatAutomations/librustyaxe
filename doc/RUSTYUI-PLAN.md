@@ -177,3 +177,15 @@ live RustyRig integration remain outstanding. Workspace tests added, not run.
 - GTK must not intercept ordinary entry editing or allow panel-navigation keys
   to leak to PTT; respect modal priority and use theme-appropriate contrast.
 - TUI frame implemented with ANSI 16-color SGR; visual testing still pending.
+
+### Production TUI integration checkpoint
+
+Foundation merged into Axe main (9949362) and RustyRig main (8d28f32).
+User reports reinstall-debs.sh builds, legacy TUI works and GTK starts without
+new errors. RustyRig e42cf10 adds packaged server-picker.rrs/server-editor.rrs,
+user/admin overrides, native profile list/select/connect/disconnect and basic
+name/URL/user/password editor. Legacy picker fallback retained. New code not
+yet compiled/tested. Editor lacks full GTK profile options, atomic multi-field
+save and inline error label. Alt-X while modal, list refresh, compact row layout
+and terminal repaint/cursor behavior require follow-up testing. Next stabilize
+picker, then add VFO panel and audio controls. No GTK implementation changes.
