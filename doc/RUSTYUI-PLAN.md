@@ -157,3 +157,12 @@ server picker integration first, then extract a cell-rectangle compositor and
 introduce nonmodal floating panels. Do not create another terminal input loop.
 The initial modal renderer is commit f516f21; it is not yet compiled/tested by
 this session. Floating panels are planned, not implemented.
+
+### Workspace prototype checkpoint
+
+Implemented nonmodal panel registration, cell geometry, clipped overlay drawing,
+z-order, mouse focus/raise and title drag/resize, Ctrl+arrow and Ctrl+keypad
+spatial selection, keypad 5/Escape chat focus, modal priority. Terminals may
+not report modified keypad keys distinctly. Existing chat draws beneath panels;
+reserved/docked chat geometry, persistence, script geometry, native widgets and
+live RustyRig integration remain outstanding. Workspace tests added, not run.

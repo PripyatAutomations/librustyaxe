@@ -296,6 +296,8 @@ bool tui_init(void) {
 }
 
 extern bool rrui_tui_draw(int rows,int cols);
+extern void rrui_tui_draw_panels(int rows,int cols);
+extern bool rrui_tui_modal_active(void);
 #include <librustyui/form.h>
 bool tui_fini(void) {
    tui_render_lock();
@@ -420,6 +422,7 @@ void tui_redraw_screen(void) {
       fputs("\033[0m", stdout);
 
       if (w->view_full_height) {
+         rrui_tui_draw_panels(term_rows,term_cols);
          fflush(stdout);
          tui_render_unlock();
 
@@ -582,6 +585,7 @@ draw_footer:
 
    tui_redraw_clock();
    tui_update_input_line();
+   rrui_tui_draw_panels(term_rows,term_cols);
    tui_render_unlock();
 }
 
