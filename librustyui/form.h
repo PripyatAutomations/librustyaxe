@@ -1,0 +1,38 @@
+/* SPDX-License-Identifier: MIT */
+#ifndef RUSTYUI_FORM_H
+#define RUSTYUI_FORM_H
+#include <librustyui/ui.h>
+typedef struct rrui_form rrui_form_t;
+typedef void (*rrui_action_fn)(rrui_form_t *,const char *id,const char *action,void *);
+typedef struct {
+   const rrui_widget_t *widget;
+   const char *value;
+   bool checked, interactive, visible;
+   size_t cursor, count, selected;
+} rrui_field_t;
+/* Form owns a snapshot of the layout. Call on the UI thread. */
+rrui_form_t *rrui_form_new(const rrui_layout_t *,rrui_action_fn,void *);
+void rrui_form_free(rrui_form_t *);
+size_t rrui_form_count(const rrui_form_t *);
+bool rrui_form_field(const rrui_form_t *,size_t,rrui_field_t *);
+size_t rrui_form_focus(const rrui_form_t *);
+bool rrui_form_set_focus(rrui_form_t *,size_t);
+bool rrui_form_next(rrui_form_t *,int direction);
+const char *rrui_form_value(const rrui_form_t *,const char *id);
+bool rrui_form_set_value(rrui_form_t *,const char *id,const char *value);
+bool rrui_form_checked(const rrui_form_t *,const char *id);
+bool rrui_form_set_checked(rrui_form_t *,const char *id,bool);
+bool rrui_form_list_clear(rrui_form_t *,const char *id);
+bool rrui_form_list_append(rrui_form_t *,const char *id,const char *key,const char *label);
+const char *rrui_form_list_label(const rrui_form_t *,size_t field,size_t item);
+bool rrui_form_select(rrui_form_t *,size_t field,size_t item);
+/* Entry edits use Unicode code points and byte-offset cursor positions. */
+bool rrui_form_insert(rrui_form_t *,uint32_t codepoint);
+bool rrui_form_edit(rrui_form_t *,int direction,bool erase);
+bool rrui_form_activate(rrui_form_t *);
+void rrui_form_cancel(rrui_form_t *);
+/* Nonblocking modal terminal form; caller retains ownership and must close
+ * before freeing. Actions may close the form. */
+bool rrui_tui_open(rrui_form_t *);
+void rrui_tui_close(rrui_form_t *);
+#endif

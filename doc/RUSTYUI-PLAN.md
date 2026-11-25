@@ -113,3 +113,11 @@ Update this document with each implementation milestone, relevant commit IDs,
 tests actually run, unresolved defects, and the next concrete task. Keep this
 document on the foundation branch alongside the implementation. The next task
 is Phase 1 shared form state and nonblocking terminal renderer integration.
+
+## Interactive TUI checkpoint
+
+Implemented owned form snapshots, native actions, focus traversal, entry editing,
+checkbox state, keyed list selection, and a nonblocking modal terminal renderer
+using the existing input loop. Initial renderer uses vertical stacking (row/grid
+geometry not yet implemented). Tests added; not yet run. Next: verify compile,
+fix redraw and geometry edge cases, integrate actual RustyRig server picker.

@@ -295,6 +295,8 @@ bool tui_init(void) {
    return false;
 }
 
+extern bool rrui_tui_draw(int rows,int cols);
+#include <librustyui/form.h>
 bool tui_fini(void) {
    tui_render_lock();
 
@@ -305,6 +307,7 @@ bool tui_fini(void) {
    }
    tui_finalized = true;
    tui_is_enabled = false;
+   rrui_tui_close(NULL);
 
    if (tui_sigwinch_installed) {
       signal(SIGWINCH, previous_sigwinch_handler);
@@ -384,6 +387,7 @@ void tui_redraw_screen(void) {
    }
    tui_redraw_pending = 0;
    update_term_size();
+   if(rrui_tui_draw(term_rows,term_cols)){tui_render_unlock();return;}
 
    printf("\033[H\033[2J");     // clear screen
 

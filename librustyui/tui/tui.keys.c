@@ -22,6 +22,7 @@
 #include <librustyaxe/core.h>
 #include <librustyui/tui.h>
 #include "termkey.h"
+extern bool rrui_tui_key(TermKey *,const TermKeyKey *);
 #include <glib.h>
 #include <glib-unix.h>
 #include <fcntl.h>
@@ -364,6 +365,8 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
       if (res == TERMKEY_RES_AGAIN) {
          return TRUE;
       }
+      if (res != TERMKEY_RES_KEY) break;
+      if (rrui_tui_key(tk,&key)) continue;
       tui_window_t *win = tui_active_window();
 
       if (!win) {
