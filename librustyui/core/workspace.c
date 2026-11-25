@@ -43,3 +43,19 @@ int rrui_workspace_tiles(int rows,int cols,int width,const int *minimum,
    }
    return cols-width;
 }
+
+bool rrui_workspace_split(const rrui_rect_t *r,const int *minimum,size_t n,
+                          size_t upper,int boundary,int *weights) {
+   if(!r||!minimum||!weights||n<2||n>32||upper>=n-1)return false;
+   for(size_t i=0;i<n;i++)if(r[i].width<=0||r[i].height<=0)return false;
+   const rrui_rect_t *a=&r[upper],*b=&r[upper+1];
+   if(a->x!=b->x||a->width!=b->width||a->y+a->height!=b->y)return false;
+   int amin=minimum[upper]<6?6:minimum[upper];
+   int bmin=minimum[upper+1]<6?6:minimum[upper+1];
+   int total=a->height+b->height;
+   if(total<amin+bmin)return false;
+   int height=boundary<a->y+amin?amin:boundary>b->y+b->height-bmin?total-bmin:boundary-a->y;
+   for(size_t i=0;i<n;i++)weights[i]=r[i].height;
+   weights[upper]=height;weights[upper+1]=total-height;
+   return true;
+}

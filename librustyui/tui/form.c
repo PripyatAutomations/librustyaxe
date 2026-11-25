@@ -18,6 +18,8 @@ static size_t npanels;
 static int tile_width=34,chat_width;
 static unsigned tile_order;
 static bool divider_drag;
+static rrui_form_t *split_upper,*split_lower;
+static int split_grab_offset,divider_grab_offset;
 static rrui_form_t *focused;
 static int ox=1,oy=0;
 static bool overlay;
@@ -61,7 +63,7 @@ bool rrui_tui_open(rrui_form_t *f) {
 }
 void rrui_tui_close(rrui_form_t *f) {
    if(active&&(!f||active==f)){active=NULL;if(modal_hits){g_array_unref(modal_hits);modal_hits=NULL;}tui_redraw_request();}
-   for(size_t i=0;i<npanels;) {if(!f||panels[i].form==f){if(focused==panels[i].form)focused=NULL;if(dragging==panels[i].form)dragging=NULL;if(panels[i].hits)g_array_unref(panels[i].hits);memmove(panels+i,panels+i+1,(npanels-i-1)*sizeof(panel_t));npanels--;tui_redraw_request();}else i++;}
+   for(size_t i=0;i<npanels;) {if(!f||panels[i].form==f){if(focused==panels[i].form)focused=NULL;if(split_upper==panels[i].form||split_lower==panels[i].form)split_upper=split_lower=NULL;if(dragging==panels[i].form)dragging=NULL;if(panels[i].hits)g_array_unref(panels[i].hits);memmove(panels+i,panels+i+1,(npanels-i-1)*sizeof(panel_t));npanels--;tui_redraw_request();}else i++;}
 }
 /* Print plain terminal text only. Count wide characters conservatively. */
 static int clipped(const char *s,int width) {
@@ -209,6 +211,24 @@ void rrui_tui_draw_panels(int rows,int cols) {
    else fputs("\033[?25h",stdout);
    fflush(stdout);
 }
+/* Resize in tile order rather than z-order, preserving all other visible
+ * tile heights. Store ratios as weights so terminal resize remains adaptive. */
+static void split_resize(int boundary) {
+   size_t ids[32],n=0,upper=SIZE_MAX;
+   rrui_rect_t rects[32];int minimum[32],weights[32];
+   for(size_t i=0;i<npanels;i++)if(panels[i].tiled&&panels[i].rect.width){
+      size_t j=n++;while(j&&panels[ids[j-1]].order>panels[i].order){ids[j]=ids[j-1];j--;}ids[j]=i;
+   }
+   for(size_t i=0;i<n;i++){
+      panel_t *p=&panels[ids[i]];rects[i]=p->rect;minimum[i]=p->minimum;
+      if(p->form==split_upper)upper=i;
+   }
+   if(upper==SIZE_MAX||upper+1>=n||panels[ids[upper+1]].form!=split_lower){split_upper=split_lower=NULL;return;}
+   if(rrui_workspace_split(rects,minimum,n,upper,boundary,weights)){
+      for(size_t i=0;i<n;i++)panels[ids[i]].weight=weights[i];
+      tui_redraw_request();
+   }
+}
 static bool directional(const TermKeyKey *k,int *dx,int *dy,bool *chat) {
    if(!(k->modifiers&TERMKEY_KEYMOD_CTRL)||k->modifiers&TERMKEY_KEYMOD_ALT)return false;
    int n=0;*dx=*dy=0;*chat=false;
@@ -240,9 +260,14 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
       if(key->type==TERMKEY_TYPE_MOUSE) {
          TermKeyMouseEvent ev;int b,r,c;
          if(termkey_interpret_mouse(tk,key,&ev,&b,&r,&c)!=TERMKEY_RES_KEY)return true;
+         if(split_upper){
+            if(ev==TERMKEY_MOUSE_RELEASE)split_upper=split_lower=NULL;
+            else if(ev==TERMKEY_MOUSE_DRAG)split_resize(r+split_grab_offset);
+            return true;
+         }
          if(divider_drag){
             if(ev==TERMKEY_MOUSE_RELEASE)divider_drag=false;
-            else if(ev==TERMKEY_MOUSE_DRAG)rrui_tui_tile_width(CLAMP(workspace_cols-c+1,24,MAX(24,workspace_cols-40)));
+            else if(ev==TERMKEY_MOUSE_DRAG)rrui_tui_tile_width(CLAMP(workspace_cols-c+1-divider_grab_offset,24,MAX(24,workspace_cols-40)));
             return true;
          }
          if(dragging) {
@@ -257,11 +282,28 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             return true;
          }
          if(ev!=TERMKEY_MOUSE_PRESS||b!=1)return focused!=NULL;
+         /* Either column of the double vertical border is draggable.
+          * Floating panels in front retain their normal mouse handling. */
          size_t j=npanels;
          while(j) {j--;rrui_rect_t a=panels[j].rect;
-            if(c<a.x||c>=a.x+a.width||r<a.y||r>=a.y+a.height)continue;
+            if(a.width<=0||a.height<=0||r<a.y||r>=a.y+a.height)continue;
+            if(panels[j].tiled&&(c==a.x||c==a.x-1)){
+               divider_drag=true;divider_grab_offset=a.x-c;return true;
+            }
+            if(c<a.x||c>=a.x+a.width)continue;
+            if(panels[j].tiled&&(r==a.y||r==a.y+a.height-1)){
+               for(size_t k=0;k<npanels;k++){
+                  panel_t *q=&panels[k];rrui_rect_t b=q->rect;
+                  if(k==j||!q->tiled||!b.width||b.x!=a.x)continue;
+                  if(r==a.y&&b.y+b.height==a.y){
+                     split_upper=q->form;split_lower=panels[j].form;split_grab_offset=0;return true;
+                  }
+                  if(r==a.y+a.height-1&&a.y+a.height==b.y){
+                     split_upper=panels[j].form;split_lower=q->form;split_grab_offset=1;return true;
+                  }
+               }
+            }
             raise_panel(j);panel_t *p=&panels[npanels-1];
-            if(p->tiled&&c==a.x){divider_drag=true;tui_redraw_request();return true;}
             if(!p->tiled&&(r==a.y||(r==a.y+a.height-1&&c>=a.x+a.width-4))){
                dragging=p->form;resizing=r!=a.y;drag_x=c-a.x;drag_y=r-a.y;tui_redraw_request();return true;
             }

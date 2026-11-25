@@ -19,5 +19,15 @@ int main(void){
    int split_min[]={6,10},split_weight[]={2,1};rrui_rect_t split[2];
    assert(rrui_workspace_tiles(33,100,34,split_min,split_weight,2,split)==66);
    assert(split[0].height==20&&split[1].height==10);
-   puts("PASS: directional workspace focus");return 0;
+   int adjusted[2];
+   assert(rrui_workspace_split(split,split_min,2,0,17,adjusted));
+   assert(adjusted[0]==15&&adjusted[1]==15);
+   assert(rrui_workspace_tiles(33,100,34,split_min,adjusted,2,split)==66);
+   assert(split[0].height==15&&split[1].height==15);
+   assert(rrui_workspace_split(split,split_min,2,0,-100,adjusted));
+   assert(adjusted[0]==6&&adjusted[1]==24);
+   assert(rrui_workspace_split(split,split_min,2,0,100,adjusted));
+   assert(adjusted[0]==20&&adjusted[1]==10);
+   assert(!rrui_workspace_split(split,split_min,2,1,17,adjusted));
+   puts("PASS: directional workspace focus and divider resizing");return 0;
 }

@@ -13,6 +13,10 @@ void rrui_tui_focus_chat(void);
  * is insufficient. Returns chat width; invisible rectangles are zeroed. */
 int rrui_workspace_tiles(int rows,int cols,int width,const int *minimum,
                          const int *weight,size_t n,rrui_rect_t *out);
+/* Resize adjacent visible tiles, returning their new heights as weights.
+ * Boundary is the first row of the lower tile. Other heights stay unchanged. */
+bool rrui_workspace_split(const rrui_rect_t *,const int *minimum,size_t n,
+                          size_t upper,int boundary,int *weights);
 bool rrui_tui_tile_open(rrui_form_t *,int minimum_height,int weight);
 void rrui_tui_tile_width(int width);
 int rrui_tui_chat_width(int rows,int cols,bool structured);
