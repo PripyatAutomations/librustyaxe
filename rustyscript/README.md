@@ -167,3 +167,14 @@ provide event subscriptions, slash-command dispatch (rrclient), and GTK hotkey
 dispatch. Server-side script management is implemented by RustyRig through its
 admin-authorized command channel. Remote invocation of script-defined
 slash commands remains unsupported.
+
+### Anonymous typed dictionaries
+
+```c
+ui.add(dict {
+   kind = "entry";
+   id = "host";
+   dict validation { required = true; max_length = 255; };
+});
+```
+`dict { ... }` is an expression usable in arguments, arrays, initializers and returns. Fields accept `=` (or `:`), with comma or semicolon separators, including mixed and trailing separators. `dict name { ... }` inside the literal is shorthand for `name = dict { ... }`. Ordinary `{key: value}` literals remain supported.

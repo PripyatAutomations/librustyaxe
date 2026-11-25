@@ -1,11 +1,11 @@
 // Shared server picker layout. The host supplies profiles and actions.
-ui.add({kind:"dialog", id:"servers", label:"Server Picker", width_chars:60});
-ui.add({kind:"column", id:"body", parent:"servers", spacing:1, expand_x:true});
-ui.add({kind:"list", id:"profiles", parent:"body", label:"Servers",
+ui.add(dict {kind:"dialog", id:"servers", label:"Server Picker", width_chars:60});
+ui.add(dict {kind:"column", id:"body", parent:"servers", spacing:1, expand_x:true});
+ui.add(dict {kind:"list", id:"profiles", parent:"body", label:"Servers",
         height_rows:12, expand_x:true, expand_y:true});
-ui.add({kind:"row", id:"buttons", parent:"body"});
-ui.add({kind:"button", id:"connect", parent:"buttons", label:"Connect", action:"server.connect"});
-ui.add({kind:"button", id:"new", parent:"buttons", label:"New", action:"server.new"});
-ui.add({kind:"button", id:"edit", parent:"buttons", label:"Edit", action:"server.edit"});
-ui.add({kind:"button", id:"delete", parent:"buttons", label:"Delete", action:"server.delete"});
-ui.add({kind:"button", id:"cancel", parent:"buttons", label:"Cancel", action:"dialog.close"});
+ui.add(dict {kind:"row", id:"buttons", parent:"body"});
+ui.add(dict {kind:"button", id:"connect", parent:"buttons", label:"Connect", action:"server.connect"});
+ui.add(dict {kind:"button", id:"new", parent:"buttons", label:"New", action:"server.new"});
+ui.add(dict {kind:"button", id:"edit", parent:"buttons", label:"Edit", action:"server.edit"});
+ui.add(dict {kind:"button", id:"delete", parent:"buttons", label:"Delete", action:"server.delete"});
+ui.add(dict {kind:"button", id:"cancel", parent:"buttons", label:"Cancel", action:"dialog.close"});

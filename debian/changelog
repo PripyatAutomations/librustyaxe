@@ -4,6 +4,8 @@ librustyaxe (0.2.0-1) unstable; urgency=medium
   * Rebuild IRC and scripting libraries against the new ABI.
   * Add RustyScript dictionary property-block assignment (.=), with mixed
     separators, nested updates, const protection and rollback.
+  * Support anonymous typed dictionary expressions and nested dictionary
+    declaration shorthand.
   * Extract the terminal UI into independently built librustyui and move
     its terminal dependencies and tests out of the core library.
   * Restore upstream libtermkey copyright and MIT license notices.
