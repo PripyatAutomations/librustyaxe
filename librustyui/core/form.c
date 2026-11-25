@@ -3,7 +3,7 @@
 #include <glib.h>
 #include <string.h>
 
-typedef struct { char *key,*label; } item_t;
+typedef struct { char *key,*label; uint32_t color; } item_t;
 typedef struct {
    rrui_widget_t w;
    char *value;
@@ -105,13 +105,19 @@ bool rrui_form_list_clear(rrui_form_t *f,const char *id) {
    /* Preserve desired key until matching item is appended, or host selects. */
    return true;
 }
-bool rrui_form_list_append(rrui_form_t *f,const char *id,const char *key,const char *label) {
+bool rrui_form_list_append_color(rrui_form_t *f,const char *id,const char *key,const char *label,uint32_t color) {
    field_t *x=find(f,id);if(!x||x->w.kind!=RRUI_LIST||!key||!*key||!valid_text(label))return false;
    for(guint i=0;i<x->items->len;i++)if(!strcmp(((item_t *)g_ptr_array_index(x->items,i))->key,key))return false;
-   item_t *it=g_new0(item_t,1);it->key=g_strdup(key);it->label=g_strdup(label);
+   item_t *it=g_new0(item_t,1);it->key=g_strdup(key);it->label=g_strdup(label);it->color=color<=0xffffff?color:UINT32_MAX;
    if(!strcmp(x->value,key))x->selected=x->items->len;
    g_ptr_array_add(x->items,it);
    return true;
+}
+bool rrui_form_list_append(rrui_form_t *f,const char *id,const char *key,const char *label) {
+   return rrui_form_list_append_color(f,id,key,label,UINT32_MAX);
+}
+uint32_t rrui_form_list_color(const rrui_form_t *f,size_t i,size_t j) {
+   field_t *x=at(f,i);return x&&j<x->items->len?((item_t *)g_ptr_array_index(x->items,j))->color:UINT32_MAX;
 }
 const char *rrui_form_list_label(const rrui_form_t *f,size_t i,size_t j) {
    field_t *x=at(f,i);return x&&j<x->items->len?((item_t *)g_ptr_array_index(x->items,j))->label:NULL;

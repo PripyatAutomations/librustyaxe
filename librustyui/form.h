@@ -25,6 +25,9 @@ bool rrui_form_checked(const rrui_form_t *,const char *id);
 bool rrui_form_set_checked(rrui_form_t *,const char *id,bool);
 bool rrui_form_list_clear(rrui_form_t *,const char *id);
 bool rrui_form_list_append(rrui_form_t *,const char *id,const char *key,const char *label);
+/* RGB foreground, 0xRRGGBB; UINT32_MAX uses theme default. */
+bool rrui_form_list_append_color(rrui_form_t *,const char *,const char *,const char *,uint32_t);
+uint32_t rrui_form_list_color(const rrui_form_t *,size_t,size_t);
 const char *rrui_form_list_label(const rrui_form_t *,size_t field,size_t item);
 bool rrui_form_select(rrui_form_t *,size_t field,size_t item);
 /* Entry edits use Unicode code points and byte-offset cursor positions. */

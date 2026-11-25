@@ -20,6 +20,7 @@ static bool divider_drag;
 static rrui_form_t *focused;
 static int ox=1,oy=0;
 static bool overlay;
+static uint32_t row_color=UINT32_MAX;
 static int workspace_rows,workspace_cols;
 static rrui_form_t *dragging;
 static int drag_x,drag_y;
@@ -80,6 +81,13 @@ static int clipped(const char *s,int width) {
 static void line(int row,int cols,bool focus,const char *prefix,const char *value) {
    printf("\033[%d;%dH%s",row+oy,ox,focus?"\033[7m":"\033[0m");
    if(!overlay)fputs("\033[2K",stdout);
+   if(cfg_tui_colors&&!focus&&row_color<=0xffffff){
+      unsigned r=row_color>>16,g=(row_color>>8)&255,b=row_color&255;
+      const char *ct=g_getenv("COLORTERM"),*term=g_getenv("TERM");
+      if(ct&&(!strcmp(ct,"truecolor")||!strcmp(ct,"24bit")))printf("\033[38;2;%u;%u;%um",r,g,b);
+      else if(term&&strstr(term,"256color"))printf("\033[38;5;%um",16+36*((r*5+127)/255)+6*((g*5+127)/255)+(b*5+127)/255);
+      else printf("\033[%um",90+((r>=128)?1:0)+((g>=128)?2:0)+((b>=128)?4:0));
+   }
    int remain=cols-1-clipped(prefix,cols-1);
    if(remain>0)remain-=clipped(value,remain);
    if(overlay)while(remain-->0)putchar(' ');
@@ -118,7 +126,9 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
          size_t start=x.selected!=SIZE_MAX&&x.selected>=span&&span?x.selected-span+1:0;
          for(size_t j=start;j<x.count&&j-start<span&&row<rows;j++) {
             hit_t h={i,j,row};g_array_append_val(hits,h);
+            row_color=rrui_form_list_color(form,i,j);
             line(row++,cols,selected&&j==x.selected,j==x.selected?" > ":"   ",rrui_form_list_label(form,i,j));
+            row_color=UINT32_MAX;
          }
          continue;
       }
