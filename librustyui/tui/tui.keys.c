@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <librustyaxe/core.h>
 #include <librustyui/tui.h>
+#include <librustyui/tui.workspace.h>
 #include "termkey.h"
 extern bool rrui_tui_key(TermKey *,const TermKeyKey *);
 #include <glib.h>
@@ -132,16 +133,9 @@ int handle_pgup(int count, int key) {
    if (page < 1) {
       page = 1;
    }
-   int max_scroll = (w->log_count > page) ? (w->log_count - page) : 0;
-
-   if (w->scroll_offset + page > max_scroll) {
-      w->scroll_offset = max_scroll;   // stop at top of buffer
-   } else {
-      w->scroll_offset += page;
-   }
-   tui_redraw_screen();
-
-   return 0;
+   w->scroll_offset += page; /* renderer clamps physical wrapped rows */
+   tui_redraw_request();
+   return 1;
 }
 
 int handle_pgdn(int count, int key) {
@@ -161,9 +155,8 @@ int handle_pgdn(int count, int key) {
    } else {
       w->scroll_offset -= page;
    }
-   tui_redraw_screen();
-
-   return 0;
+   tui_redraw_request();
+   return 1;
 }
 
 int handle_ptt_button(int count, int key) {
@@ -365,6 +358,13 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
          break; /* Paint already-dispatched keys before waiting for more bytes. */
       }
       if (res != TERMKEY_RES_KEY) break;
+      /* Normalize alternate Home/End and Tab encodings before dispatch. */
+      if(key.type==TERMKEY_TYPE_KEYSYM){
+         if(key.code.sym==TERMKEY_SYM_FIND)key.code.sym=TERMKEY_SYM_HOME;
+         if(key.code.sym==TERMKEY_SYM_SELECT)key.code.sym=TERMKEY_SYM_END;
+      }else if(key.type==TERMKEY_TYPE_UNICODE&&key.code.codepoint=='\t'){
+         key.type=TERMKEY_TYPE_KEYSYM;key.code.sym=TERMKEY_SYM_TAB;
+      }
       if (rrui_tui_key(tk,&key)) continue;
       tui_window_t *win = tui_active_window();
 
@@ -385,9 +385,17 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
          TermKeyMouseEvent ev;
          int button = 0, row = 0, col = 0;
 
-         if (termkey_interpret_mouse(tk, &key, &ev, &button, &row, &col) == TERMKEY_RES_KEY &&
-            win->view_mouse && win->view_mouse(win, row, col, button, (int)ev, key.modifiers, win->view_data)) {
-            tui_redraw_request();
+         if (termkey_interpret_mouse(tk,&key,&ev,&button,&row,&col)==TERMKEY_RES_KEY) {
+            if(win->view_mouse&&win->view_mouse(win,row,col,button,(int)ev,key.modifiers,win->view_data))
+               tui_redraw_request();
+            else if(!win->view_draw&&ev==TERMKEY_MOUSE_PRESS&&(button==4||button==5)){
+               int width=rrui_tui_chat_width(tui_rows(),tui_cols(),false);
+               bool framed=tui_rows()>=9&&width>=20;
+               if(col<=width&&row>=(framed?3:2)&&row<(framed?tui_rows()-3:tui_rows()-1)){
+                  win->scroll_offset=MAX(0,win->scroll_offset+(button==4?3:-3));
+                  tui_redraw_request();
+               }
+            }
          }
          continue;              /* Mouse input must never enter the command line. */
       }
@@ -794,9 +802,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
       }
 
       // --- Redraw after any modification ---
-      if (handled) {
-         tui_update_input_line();
-      }
+      if (handled) tui_redraw_request();
    }
    /* Coalesce the input batch into one frame, not the next clock tick. */
    tui_redraw_if_pending();

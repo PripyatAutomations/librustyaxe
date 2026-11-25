@@ -490,10 +490,10 @@ static int register_keys(void) {
    register_ss3kpalt(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_KP8, 'x', '8');
    register_ss3kpalt(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_KP9, 'y', '9');
 
-   register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_FIND, 1);
+   register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_HOME, 1);
    register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_INSERT, 2);
    register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_DELETE, 3);
-   register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_SELECT, 4);
+   register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_END, 4);
    register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_PAGEUP, 5);
    register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_PAGEDOWN, 6);
    register_csifunc(TERMKEY_TYPE_KEYSYM, TERMKEY_SYM_HOME, 7);

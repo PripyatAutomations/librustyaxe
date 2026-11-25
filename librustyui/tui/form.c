@@ -442,7 +442,12 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
          case TERMKEY_SYM_DOWN:
             if(x.widget&&x.widget->kind==RRUI_LIST&&x.count) {
                size_t n=x.selected==SIZE_MAX?0:x.selected;
-               if(x.selected!=SIZE_MAX){if(key->code.sym==TERMKEY_SYM_UP&&n)n--;else if(key->code.sym==TERMKEY_SYM_DOWN&&n+1<x.count)n++;}
+               if(x.selected!=SIZE_MAX){
+                  rrui_field_t root={0};rrui_form_field(f,0,&root);
+                  bool wrap=active&&root.widget&&!strcmp(root.widget->id,"servers");
+                  if(key->code.sym==TERMKEY_SYM_UP)n=n?n-1:wrap?x.count-1:0;
+                  else n=n+1<x.count?n+1:wrap?0:n;
+               }
                rrui_form_select(f,i,n);rrui_form_list_view(f,i,list_page(local_hits,i),true);
             } else rrui_form_next(f,key->code.sym==TERMKEY_SYM_UP?-1:1);
             break;

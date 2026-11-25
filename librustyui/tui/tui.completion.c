@@ -220,7 +220,7 @@ bool tui_do_completion(tui_window_t *win) {
          word[pl++] = ' ';      // Add a space after a completed word
       }
 
-      if (start + pl < TUI_INPUTLEN) {
+      if ((size_t)tui_input_len - word_len + pl < TUI_INPUTLEN) {
          memmove(&input_buf[start + pl], &input_buf[tui_cursor_pos], tui_input_len - tui_cursor_pos + 1);
          memcpy(&input_buf[start], matches[0], nmatch == 1 ? pl - 1 : pl);
 
