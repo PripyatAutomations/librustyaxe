@@ -363,7 +363,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
       }
 
       if (res == TERMKEY_RES_AGAIN) {
-         return TRUE;
+         break; /* Paint already-dispatched keys before waiting for more bytes. */
       }
       if (res != TERMKEY_RES_KEY) break;
       if (rrui_tui_key(tk,&key)) continue;
@@ -799,5 +799,7 @@ static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data) {
          tui_update_input_line();
       }
    }
+   /* Coalesce the input batch into one frame, not the next clock tick. */
+   tui_redraw_if_pending();
    return G_SOURCE_CONTINUE;
 }
