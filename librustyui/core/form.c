@@ -9,6 +9,7 @@ typedef struct {
    char *value;
    bool checked,visible,interactive;
    size_t cursor,selected,top;
+   bool reveal_selection;
    GPtrArray *items;
 } field_t;
 struct rrui_form {
@@ -124,7 +125,7 @@ const char *rrui_form_list_label(const rrui_form_t *f,size_t i,size_t j) {
 }
 bool rrui_form_select(rrui_form_t *f,size_t i,size_t j) {
    field_t *x=at(f,i);if(!x||x->w.kind!=RRUI_LIST||j>=x->items->len)return false;
-   item_t *it=g_ptr_array_index(x->items,j);g_free(x->value);x->value=g_strdup(it->key);x->selected=j;return true;
+   item_t *it=g_ptr_array_index(x->items,j);g_free(x->value);x->value=g_strdup(it->key);x->selected=j;x->reveal_selection=true;return true;
 }
 /* Keep viewport independent from selection. Only explicit navigation follows
  * the selected row; scrolling an inactive list must not change its value. */
@@ -132,10 +133,11 @@ size_t rrui_form_list_view(rrui_form_t *f,size_t i,size_t span,bool follow) {
    field_t *x=at(f,i);if(!x||x->w.kind!=RRUI_LIST||!span)return 0;
    size_t count=x->items->len,limit=count>span?count-span:0;
    x->top=MIN(x->top,limit);
-   if(follow&&x->selected<count){
+   if((follow||x->reveal_selection)&&x->selected<count){
       if(x->selected<x->top)x->top=x->selected;
       else if(x->selected-x->top>=span)x->top=x->selected-span+1;
    }
+   x->reveal_selection=false;
    return x->top;
 }
 bool rrui_form_list_scroll(rrui_form_t *f,size_t i,size_t span,int delta) {
