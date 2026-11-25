@@ -199,3 +199,7 @@ Floating panels remain optional. Dynamic labels support host state readback.
 This is a side-column prototype, not yet an arbitrary recursive split tree;
 vertical divider dragging, persistence, user rearrangement and compact forms
 remain pending. Test geometry and redraw with real terminal before expanding.
+
+Room workspace default: call the primary pane Main (not Chat); right column
+user roster above VFO, weighted 2:1 subject to minimum usable heights.
+Roster list fills available tile rows. Keep GTK unchanged.

@@ -16,5 +16,8 @@ int main(void){
    assert(tiles[2].y+tiles[2].height==28+1);
    assert(rrui_workspace_tiles(24,60,34,minimum,weight,3,tiles)==60);
    assert(!tiles[0].width);
+   int split_min[]={6,10},split_weight[]={2,1};rrui_rect_t split[2];
+   assert(rrui_workspace_tiles(33,100,34,split_min,split_weight,2,split)==66);
+   assert(split[0].height==20&&split[1].height==10);
    puts("PASS: directional workspace focus");return 0;
 }

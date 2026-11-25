@@ -113,7 +113,7 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
       bool selected=has_focus&&i==focus;
       if(w->kind==RRUI_LIST) {
          line(row++,cols,selected,"  ",w->label);
-         size_t span=MAX(1,MIN((int)w->height_rows,rows/2));
+         size_t span=w->expand_y?(size_t)MAX(1,rows-row):MAX(1,MIN((int)w->height_rows,rows/2));
          span=MIN(span,(size_t)MAX(0,rows-row));
          size_t start=x.selected!=SIZE_MAX&&x.selected>=span&&span?x.selected-span+1:0;
          for(size_t j=start;j<x.count&&j-start<span&&row<rows;j++) {
@@ -142,7 +142,7 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
             g_free(masked);row++;
          }
       } else if(w->kind==RRUI_CHECKBOX)line(row++,cols,selected,x.checked?" [x] ":" [ ] ",w->label);
-      else if(w->kind==RRUI_BUTTON)line(row++,cols,selected," [ ] ",w->label);
+      else if(w->kind==RRUI_BUTTON)line(row++,cols,selected," > ",w->label);
       else if(w->kind==RRUI_LABEL&&*x.value)line(row++,cols,false,w->label,x.value);
       else line(row++,cols,false,"  ",w->label);
    }

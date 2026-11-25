@@ -30,13 +30,16 @@ int rrui_workspace_tiles(int rows,int cols,int width,const int *minimum,
       used+=m;total+=weight[visible]>0&&weight[visible]<=1000?weight[visible]:1;
    }
    if(!visible)return cols;
-   int y=2,extra=available-used;
+   int y=2,remaining=available,minimum_left=used;
    for(size_t i=0;i<visible;i++){
       int w=weight[i]>0&&weight[i]<=1000?weight[i]:1;
-      int add=(int)((long long)extra*w/total);
-      int height=(minimum[i]<6?6:minimum[i])+add;
+      int m=minimum[i]<6?6:minimum[i];
+      minimum_left-=m;
+      int height=(int)((long long)remaining*w/total);
+      if(height<m)height=m;
+      if(height>remaining-minimum_left)height=remaining-minimum_left;
       out[i]=(rrui_rect_t){cols-width+1,y,width,height};
-      y+=height;extra-=add;total-=w;
+      y+=height;remaining-=height;total-=w;
    }
    return cols-width;
 }
