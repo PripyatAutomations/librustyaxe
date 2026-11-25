@@ -30,6 +30,8 @@ bool rrui_form_list_append_color(rrui_form_t *,const char *,const char *,const c
 uint32_t rrui_form_list_color(const rrui_form_t *,size_t,size_t);
 const char *rrui_form_list_label(const rrui_form_t *,size_t field,size_t item);
 bool rrui_form_select(rrui_form_t *,size_t field,size_t item);
+size_t rrui_form_list_view(rrui_form_t *,size_t field,size_t span,bool follow_selection);
+bool rrui_form_list_scroll(rrui_form_t *,size_t field,size_t span,int delta);
 /* Entry edits use Unicode code points and byte-offset cursor positions. */
 bool rrui_form_insert(rrui_form_t *,uint32_t codepoint);
 bool rrui_form_edit(rrui_form_t *,int direction,bool erase);

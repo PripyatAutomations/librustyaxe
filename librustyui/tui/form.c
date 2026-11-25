@@ -133,7 +133,7 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
          line(row++,cols,selected,"  ",w->label);
          size_t span=w->expand_y?(size_t)MAX(1,rows-row):MAX(1,MIN((int)w->height_rows,rows/2));
          span=MIN(span,(size_t)MAX(0,rows-row));
-         size_t start=x.selected!=SIZE_MAX&&x.selected>=span&&span?x.selected-span+1:0;
+         size_t start=rrui_form_list_view(form,i,span,false);
          for(size_t j=start;j<x.count&&j-start<span&&row<rows;j++) {
             hit_t h={i,j,row};g_array_append_val(hits,h);
             row_color=rrui_form_list_color(form,i,j);
@@ -255,7 +255,7 @@ static bool directional(const TermKeyKey *k,int *dx,int *dy,bool *chat) {
 static void cycle_panel(bool reverse) {
    size_t ids[32],n=0;
    for(size_t j=0;j<npanels;j++){
-      if(panels[j].hidden||panels[j].rect.width<=0||panels[j].rect.height<=0)continue;
+      if(panels[j].hidden||panels[j].rect.width<=0||panels[j].rect.height<6)continue;
       size_t k=n++;
       while(k&&panels[ids[k-1]].order>panels[j].order){ids[k]=ids[k-1];k--;}
       ids[k]=j;
@@ -286,8 +286,8 @@ static bool wheel_list(rrui_form_t *f,GArray *h,int row,int button) {
    for(guint j=0;j<h->len;j++){
       hit_t x=g_array_index(h,hit_t,j);
       if(x.row==row&&x.item!=SIZE_MAX){
-         list_step(f,x.field,button==4?-1:1,3);
-         tui_redraw_request();return true;
+         if(rrui_form_list_scroll(f,x.field,list_page(h,x.field),button==4?-3:3))tui_redraw_request();
+         return true;
       }
    }
    return false;
@@ -378,7 +378,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
                hit_t h=g_array_index(p->hits,hit_t,k);
                if(h.row+a.y!=r)continue;
                if(rrui_form_set_focus(p->form,h.field)){
-                  if(h.item!=SIZE_MAX)rrui_form_select(p->form,h.field,h.item);
+                  if(h.item!=SIZE_MAX){rrui_form_select(p->form,h.field,h.item);rrui_form_list_view(p->form,h.field,list_page(p->hits,h.field),true);}
                   else {rrui_field_t z;if(rrui_form_field(p->form,h.field,&z)&&(z.widget->kind==RRUI_BUTTON||z.widget->kind==RRUI_CHECKBOX))rrui_form_activate(p->form);}
                }
                break;
@@ -404,7 +404,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             hit_t h=g_array_index(local_hits,hit_t,j);
             if(h.row!=r)continue;
             if(!rrui_form_set_focus(f,h.field))break;
-            if(h.item!=SIZE_MAX)rrui_form_select(f,h.field,h.item);
+            if(h.item!=SIZE_MAX){rrui_form_select(f,h.field,h.item);rrui_form_list_view(f,h.field,list_page(local_hits,h.field),true);}
             else {rrui_field_t y;if(rrui_form_field(f,h.field,&y)&&(y.widget->kind==RRUI_BUTTON||y.widget->kind==RRUI_CHECKBOX))rrui_form_activate(f);}
             break;
          }
@@ -428,13 +428,14 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
          case TERMKEY_SYM_HOME:
          case TERMKEY_SYM_END:
             if(x.widget&&x.widget->kind==RRUI_LIST&&x.count)
-               rrui_form_select(f,i,key->code.sym==TERMKEY_SYM_HOME?0:x.count-1);
+               {rrui_form_select(f,i,key->code.sym==TERMKEY_SYM_HOME?0:x.count-1);rrui_form_list_view(f,i,list_page(local_hits,i),true);}
             else if(x.widget&&x.widget->kind==RRUI_ENTRY)
                while(rrui_form_edit(f,key->code.sym==TERMKEY_SYM_HOME?-1:1,false)){}
             break;
          case TERMKEY_SYM_PAGEUP:
          case TERMKEY_SYM_PAGEDOWN:
-            list_step(f,i,key->code.sym==TERMKEY_SYM_PAGEUP?-1:1,list_page(local_hits,i));break;
+            list_step(f,i,key->code.sym==TERMKEY_SYM_PAGEUP?-1:1,list_page(local_hits,i));
+            rrui_form_list_view(f,i,list_page(local_hits,i),true);break;
          case TERMKEY_SYM_BACKSPACE:rrui_form_edit(f,-1,true);break;
          case TERMKEY_SYM_DELETE:rrui_form_edit(f,1,true);break;
          case TERMKEY_SYM_UP:
@@ -442,7 +443,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             if(x.widget&&x.widget->kind==RRUI_LIST&&x.count) {
                size_t n=x.selected==SIZE_MAX?0:x.selected;
                if(x.selected!=SIZE_MAX){if(key->code.sym==TERMKEY_SYM_UP&&n)n--;else if(key->code.sym==TERMKEY_SYM_DOWN&&n+1<x.count)n++;}
-               rrui_form_select(f,i,n);
+               rrui_form_select(f,i,n);rrui_form_list_view(f,i,list_page(local_hits,i),true);
             } else rrui_form_next(f,key->code.sym==TERMKEY_SYM_UP?-1:1);
             break;
          default:break;

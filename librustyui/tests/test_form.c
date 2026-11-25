@@ -30,6 +30,20 @@ int main(void) {
    assert(rrui_form_select(f,3,1));assert(!strcmp(rrui_form_value(f,"l"),"two"));
    assert(rrui_form_list_clear(f,"l"));assert(rrui_form_list_append(f,"l","two","Two"));
    rrui_field_t field;assert(rrui_form_field(f,3,&field)&&field.selected==0);
+   for(int j=0;j<20;j++){char key[16];snprintf(key,sizeof(key),"item%d",j);assert(rrui_form_list_append(f,"l",key,key));}
+   assert(rrui_form_select(f,3,0));
+   assert(rrui_form_list_view(f,3,5,true)==0);
+   assert(rrui_form_list_scroll(f,3,5,3));
+   assert(rrui_form_list_view(f,3,5,false)==3);
+   assert(rrui_form_field(f,3,&field)&&field.selected==0);
+   assert(rrui_form_list_scroll(f,3,5,100));
+   assert(rrui_form_list_view(f,3,5,false)==16);
+   assert(!rrui_form_list_scroll(f,3,5,1));
+   assert(rrui_form_list_view(f,3,5,true)==0);
+   assert(rrui_form_select(f,3,10));
+   assert(rrui_form_list_view(f,3,5,true)==6);
+   assert(rrui_form_select(f,3,9));
+   assert(rrui_form_list_view(f,3,5,true)==6);
    assert(rrui_form_set_focus(f,4));assert(rrui_form_activate(f)&&called==1);
    assert(rrui_form_next(f,1)&&rrui_form_focus(f)==1);
    rrui_form_free(f);puts("PASS: form snapshot, UTF-8 editing, focus, keyed lists and actions");return 0;

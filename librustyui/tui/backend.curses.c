@@ -68,15 +68,20 @@ static int pair_id(void){
    next_pair++;
    return id;
 }
+static attr_t last_attrs;
+static int last_pair=-1;
 static void style(void){
    int id=pair_id();
+   if(id==last_pair&&attrs==last_attrs)return;
    wattr_set(stdscr,attrs,0,&id);
+   last_pair=id;last_attrs=attrs;
 }
 static void blank(int y,int x,int count){
    if(y<0||y>=LINES||x<0||x>=COLS)return;
    count=MIN(count,COLS-x);
    style();
-   for(int i=0;i<count;i++){wmove(stdscr,y,x+i);waddch(stdscr,' ');}
+   wmove(stdscr,y,x);
+   whline(stdscr,' ',count);
    wmove(stdscr,y,x);
    dirty=true;
 }
@@ -117,7 +122,7 @@ static void sgr(const int *p,size_t n){
 }
 static void move_to(int y,int x){
    wmove(stdscr,CLAMP(y,0,LINES-1),CLAMP(x,0,COLS-1));
-   wrap_pending=false;
+   wrap_pending=false;dirty=true;
 }
 static void csi(void){
    int p[64]={0};size_t n=1;
@@ -205,7 +210,7 @@ bool rrui_render_init(void){
       pairs=g_hash_table_new_full(g_int64_hash,g_int64_equal,g_free,NULL);
    }
    scrollok(stdscr,FALSE);leaveok(stdscr,FALSE);
-   next_pair=1;fg=bg=-1;attrs=0;frame_depth=0;seq_len=utf_len=0;
+   last_pair=-1;next_pair=1;fg=bg=-1;attrs=0;frame_depth=0;seq_len=utf_len=0;
    cursor_visibility=1;applied_cursor=-1;dirty=true;wrap_pending=false;
    return true;
 }
