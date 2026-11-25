@@ -20,6 +20,8 @@ int main(void) {
    assert(rrui_form_focus(f)==1);
    assert(rrui_form_insert(f,0x00e9));assert(rrui_form_insert(f,'x'));assert(!rrui_form_insert(f,'y'));
    assert(rrui_form_edit(f,-1,false));assert(rrui_form_edit(f,-1,true));assert(!strcmp(rrui_form_value(f,"e"),"x"));
+   assert(rrui_form_move_word(f,-1));assert(!rrui_form_move_word(f,-1));
+   assert(rrui_form_move_word(f,1));assert(!rrui_form_move_word(f,1));
    assert(!rrui_form_set_value(f,"e","\033[2J"));
    assert(rrui_form_next(f,1)&&rrui_form_focus(f)==2);
    assert(rrui_form_activate(f)&&rrui_form_checked(f,"c"));

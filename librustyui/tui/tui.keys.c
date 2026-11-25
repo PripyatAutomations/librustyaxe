@@ -305,7 +305,7 @@ bool tui_hotkey_dispatch(tui_window_t *win, unsigned key, unsigned modifiers) {
 static gboolean stdin_ev_cb(gint fd, GIOCondition condition, gpointer data);
 
 void tui_keys_init(void) {
-   tk = termkey_new(STDIN_FILENO, TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW);
+   tk = termkey_new(STDIN_FILENO, TERMKEY_FLAG_CTRLC | TERMKEY_FLAG_RAW | TERMKEY_FLAG_NOTERMIOS);
 
    if (!tk) {
       Log(LOG_WARN, "tui.keys", "Unable to initialize terminal input; keyboard input disabled");
@@ -313,7 +313,6 @@ void tui_keys_init(void) {
       return;
    }
    termkey_set_canonflags(tk, TERMKEY_CANON_DELBS);
-   termkey_set_flags(tk, termkey_get_flags(tk) | TERMKEY_FLAG_NOTERMIOS);
 
    // stdin must be non-blocking for the GLib fd source
    orig_stdin_flags = fcntl(STDIN_FILENO, F_GETFL, 0);

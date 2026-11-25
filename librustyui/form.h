@@ -33,6 +33,7 @@ bool rrui_form_select(rrui_form_t *,size_t field,size_t item);
 /* Entry edits use Unicode code points and byte-offset cursor positions. */
 bool rrui_form_insert(rrui_form_t *,uint32_t codepoint);
 bool rrui_form_edit(rrui_form_t *,int direction,bool erase);
+bool rrui_form_move_word(rrui_form_t *,int direction);
 bool rrui_form_activate(rrui_form_t *);
 void rrui_form_cancel(rrui_form_t *);
 /* Nonblocking modal terminal form; caller retains ownership and must close

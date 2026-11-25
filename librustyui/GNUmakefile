@@ -18,7 +18,7 @@ ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error RustyUI TUI requires development packages: $(DEPS))
 endif
 endif
-SOURCES := core/layout.c core/form.c core/workspace.c core/theme.c tui/theme.palette.c tui/render.c tui/form.c tui/tui.c tui/tui.completion.c tui/tui.keys.c tui/tui.theme.c tui/tui.window.c vendor/libtermkey/termkey.c vendor/libtermkey/driver-csi.c vendor/libtermkey/driver-ti.c
+SOURCES := core/layout.c core/form.c core/workspace.c core/theme.c tui/theme.palette.c tui/backend.curses.c tui/form.c tui/tui.c tui/tui.completion.c tui/tui.keys.c tui/tui.theme.c tui/tui.window.c vendor/libtermkey/termkey.c vendor/libtermkey/driver-csi.c vendor/libtermkey/driver-ti.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
 HEADERS := $(wildcard *.h) vendor/libtermkey/termkey.h
 SCRIPT_BUILD_DIR ?= $(AXE_BUILD_DIR)/script

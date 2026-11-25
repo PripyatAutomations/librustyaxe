@@ -9,9 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <termios.h>
 #include <locale.h>
 #include <ncurses.h>
 static SCREEN *screen;
+static struct termios shell_termios;
+static bool shell_termios_valid;
 static GHashTable *pairs;
 static int next_pair=1,fg=-1,bg=-1;
 static attr_t attrs;
@@ -190,8 +193,13 @@ bool rrui_render_init(void){
    if(screen)return true;
    if(!isatty(STDIN_FILENO)||!isatty(STDOUT_FILENO))return false;
    setlocale(LC_CTYPE,"");
+   shell_termios_valid=tcgetattr(STDIN_FILENO,&shell_termios)==0;
    screen=newterm(NULL,stdout,stdin);
-   if(!screen)return false;
+   if(!screen){
+      if(shell_termios_valid)tcsetattr(STDIN_FILENO,TCSANOW,&shell_termios);
+      shell_termios_valid=false;
+      return false;
+   }
    if(has_colors()&&start_color()!=ERR){
       use_default_colors();
       pairs=g_hash_table_new_full(g_int64_hash,g_int64_equal,g_free,NULL);
@@ -216,7 +224,11 @@ void rrui_render_flush(void){
 void rrui_render_end(void){if(screen&&frame_depth)frame_depth--;rrui_render_flush();}
 void rrui_render_fini(void){
    if(!screen)return;
+   curs_set(1);
    endwin();delscreen(screen);screen=NULL;
+   fflush(stdout);
+   if(shell_termios_valid)tcsetattr(STDIN_FILENO,TCSANOW,&shell_termios);
+   shell_termios_valid=false;
    if(pairs){g_hash_table_destroy(pairs);pairs=NULL;}
 }
 void rrui_render_write(const char *s,size_t n){

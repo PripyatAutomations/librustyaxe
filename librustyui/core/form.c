@@ -143,6 +143,18 @@ bool rrui_form_edit(rrui_form_t *f,int dir,bool erase) {
    else x->cursor=q-x->value;
    return true;
 }
+bool rrui_form_move_word(rrui_form_t *f,int dir) {
+   field_t *x=at(f,rrui_form_focus(f));if(!x||x->w.kind!=RRUI_ENTRY||!x->interactive)return false;
+   const char *start=x->value,*p=start+x->cursor,*old=p;
+   if(dir<0){
+      while(p>start&&g_unichar_isspace(g_utf8_get_char(g_utf8_prev_char(p))))p=g_utf8_prev_char(p);
+      while(p>start&&!g_unichar_isspace(g_utf8_get_char(g_utf8_prev_char(p))))p=g_utf8_prev_char(p);
+   }else{
+      while(*p&&!g_unichar_isspace(g_utf8_get_char(p)))p=g_utf8_next_char(p);
+      while(*p&&g_unichar_isspace(g_utf8_get_char(p)))p=g_utf8_next_char(p);
+   }
+   x->cursor=p-start;return p!=old;
+}
 bool rrui_form_activate(rrui_form_t *f) {
    field_t *x=at(f,rrui_form_focus(f));if(!x||!x->interactive)return false;
    if(x->w.kind==RRUI_CHECKBOX)x->checked=!x->checked;

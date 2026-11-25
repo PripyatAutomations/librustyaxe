@@ -393,8 +393,9 @@ bool tui_fini(void) {
    /* termkey must stop before termios is restored.  Older shutdown ordering restored cooked mode first, then termkey restored its raw-mode snapshot. */
    tui_keys_fini();
    if(cfg_tui_use_mouse){fputs("\033[?1006l\033[?1002l\033[?1000l",stdout);fflush(stdout);}
-   rrui_render_fini();
    tui_raw_mode(false);
+   /* Backend restores the pre-newterm shell snapshot last. */
+   rrui_render_fini();
 
    tui_window_fini();
    tui_render_unlock();
