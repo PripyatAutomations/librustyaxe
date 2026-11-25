@@ -15,6 +15,7 @@ librustyaxe (0.2.0-1) unstable; urgency=medium
     queries; remove the unnecessary IRC dependency from RustyScript.
   * Add shared interactive form state and an initial modal TUI renderer.
   * Add nonmodal terminal panels and directional keyboard focus navigation.
+  * Draw bright cyan focused panel frames and cyan inactive frames.
 
  -- Pripyat Automations <dangerousdevices@istabpeople.com>  Tue, 24 Nov 2026 22:10:00 -0500
 

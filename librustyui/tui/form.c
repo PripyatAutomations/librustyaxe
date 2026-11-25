@@ -140,14 +140,34 @@ void rrui_tui_draw_panels(int rows,int cols) {
       panel_t *p=&panels[i];rrui_rect_t r=p->requested;
       r.width=MIN(r.width,cols-1);r.height=MIN(r.height,rows-3);
       r.x=CLAMP(r.x,1,cols-r.width+1);r.y=CLAMP(r.y,2,rows-r.height);
-      p->rect=r;ox=r.x;oy=r.y-1;
+      p->rect=r;
+      bool selected=focused==p->form;
+      ox=r.x;oy=r.y-1;
       for(int j=1;j<=r.height;j++)line(j,r.width+1,false,"","");
-      rrui_field_t root={0};rrui_form_field(p->form,0,&root);
-      line(1,r.width+1,focused==p->form,"[ ",root.widget?root.widget->label:"Panel");
-      printf("\033[%d;%dH[+]",r.y+r.height-1,r.x+r.width-3);
-      oy=r.y;scroll=p->scroll;hits=p->hits;
-      draw_form(p->form,r.height-1,r.width+1,focused==p->form);
+      /* Reserve both border columns and the title/bottom rows. */
+      ox=r.x+1;oy=r.y;scroll=p->scroll;hits=p->hits;
+      if(r.height>=6)
+         draw_form(p->form,r.height-1,r.width-1,selected);
+      else if(hits)
+         g_array_set_size(hits,0);
       p->scroll=scroll;p->hits=hits;hits=NULL;
+      /* Bright cyan for keyboard focus; ordinary cyan for inactive panels.
+       * ANSI 16-color SGR works without true-color terminal support. */
+      printf("\033[0m%s",selected?"\033[96m":"\033[36m");
+      printf("\033[%d;%dH┌",r.y,r.x);
+      for(int j=0;j<r.width-2;j++)fputs("─",stdout);
+      fputs("┐",stdout);
+      for(int j=1;j<r.height-1;j++){
+         printf("\033[%d;%dH│",r.y+j,r.x);
+         printf("\033[%d;%dH│",r.y+j,r.x+r.width-1);
+      }
+      printf("\033[%d;%dH└",r.y+r.height-1,r.x);
+      for(int j=0;j<r.width-5;j++)fputs("─",stdout);
+      fputs("[+]┘",stdout);
+      rrui_field_t root={0};rrui_form_field(p->form,0,&root);
+      printf("\033[%d;%dH ",r.y,r.x+2);
+      clipped(root.widget?root.widget->label:"Panel",r.width-5);
+      fputs(" \033[0m",stdout);
    }
    overlay=false;ox=1;oy=0;
    if(focused)fputs("\033[?25l",stdout);
@@ -200,7 +220,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
          while(j) {j--;rrui_rect_t a=panels[j].rect;
             if(c<a.x||c>=a.x+a.width||r<a.y||r>=a.y+a.height)continue;
             raise_panel(j);panel_t *p=&panels[npanels-1];
-            if(r==a.y||(r==a.y+a.height-1&&c>=a.x+a.width-3)){
+            if(r==a.y||(r==a.y+a.height-1&&c>=a.x+a.width-4)){
                dragging=p->form;resizing=r!=a.y;drag_x=c-a.x;drag_y=r-a.y;tui_redraw_request();return true;
             }
             if(p->hits)for(guint k=0;k<p->hits->len;k++){

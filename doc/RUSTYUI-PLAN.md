@@ -166,3 +166,14 @@ spatial selection, keypad 5/Escape chat focus, modal priority. Terminals may
 not report modified keypad keys distinctly. Existing chat draws beneath panels;
 reserved/docked chat geometry, persistence, script geometry, native widgets and
 live RustyRig integration remain outstanding. Workspace tests added, not run.
+
+### Shared keyboard focus conventions
+
+- Active panel frame/title uses bright cyan; inactive panel frames use ordinary
+  cyan. Preserve an unmistakable focus indicator independent of widget focus.
+- Carry spatial Ctrl+arrow / Ctrl+keypad navigation, keypad 5 chat focus,
+  click-to-focus and raise, remembered per-panel control focus, and ordinary
+  Tab/Shift-Tab/arrows/Space/Enter form navigation into GTK3 and future backends.
+- GTK must not intercept ordinary entry editing or allow panel-navigation keys
+  to leak to PTT; respect modal priority and use theme-appropriate contrast.
+- TUI frame implemented with ANSI 16-color SGR; visual testing still pending.
