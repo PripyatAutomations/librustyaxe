@@ -290,7 +290,37 @@ static void functions_and_memory(void) {
    assert(rrs_value_bool(value));rrs_value_free(value);
    rrs_vm_free(vm);
 }
+static void property_blocks(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   rrs_value_t *v=NULL;
+   assert(vm);
+   assert(rrs_vm_eval(vm,"dict w = {keep: 7, layout: {spacing: 1}}; dict alias := w; dict copy = w;",&v));
+   rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"alias .= { a = 1, b = 200; c = false; layout .= { padding = 3, }; };",&v));
+   rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"w",&v));
+   assert(rrs_value_int(rrs_value_field(v,"a"))==1);
+   assert(rrs_value_int(rrs_value_field(v,"b"))==200);
+   assert(rrs_value_type(rrs_value_field(v,"c"))==RRS_BOOL);
+   assert(!rrs_value_bool(rrs_value_field(v,"c")));
+   assert(rrs_value_int(rrs_value_field(v,"keep"))==7);
+   assert(rrs_value_int(rrs_value_field(rrs_value_field(v,"layout"),"spacing"))==1);
+   assert(rrs_value_int(rrs_value_field(rrs_value_field(v,"layout"),"padding"))==3);
+   rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"copy",&v));
+   assert(!rrs_value_field(v,"a"));rrs_value_free(v);
+   assert(!rrs_vm_eval(vm,"w .= { a = 99; b = missing; };",&v));
+   assert(!rrs_vm_eval(vm,"w .= { a = 99 b = 2 };",&v));
+   assert(rrs_vm_eval(vm,"w.a",&v)&&rrs_value_int(v)==1);rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"const dict frozen := w",&v));rrs_value_free(v);
+   assert(!rrs_vm_eval(vm,"frozen .= { a = 9 };",&v));
+   assert(rrs_vm_eval(vm,"w .= { a = 2, b = 3 }",&v));rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"w .= { a = 4; b = 5; }",&v));rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"w .= {}",&v));rrs_value_free(v);
+   rrs_vm_free(vm);
+}
 int main(void) {
+   property_blocks();
    syntax_and_invocation();
    comment_forms();
    repeated_events();
