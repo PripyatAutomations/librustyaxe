@@ -87,16 +87,51 @@ void tui_set_prompt_renderer(const char *(*renderer) (tui_window_t *win)) {
 /* Resolve default SGR colors against the current surface, not the terminal
  * palette. Explicit foreground/background colors (including IRC art) stay
  * untouched. Stored scrollback remains independent of the selected theme. */
+/* Use one surface-aware SGR interpreter for every generic text surface.
+ * Extended color parameters are consumed as a group: a zero RGB component
+ * must never be mistaken for a reset. */
 static void surface_sgr(const char *s,size_t n,rrui_theme_role_t bg){
-   fwrite(s,1,n,stdout);
-   if((n==4&&!memcmp(s,"\033[0m",4))||(n==3&&!memcmp(s,"\033[m",3))||
-      (n==8&&!memcmp(s,"\033[39;49m",8))){
-      rrui_tui_theme_role(RRUI_THEME_TEXT,false);
-      rrui_tui_theme_role(bg,true);
-   }else if(n==5&&!memcmp(s,"\033[39m",5))rrui_tui_theme_role(RRUI_THEME_TEXT,false);
-   else if(n==5&&!memcmp(s,"\033[49m",5))rrui_tui_theme_role(bg,true);
+   int params[64];size_t count=0;
+   if(n<3||s[0]!=27||s[1]!='['||s[n-1]!='m')return;
+   const char *p=s+2,*end=s+n-1;
+   do {
+      unsigned v=0;
+      while(p<end&&*p>='0'&&*p<='9'){
+         if(v>10000)return;
+         v=v*10+(unsigned)(*p++-'0');
+      }
+      if(count==G_N_ELEMENTS(params))return;
+      params[count++]=(int)v;
+      if(p==end)break;
+      if(*p++!=';')return;
+   }while(true);
+   for(size_t i=0;i<count;i++){
+      int k=params[i];
+      if(k==0)rrui_tui_theme_style(RRUI_THEME_TEXT,bg);
+      else if(k==39)rrui_tui_theme_role(RRUI_THEME_TEXT,false);
+      else if(k==49)rrui_tui_theme_role(bg,true);
+      else if(k==38||k==48||k==58){
+         if(i+1>=count)return;
+         int mode=params[i+1];
+         size_t extra=mode==2?4:mode==5?2:0;
+         if(!extra||i+extra>=count)return;
+         bool valid=true;
+         for(size_t j=2;j<=extra;j++)if(params[i+j]>255)valid=false;
+         if(valid&&cfg_tui_colors){
+            printf("\033[%d",k);
+            for(size_t j=1;j<=extra;j++)printf(";%d",params[i+j]);
+            putchar('m');
+         }
+         i+=extra;
+      }else if(cfg_tui_colors&&((k>=1&&k<=9)||(k>=21&&k<=29)||
+               (k>=30&&k<=37)||(k>=40&&k<=47)||(k>=90&&k<=97)||
+               (k>=100&&k<=107)||k==59)){
+         printf("\033[%dm",k);
+      }
+   }
 }
-static void surface_write(const char *s,size_t n,rrui_theme_role_t bg){
+static void surface_text(const char *s,size_t n,rrui_theme_role_t bg,bool emit_text){
+   if(!s)return;
    const char *end=s+n;
    while(s<end){
       if(end-s>=2&&s[0]=='\033'&&s[1]=='['){
@@ -105,9 +140,12 @@ static void surface_write(const char *s,size_t n,rrui_theme_role_t bg){
          if(p<end){if(*p=='m')surface_sgr(s,p-s+1,bg);s=p+1;continue;}
          break;
       }
-      if((unsigned char)*s>=32&&*s!=127)putchar(*s);
+      if(emit_text&&(unsigned char)*s>=32&&*s!=127)putchar(*s);
       s++;
    }
+}
+static void surface_write(const char *s,size_t n,rrui_theme_role_t bg){
+   surface_text(s,n,bg,true);
 }
 static void tui_print_topline(const char *text, int columns) {
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
@@ -540,19 +578,17 @@ void tui_redraw_screen(void) {
       }
 
       const char *p = w->buffer[idx];
-      char active_sgr[64] = ""; // last SGR seen, so wrapped rows re-apply it
+      const char *message_start=p;
       int rows_done = 0;
 
       while (*p && row < log_end) {
          int col = 0;
          const char *line_start = p;
          const char *last_break = p;
-         char start_sgr[64];memcpy(start_sgr,active_sgr,sizeof(start_sgr));
+
 
          while (*p && col < chat_cols) {
             if (*p == '\033' && *(p + 1) == '[') {
-               const char *estart = p;
-
                p += 2;
 
                while (*p && !(*p >= '@' && *p <= '~')) {
@@ -563,15 +599,7 @@ void tui_redraw_screen(void) {
                   p++;
                }
 
-               // Remember the last complete SGR sequence; a wrapped row must
-               // re-apply the color in effect where the previous row ended
-               if (p[-1] == 'm' && (size_t)(p - estart) < sizeof(active_sgr)) {
-                  size_t elen = p - estart;
-
-                  memcpy(active_sgr, estart, elen);
-                  active_sgr[elen] = '\0';
-                  last_break=p;
-               }
+               last_break=p;
 
                continue;
             }
@@ -596,9 +624,8 @@ void tui_redraw_screen(void) {
             rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
 
             // Continuation of a wrapped row: restore the active color first
-            if (rows_done > 0 && start_sgr[0]) {
-               surface_write(start_sgr,strlen(start_sgr),RRUI_THEME_WORKSPACE);
-            }
+            if(rows_done>0)
+               surface_text(message_start,line_start-message_start,RRUI_THEME_WORKSPACE,false);
 
             if (explicit_newline) {
                surface_write(line_start,p-line_start,RRUI_THEME_WORKSPACE);
@@ -887,11 +914,7 @@ void tui_window_update_topline(const char *line) {
    // Move cursor to the top-left
    printf("\033[1;1H");
 
-   // Clear the line
-   printf("\033[2K");
-
-   // Print the new content
-   printf("%s", line);
+   tui_print_topline(line,term_cols);
 
    // Make sure output is flushed
    fflush(stdout);
