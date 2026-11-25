@@ -36,7 +36,7 @@ printf 'Discovered %d tracked C/header files; per-tool timeout: %ss\n' "$total" 
 for file in "${files[@]}"; do
    current=$((current + 1))
    case "$file" in
-      ext/*|*/ext/*|www/*|debian/*|build/*|snippets/*) continue ;;
+      ext/*|*/ext/*|vendor/*|*/vendor/*|www/*|debian/*|build/*|snippets/*) continue ;;
       wire-registry.h) continue ;; # Regenerated from wire-schema.json.
    esac
    [[ -f "$file" ]] || continue

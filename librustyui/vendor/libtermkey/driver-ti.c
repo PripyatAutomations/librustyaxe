@@ -25,10 +25,10 @@
  * THE SOFTWARE.
  */
 #define _XOPEN_SOURCE 600
-#include <librustyaxe/core.h>
-#include <librustyui/tui.h>
 
-#include <librustyui/termkey.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include "termkey.h"
 #include "termkey-internal.h"
 
 #ifdef HAVE_UNIBILIUM
@@ -406,6 +406,9 @@ static bool try_load_terminfo_key(TermKeyTI *ti, const char *name, struct keyinf
    }
    struct trie_node *node = new_node_key(info->type, info->sym, info->modifier_mask, info->modifier_set);
 
+   if (!node) {
+      return false;
+   }
    if (!insert_seq(ti, value, node)) {
       free(node);
 

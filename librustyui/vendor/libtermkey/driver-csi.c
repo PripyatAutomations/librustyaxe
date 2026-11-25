@@ -26,9 +26,9 @@
  */
 #include <stdio.h>
 #include <string.h>
-#include <librustyaxe/core.h>
-#include <librustyui/tui.h>
-#include <librustyui/termkey.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include "termkey.h"
 #include "termkey-internal.h"
 
 
@@ -726,8 +726,10 @@ static TermKeyResult peekkey_ctrlstring(TermKey *tk, TermKeyCsi *csi, size_t int
 
    csi->saved_string_id++;
    csi->saved_string = malloc(len + 1);
-
-   strlcpy(csi->saved_string, (char *)tk->buffer + tk->buffstart + introlen, len);
+   if (!csi->saved_string) {
+      return TERMKEY_RES_ERROR;
+   }
+   memcpy(csi->saved_string, tk->buffer + tk->buffstart + introlen, len);
    csi->saved_string[len] = 0;
 
    key->type = (CHARAT(introlen - 1) & 0x1f) == 0x10 ? TERMKEY_TYPE_DCS : TERMKEY_TYPE_OSC;

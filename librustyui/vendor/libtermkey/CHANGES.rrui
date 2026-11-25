@@ -1,0 +1,33 @@
+RustyUI local changes to libtermkey 0.22
+======================================
+
+Reference: https://github.com/deepin-community/libtermkey/
+Compared against commit 2fedbe4081a03104ab95d58719345e1ba85d341f.
+The exact historical import commit is not known. Comparison ignored comments,
+whitespace, added statement braces and preprocessor line continuations; this
+was a source-token review, not a proof of semantic equivalence.
+
+Existing differences before vendoring:
+* All five files: RustyAxe include paths, copyright headers and formatting
+  (including added statement braces); upstream MIT notice now restored.
+* termkey.h: upstream C++ extern "C" guards absent in the local header.
+* termkey-internal.h: no other token differences found.
+* termkey.c: signed %i instead of %u for mouse coordinates (int arguments);
+  add missing break after TERMKEY_TYPE_MODEREPORT formatting.
+* driver-csi.c: correct debug format for size_t args (%zu); local replacement
+  of strncpy with strlcpy in saved OSC/DCS strings was incorrect (truncation
+  and possible read beyond the bounded terminal input).
+* driver-ti.c: check insert_seq result and free the unused node on failure.
+
+Vendor relocation:
+* Restore upstream filenames and local header includes; remove RustyAxe/UI
+  umbrella includes and add direct standard-library includes.
+* driver-csi.c: use bounded memcpy for exactly len payload bytes followed
+  by NUL; check allocation failure before copying.
+* driver-ti.c: check node allocation before insertion.
+* Keep termkey.h installed under librustyui for existing native consumers;
+  the implementation remains bundled, using system terminfo.
+* Exclude vendor directories from automated source formatting.
+
+Do not run project-wide header or formatting rewrites on these files.
+Keep upstream licensing and document subsequent local patches here.

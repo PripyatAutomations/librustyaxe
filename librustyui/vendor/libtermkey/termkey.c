@@ -34,9 +34,9 @@
 #include <string.h>
 
 #include <stdio.h>
-#include <librustyaxe/core.h>
-#include <librustyui/tui.h>
-#include <librustyui/termkey.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include "termkey.h"
 #include "termkey-internal.h"
 
 #ifdef _MSC_VER

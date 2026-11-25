@@ -13,9 +13,7 @@ Comment: The optional Debian build incorporates /usr/src/mongoose.c from
  license remains applicable to RustyAxe's original source files.
  Refer to /usr/share/doc/mongoose-webserver-source/copyright.
 
-Files: librustyui/termkey.h librustyui/tui/termkey-internal.h
- librustyui/tui/termkey.c librustyui/tui/tui.driver-csi.c
- librustyui/tui/tui.driver-ti.c
+Files: librustyui/vendor/libtermkey/*
 Copyright: 2007-2011 Paul Evans <leonerd@leonerd.org.uk>
  Pripyat Automations and the respective contributors (adaptations)
 License: MIT

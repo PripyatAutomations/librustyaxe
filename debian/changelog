@@ -7,6 +7,8 @@ librustyaxe (0.2.0-1) unstable; urgency=medium
   * Extract the terminal UI into independently built librustyui and move
     its terminal dependencies and tests out of the core library.
   * Restore upstream libtermkey copyright and MIT license notices.
+  * Isolate bundled libtermkey under vendor, document local changes and
+    repair bounded OSC/DCS string copying.
 
  -- Pripyat Automations <dangerousdevices@istabpeople.com>  Tue, 24 Nov 2026 22:10:00 -0500
 

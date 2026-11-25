@@ -33,7 +33,7 @@
 #undef HAVE_TERMIOS
 #endif
 
-#include <librustyui/termkey.h>
+#include "termkey.h"
 
 #include <stdint.h>
 #ifdef HAVE_TERMIOS

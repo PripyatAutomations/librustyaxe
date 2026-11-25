@@ -18,14 +18,14 @@ ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error RustyUI TUI requires development packages: $(DEPS))
 endif
 endif
-SOURCES := tui/tui.c tui/tui.completion.c tui/tui.driver-csi.c tui/tui.driver-ti.c tui/tui.keys.c tui/tui.theme.c tui/tui.window.c tui/termkey.c
+SOURCES := tui/tui.c tui/tui.completion.c tui/tui.keys.c tui/tui.theme.c tui/tui.window.c vendor/libtermkey/termkey.c vendor/libtermkey/driver-csi.c vendor/libtermkey/driver-ti.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
-HEADERS := $(wildcard *.h)
+HEADERS := $(wildcard *.h) vendor/libtermkey/termkey.h
 AXE_LIB := $(AXE_BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 REAL_LIB := $(BUILD_DIR)/librustyui.so.$(SOVERSION).$(VERSION)
 SONAME := librustyui.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyui.pc
-UI_CFLAGS := -std=gnu23 -I$(REPO_ROOT) -I$(AXE_BUILD_DIR)/include -I$(AXE_BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))
+UI_CFLAGS := -std=gnu23 -I$(REPO_ROOT) -I$(CURDIR)/vendor/libtermkey -I$(AXE_BUILD_DIR)/include -I$(AXE_BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))
 UI_LIBS := -L$(AXE_BUILD_DIR) -lrustyaxe $(shell $(PKG_CONFIG) --libs $(DEPS)) -lbsd -pthread -lm
 TESTS := $(addprefix $(BUILD_DIR)/,test_mirc test_completion_labels)
 .PHONY: all test tests install uninstall clean
@@ -34,7 +34,7 @@ all: $(REAL_LIB) $(PC_FILE)
 $(AXE_LIB):
 	$(MAKE) -C "$(REPO_ROOT)" WITH_UI=false BUILD_DIR="$(abspath $(AXE_BUILD_DIR))" VERSION="$(VERSION)" SOVERSION="$(SOVERSION)" "$(abspath $@)"
 
-$(BUILD_DIR)/%.o: %.c $(HEADERS) $(wildcard tui/*.h) | $(AXE_LIB)
+$(BUILD_DIR)/%.o: %.c $(HEADERS) $(wildcard tui/*.h) $(wildcard vendor/libtermkey/*.h) | $(AXE_LIB)
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(UI_CFLAGS) $(CFLAGS) -fPIC -c $< -o $@
 
@@ -67,7 +67,7 @@ install: all
 
 uninstall:
 	rm -f "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))" "$(DESTDIR)$(LIBDIR)/$(SONAME)" "$(DESTDIR)$(LIBDIR)/librustyui.so" "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyui.pc"
-	@for h in $(HEADERS); do rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyui/$$h"; done
+	@for h in $(HEADERS); do rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyui/${h##*/}"; done
 	-rmdir "$(DESTDIR)$(INCLUDEDIR)/librustyui"
 
 clean:

@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <librustyaxe/core.h>
 #include <librustyui/tui.h>
-#include <librustyui/termkey.h>
+#include "termkey.h"
 #include <glib.h>
 #include <glib-unix.h>
 #include <fcntl.h>
