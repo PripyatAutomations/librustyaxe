@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <librustyaxe/core.h>
 #include <librustyui/tui.h>
+#include <librustyui/tui.workspace.h>
 
 // Private state
 static tui_window_t *tui_windows[TUI_MAX_WINDOWS];
@@ -203,6 +204,7 @@ tui_window_t *tui_window_focus(const char *title) {
    for (int i = 0 ; i < tui_num_windows ; i++) {
       if (strcmp(tui_windows[i]->title, title) == 0) {
          tui_window_t *tw = tui_windows[i];
+         if(tui_active_win!=i)rrui_tui_focus_chat();
          tui_active_win = i;
 
          // try to determine the network name to show

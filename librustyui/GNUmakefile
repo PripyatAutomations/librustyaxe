@@ -29,7 +29,7 @@ SONAME := librustyui.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyui.pc
 UI_CFLAGS := -std=gnu23 -I$(REPO_ROOT) -I$(REPO_ROOT)/rustyscript -I$(CURDIR)/vendor/libtermkey -I$(AXE_BUILD_DIR)/include -I$(AXE_BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))
 UI_LIBS := -L$(SCRIPT_BUILD_DIR) -lrustyscript -L$(AXE_BUILD_DIR) -lrustyaxe $(shell $(PKG_CONFIG) --libs $(DEPS)) -lbsd -pthread -lm
-TESTS := $(addprefix $(BUILD_DIR)/,test_mirc test_completion_labels test_layout test_form test_workspace)
+TESTS := $(addprefix $(BUILD_DIR)/,test_mirc test_completion_labels test_layout test_form test_workspace test_input)
 .PHONY: all test tests install uninstall clean
 all: $(REAL_LIB) $(PC_FILE)
 
