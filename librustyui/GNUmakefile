@@ -77,3 +77,11 @@ uninstall:
 
 clean:
 	rm -rf "$(BUILD_DIR)"
+
+# Optional interactive backend feasibility probe; not part of normal tests.
+.PHONY: test-ncurses-rgb
+test-ncurses-rgb:
+	@$(PKG_CONFIG) --exists ncursesw || { echo "Install libncurses-dev (ncursesw)"; exit 1; }
+	@mkdir -p "$(BUILD_DIR)"
+	$(CC) $(CPPFLAGS) $(CFLAGS) -std=gnu11 -Wall -Wextra $$( $(PKG_CONFIG) --cflags ncursesw ) tests/test_ncurses_rgb.c -o "$(BUILD_DIR)/test_ncurses_rgb" $$( $(PKG_CONFIG) --libs ncursesw )
+	@"$(BUILD_DIR)/test_ncurses_rgb"
