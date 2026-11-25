@@ -1,3 +1,4 @@
+#include <glib.h>
 // tui.c
 //    This is part of rustyrig-fw.
 // https://github.com/pripyatautomations/rustyrig-fw
@@ -84,6 +85,7 @@ void tui_set_prompt_renderer(const char *(*renderer) (tui_window_t *win)) {
 // permit embedded controls to move the cursor. Count UTF-8 bytes conservatively
 // against the column budget and never cut a multibyte character in half.
 static void tui_print_topline(const char *text, int columns) {
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
    const unsigned char *p = (const unsigned char *)text;
    while (p && *p && columns > 0) {
       if (p[0] == '\033' && p[1] == '[') {
@@ -130,7 +132,9 @@ static void tui_print_topline(const char *text, int columns) {
       p += len;
       columns -= (int)len;
    }
-   printf("\033[0m\033[K");
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
+   while(columns-->0)putchar(' ');
+   fputs("\033[0m",stdout);
 }
 
 // SSH_TTY is set when we're running over an SSH session: remote terminals
@@ -142,6 +146,14 @@ bool tui_is_over_ssh(void) {
    return tui_over_ssh;
 }
 
+/* Return bytes and display cells for a complete UTF-8 character. */
+static int tui_cell(const char *s,size_t *bytes) {
+   gunichar ch=g_utf8_get_char_validated(s,-1);
+   if(ch==(gunichar)-1||ch==(gunichar)-2){*bytes=1;return 1;}
+   *bytes=(size_t)(g_utf8_next_char(s)-s);
+   if(g_unichar_iszerowidth(ch))return 0;
+   return g_unichar_iswide(ch)?2:1;
+}
 static int tui_line_rows(const char *s, int width) {
    int rows = 1;
    int col = 0;
@@ -171,14 +183,9 @@ static int tui_line_rows(const char *s, int width) {
          continue;
       }
 
-      col++;
-
-      if (col > width) {
-         rows++;
-         col = 1;
-      }
-
-      s++;
+      size_t bytes;int cells=tui_cell(s,&bytes);
+      if(col&&col+cells>width){rows++;col=0;}
+      col+=cells;s+=bytes;
    }
    return rows;
 }
@@ -434,8 +441,13 @@ void tui_redraw_screen(void) {
       }
       goto draw_footer;
    }
-   // --- Log area ---
-   int log_area_rows = term_rows - 3;
+   // --- Main pane --- (small terminals retain the compact layout)
+   bool framed=term_rows>=9&&chat_cols>=20;
+   int main_width=chat_cols;
+   if(framed)chat_cols-=2;
+   int log_end=framed?term_rows-3:term_rows-1;
+   int log_start=framed?3:2;
+   int log_area_rows=MAX(1,log_end-log_start);
    int total_rows = 0;
 
    // Find the total number of physical terminal rows occupied by the
@@ -486,13 +498,13 @@ void tui_redraw_screen(void) {
       skip_rows -= message_rows;
    }
 
-   int row = 2;
+   int row = log_start;
 
    // Render messages starting at 'start'.  skip_rows tells us how many
    // physical wrapped rows to skip inside the first message.
    bool first_message = true;
 
-   for (int i = 0 ; i < w->log_count && row < term_rows - 1 ; i++) {
+   for (int i = 0 ; i < w->log_count && row < log_end ; i++) {
       int idx = (start + i) % LOG_LINES;
 
       if (!w->buffer[idx]) {
@@ -503,10 +515,11 @@ void tui_redraw_screen(void) {
       char active_sgr[64] = ""; // last SGR seen, so wrapped rows re-apply it
       int rows_done = 0;
 
-      while (*p && row < term_rows - 1) {
+      while (*p && row < log_end) {
          int col = 0;
          const char *line_start = p;
          const char *last_break = p;
+         char start_sgr[64];memcpy(start_sgr,active_sgr,sizeof(start_sgr));
 
          while (*p && col < chat_cols) {
             if (*p == '\033' && *(p + 1) == '[') {
@@ -529,6 +542,7 @@ void tui_redraw_screen(void) {
 
                   memcpy(active_sgr, estart, elen);
                   active_sgr[elen] = '\0';
+                  last_break=p;
                }
 
                continue;
@@ -538,8 +552,9 @@ void tui_redraw_screen(void) {
                break;
             }
 
-            col++;
-            last_break = ++p;
+            size_t bytes;int cells=tui_cell(p,&bytes);
+            if(col&&col+cells>chat_cols)break;
+            col+=cells;p+=bytes;last_break=p;
          }
          bool explicit_newline = (*p == '\n');
 
@@ -547,12 +562,14 @@ void tui_redraw_screen(void) {
          // discard this wrapped row without printing it.
          if (first_message && skip_rows > 0) {
             skip_rows--;
+            if(explicit_newline)p++;
          } else {
-            printf("\033[%d;1H", row++);
+            printf("\033[%d;%dH", row++,framed?2:1);
+            rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
 
             // Continuation of a wrapped row: restore the active color first
-            if (rows_done > 0 && active_sgr[0]) {
-               fputs(active_sgr, stdout);
+            if (rows_done > 0 && start_sgr[0]) {
+               fputs(start_sgr, stdout);
             }
 
             if (explicit_newline) {
@@ -564,7 +581,7 @@ void tui_redraw_screen(void) {
 
             // Reset attributes so colors don't bleed into the next line
             rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
-            term_clrtoeol();
+            if(framed){while(col++<chat_cols)putchar(' ');}else term_clrtoeol();
          }
 
          rows_done++;
@@ -579,9 +596,25 @@ void tui_redraw_screen(void) {
 
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_WORKSPACE);
    // Fill remaining log space with blanks
-   while (row < term_rows - 1) {
-      printf("\033[%d;1H", row++);
-      term_clrtoeol();
+   while (row < log_end) {
+      printf("\033[%d;%dH", row++,framed?2:1);
+      if(framed){for(int j=0;j<chat_cols;j++)putchar(' ');}else term_clrtoeol();
+   }
+   if(framed){
+      rrui_tui_theme_style(RRUI_THEME_BORDER,RRUI_THEME_WORKSPACE);
+      printf("\033[2;1H┌");
+      rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
+      fputs(" Main ",stdout);
+      for(int j=6;j<chat_cols;j++)putchar(' ');
+      rrui_tui_theme_style(RRUI_THEME_BORDER,RRUI_THEME_WORKSPACE);
+      fputs("┐",stdout);
+      for(int r=3;r<term_rows-1;r++){
+         printf("\033[%d;1H│\033[%d;%dH│",r,r,main_width);
+      }
+      printf("\033[%d;1H└",term_rows-2);
+      for(int j=0;j<chat_cols;j++)fputs("─",stdout);
+      fputs("┘",stdout);
+      fputs("\033[0m",stdout);
    }
 draw_footer:
    // --- Bottom status line ---
@@ -938,7 +971,11 @@ void tui_update_input_line(void) {
    if (tui_cursor_pos > tui_input_len) {
       tui_cursor_pos = tui_input_len;
    }
-   int width = term_cols;
+   int main_width=rrui_tui_chat_width(term_rows,term_cols,win->view_draw!=NULL);
+   bool framed=!win->view_draw&&term_rows>=9&&main_width>=20;
+   int input_row=framed?term_rows-3:term_rows;
+   int input_col=framed?2:1;
+   int width=framed?main_width-2:term_cols;
    const char *prompt_title = prompt_renderer ? prompt_renderer(win) : NULL;
 
    if (!prompt_title) {
@@ -949,10 +986,12 @@ void tui_update_input_line(void) {
    // --- build visible input buffer with placeholders ---
    char buf[2048];
    int buf_pos = 0;
-   int screen_cols[tui_input_len + 1]; // map input char -> screen column
+   int screen_cols[tui_input_len + 1];
+   memset(screen_cols,0,sizeof(screen_cols)); // map input char -> screen column
    int cols = 0;
 
    for (int i = 0 ; i < tui_input_len ; i++) {
+      if(buf_pos>(int)sizeof(buf)-64)break;
       unsigned char c = input_buf[i];
 
       switch (c) {
@@ -1043,8 +1082,12 @@ void tui_update_input_line(void) {
    char *color_prompt = tui_colorize_string(prompt);
 
    // --- redraw line ---
-   printf("\033[%d;1H\033[2K", term_rows);
-   printf("%s%s", color_prompt, slice);   // prompt includes space now
+   printf("\033[%d;%dH",input_row,input_col);
+   rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_INPUT);
+   for(int j=0;j<width;j++)putchar(' ');
+   printf("\033[%d;%dH",input_row,input_col);
+   if(prompt_len<width)printf("%s%s",color_prompt,slice);
+   else fputs("> ",stdout);   // prompt includes space now
 
    // if there's nothing typed by the user, skip forward one character, to leave
    // a space
@@ -1053,7 +1096,8 @@ void tui_update_input_line(void) {
    }
    // --- move cursor ---
    int cursor_screen = cursor_screen_pos - start_col + prompt_len;
-   printf("\033[%d;%dH", term_rows, cursor_screen);
+   fputs("\033[0m",stdout);
+   printf("\033[%d;%dH",input_row,input_col-1+CLAMP(cursor_screen,1,width));
 
    free(color_prompt);
    free(colorized_line);
