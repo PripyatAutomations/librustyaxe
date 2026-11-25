@@ -5,8 +5,9 @@
 - Keep librustyui in the librustyaxe repository but independently packaged.
 - librustyaxe depends only on system libraries. librustyscript depends on
   librustyaxe, not IRC or UI. librustyui requires both Axe and Script.
-- GTK dependencies belong only to optional graphical backends. Start with TUI,
-  then GTK3; GTK4 is future work.
+- GTK dependencies belong only to optional graphical backends. Develop TUI
+  first; target GTK4 for the eventual graphical rewrite. Preserve existing GTK3
+  until the replacement is ready.
 - Bundle MIT libtermkey in librustyui/vendor/libtermkey, preserve attribution
   and CHANGES.rrui; use system libtinfo/ncurses terminfo, not curses rendering.
 - RustyScript describes creation, placement, sizing, properties and bindings;
@@ -69,7 +70,7 @@ RustyScript anonymous dictionary expressions also on Axe main.
   Future /ui list, reload, edit, reset, inspect commands.
 - [ ] Test actual TUI picker and profile editing before replacing legacy code.
 
-## Phase 3: GTK3
+## Phase 3: GTK4 graphical replacement
 
 - [ ] Optional backend consuming same form/layout state and action interface.
 - [ ] Native GTK sizing, focus, accessibility, list/tree and dialog controls.
@@ -213,3 +214,43 @@ validates required IDs/kinds and masked password fields, and packages
 /etc/rustyrig/scripts/README.md. Source installs use the same distribution
 path as Debian. User/admin files are independent overrides. New workspace
 build/package and interactive rig testing still pending; GTK unchanged.
+
+### Agreed architecture: scriptable native UI and addons (2026-11-25)
+
+- RustyScript constructs widgets and workspaces, binds events, reads/writes
+  widget properties and implements addon behavior. It does not draw widgets,
+  emit terminal escape sequences or manipulate backend-native objects.
+- RustyUI owns common widget models, sizing, layout, focus, lifetime, native
+  input dispatch, and semantic theme properties. Backend renderers interpret
+  those properties as terminal cells or native graphical widgets.
+- Preserve and converge the existing script API (ui.add, ui.set, ui.val,
+  ui.show and ui.* events, as exercised by RustyRig ascii-art.rrs) with the
+  newer dictionary-based declarative layout interface. Do not claim the
+  restricted layout VM already supports the full addon API.
+- Share widget semantics, application bindings, actions and addon preferences
+  across TUI and future GTK4. Backend capability checks permit graceful
+  fallback for graphical-only widgets. Native widgets such as IRC preview,
+  frequency entry, meters and file lists provide their own presentation.
+- Persist workspace geometry, docking, zoom, collapse, visibility and ordering
+  separately per backend; use stable script identity plus widget/panel ID
+  to namespace saved state and addon instances. Shared functional settings
+  must not be overwritten by backend-specific geometry. Restore safely when
+  display size, available widgets or backend changes.
+- Shared semantic themes with backend-specific overrides, mapped to terminal
+  truecolor/256/16-color and future GTK4 CSS. Never confuse native control
+  styling with explicit user-supplied IRC message colors. Theme lookup should
+  follow user > administrator > distribution precedence.
+- Addons participate in the same workspace, keyboard focus, docking and
+  window-management system as built-in panels without backend GUI coding.
+  Unload/reload removes owned widgets and event bindings safely. Keep host
+  permissions and privileged radio operations authoritative in RustyRig.
+- Default application UI should progressively become replaceable scripts.
+  Do not change existing GTK3 during the TUI migration.
+
+User screenshot confirms the default TUI roster/VFO tiles load and render.
+Known bug: VFO tile uses uppercase membership search against room reference
+strings rather than the room VFO bitmask; top status line shows valid frequency
+while tile says No active VFO. Next implementation: fix binding, theme model
+and terminal rendering (filled headers, Main frame, input area, focus styling,
+frequency emphasis), then expose workspace placement and persistent geometry.
+This section records design decisions, not completed features.
