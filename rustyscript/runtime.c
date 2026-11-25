@@ -73,6 +73,7 @@ typedef struct {
    variable_t *vars;
    bool returning;
    bool in_function;
+   bool property_separators;
    rrs_value_t *return_value;
    int depth;
 } eval_t;
@@ -498,7 +499,7 @@ static char advance(eval_t *e) {
 }
 static void ws(eval_t *e) {
    for(;;) {
-      while(isspace((unsigned char)ep(e))||ep(e)==';')advance(e);
+      while(isspace((unsigned char)ep(e))||(!e->property_separators&&ep(e)==';'))advance(e);
       if(ep(e)=='#'||(ep(e)=='/'&&e->text[e->pos+1]=='/')) {
          while(ep(e)&&ep(e)!='\n')advance(e);
       } else if(ep(e)=='/'&&e->text[e->pos+1]=='*') {
@@ -925,6 +926,65 @@ static bool execute_block(eval_t *e,bool run) {
    bool result=statements(e,true);
    return result;
 }
+/* Apply to a private copy, publishing only after the entire block succeeds.
+ * Expressions use ordinary lexical scope; nested blocks require dictionaries. */
+static bool property_block(eval_t *e,rrs_value_t *target,unsigned depth) {
+   if(depth>=64 || !match(e,'{')) {
+      rrs_vm_raise(e->vm,"expected property block or maximum depth exceeded");
+      return false;
+   }
+   while(!match(e,'}')) {
+      char key[192];
+      if(!ident(e,key,sizeof(key))) {
+         rrs_vm_raise(e->vm,"expected property name");return false;
+      }
+      ws(e);
+      rrs_value_t *value=NULL;
+      if(ep(e)=='.'&&e->text[e->pos+1]=='=') {
+         advance(e);advance(e);
+         const rrs_value_t *old=rrs_value_field(target,key);
+         if(!old||old->type!=RRS_DICT) {
+            rrs_vm_raise(e->vm,"nested property block requires dictionary");return false;
+         }
+         value=rrs_value_copy(old);
+         if(!value||!property_block(e,value,depth+1)) {
+            rrs_value_free(value);return false;
+         }
+      } else {
+         if(ep(e)!='='||e->text[e->pos+1]=='=') {
+            rrs_vm_raise(e->vm,"expected property assignment");return false;
+         }
+         advance(e);
+         value=expression(e);
+      }
+      bool ok=value&&!e->vm->error[0]&&rrs_dict_put(target,key,value);
+      rrs_value_free(value);
+      if(!ok)return false;
+      ws(e);
+      if(ep(e)=='}')continue;
+      if(ep(e)!=','&&ep(e)!=';') {
+         rrs_vm_raise(e->vm,"expected property separator");return false;
+      }
+      advance(e);
+   }
+   return true;
+}
+static bool update_properties(eval_t *e,const char *name) {
+   variable_t *v=find_var(e,name);
+   if(!v||v->read_only||v->cell->value->type!=RRS_DICT) {
+      rrs_vm_raise(e->vm,"property assignment requires mutable dictionary (not const)");
+      return false;
+   }
+   rrs_value_t *copy=rrs_value_copy(v->cell->value);
+   if(!copy)return false;
+   bool previous=e->property_separators;
+   e->property_separators=true;
+   bool ok=property_block(e,copy,0);
+   e->property_separators=previous;
+   if(ok&&!e->vm->error[0])ok=set_var(e,name,copy,false);
+   rrs_value_free(copy);
+   return ok;
+}
 static bool statement(eval_t *e) {
    if(keyword(e,"if")) {
       if(!match(e,'(')){rrs_vm_raise(e->vm,"expected (");return false;}
@@ -977,6 +1037,10 @@ static bool statement(eval_t *e) {
       rrs_value_t *next=rrs_integer(v->cell->value->as.integer+(sign=='+'?1:-1));
       if(!next)return false;
       bool ok=set_var(e,name,next,false);rrs_value_free(next);return ok;
+   }
+   if(!declaration&&ep(e)=='.'&&e->text[e->pos+1]=='=') {
+      advance(e);advance(e);
+      return update_properties(e,name);
    }
    if(ep(e)==':'&&e->text[e->pos+1]=='=') {
       advance(e);advance(e);
@@ -1091,7 +1155,7 @@ bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result) {
       if(ident(&probe,name,sizeof(name))) {
          ws(&probe);
          if((ep(&probe)=='='&&probe.text[probe.pos+1]!='=') ||
-            (ep(&probe)==':'&&probe.text[probe.pos+1]=='='))
+            ((ep(&probe)==':'||ep(&probe)=='.')&&probe.text[probe.pos+1]=='='))
             declaration=true;
       }
       e.pos=0;e.line=1;
