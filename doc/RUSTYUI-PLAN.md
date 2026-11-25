@@ -189,3 +189,13 @@ yet compiled/tested. Editor lacks full GTK profile options, atomic multi-field
 save and inline error label. Alt-X while modal, list refresh, compact row layout
 and terminal repaint/cursor behavior require follow-up testing. Next stabilize
 picker, then add VFO panel and audio controls. No GTK implementation changes.
+
+### Tiled workspace checkpoint
+
+Default side-column tiling reserves chat width; ordered weighted tile heights,
+minimum sizes, automatic hiding on narrow/short terminals, draggable column
+divider, directional focus. Structured full-screen tabs suppress tiles.
+Floating panels remain optional. Dynamic labels support host state readback.
+This is a side-column prototype, not yet an arbitrary recursive split tree;
+vertical divider dragging, persistence, user rearrangement and compact forms
+remain pending. Test geometry and redraw with real terminal before expanding.

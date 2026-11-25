@@ -19,6 +19,7 @@ size_t rrui_form_focus(const rrui_form_t *);
 bool rrui_form_set_focus(rrui_form_t *,size_t);
 bool rrui_form_next(rrui_form_t *,int direction);
 const char *rrui_form_value(const rrui_form_t *,const char *id);
+/* Set an entry or dynamic display label. */
 bool rrui_form_set_value(rrui_form_t *,const char *id,const char *value);
 bool rrui_form_checked(const rrui_form_t *,const char *id);
 bool rrui_form_set_checked(rrui_form_t *,const char *id,bool);

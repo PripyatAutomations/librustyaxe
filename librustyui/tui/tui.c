@@ -298,6 +298,7 @@ bool tui_init(void) {
 extern bool rrui_tui_draw(int rows,int cols);
 extern void rrui_tui_draw_panels(int rows,int cols);
 extern bool rrui_tui_modal_active(void);
+extern int rrui_tui_chat_width(int,int,bool);
 #include <librustyui/form.h>
 bool tui_fini(void) {
    tui_render_lock();
@@ -400,6 +401,7 @@ void tui_redraw_screen(void) {
 
       return;
    }
+   int chat_cols=rrui_tui_chat_width(term_rows,term_cols,w->view_draw!=NULL);
    // --- Top status line ---
    printf("\033[1;1H");
 
@@ -442,7 +444,7 @@ void tui_redraw_screen(void) {
       int idx = (oldest + i) % LOG_LINES;
 
       if (w->buffer[idx]) {
-         total_rows += tui_line_rows(w->buffer[idx], term_cols);
+         total_rows += tui_line_rows(w->buffer[idx], chat_cols);
       }
    }
 
@@ -472,7 +474,7 @@ void tui_redraw_screen(void) {
          continue;
       }
 
-      int message_rows = tui_line_rows(w->buffer[idx], term_cols);
+      int message_rows = tui_line_rows(w->buffer[idx], chat_cols);
 
       if (skip_rows < message_rows) {
          start = idx;
@@ -504,7 +506,7 @@ void tui_redraw_screen(void) {
          const char *line_start = p;
          const char *last_break = p;
 
-         while (*p && col < term_cols) {
+         while (*p && col < chat_cols) {
             if (*p == '\033' && *(p + 1) == '[') {
                const char *estart = p;
 
@@ -591,6 +593,7 @@ draw_footer:
 
 void tui_redraw_topline(void) {
    tui_render_lock();
+   if(rrui_tui_modal_active()){tui_render_unlock();return;}
 
    if (!tui_is_enabled) {
       tui_render_unlock();
@@ -622,6 +625,7 @@ void tui_redraw_topline(void) {
 
 void tui_redraw_statusline(void) {
    tui_render_lock();
+   if(rrui_tui_modal_active()){tui_render_unlock();return;}
 
    if (!tui_is_enabled) {
       tui_render_unlock();
@@ -644,6 +648,7 @@ void tui_redraw_statusline(void) {
 
 void tui_redraw_clock(void) {
    tui_render_lock();
+   if(rrui_tui_modal_active()){tui_render_unlock();return;}
 
    if (!tui_is_enabled || (tui_active_window() && tui_active_window()->view_full_height)) {
       tui_render_unlock();
@@ -897,6 +902,7 @@ static void ansi_copy_columns(const char *text, int columns, char *out, size_t o
 
 void tui_update_input_line(void) {
    tui_render_lock();
+   if(rrui_tui_modal_active()){tui_render_unlock();return;}
 
    if (!tui_is_enabled) {
       tui_render_unlock();

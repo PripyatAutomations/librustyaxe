@@ -92,7 +92,7 @@ static bool valid_text(const char *s) {
 }
 bool rrui_form_set_value(rrui_form_t *f,const char *id,const char *v) {
    field_t *x=find(f,id);
-   if(!x||x->w.kind!=RRUI_ENTRY||!valid_text(v)||g_utf8_strlen(v,-1)>(glong)x->w.max_length)return false;
+   if(!x||(x->w.kind!=RRUI_ENTRY&&x->w.kind!=RRUI_LABEL)||!valid_text(v)||g_utf8_strlen(v,-1)>(glong)x->w.max_length)return false;
    char *copy=g_strdup(v);g_free(x->value);x->value=copy;x->cursor=strlen(copy);return true;
 }
 bool rrui_form_checked(const rrui_form_t *f,const char *id){field_t *x=find(f,id);return x&&x->checked;}

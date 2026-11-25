@@ -15,3 +15,28 @@ size_t rrui_workspace_nearest(const rrui_rect_t *r,size_t n,size_t from,int dx,i
    }
    return best;
 }
+
+int rrui_workspace_tiles(int rows,int cols,int width,const int *minimum,
+                         const int *weight,size_t n,rrui_rect_t *out) {
+   if(!out||!minimum||!weight||n>32)return cols;
+   for(size_t i=0;i<n;i++)out[i]=(rrui_rect_t){0};
+   if(cols<64||rows<12||!n)return cols;
+   if(width<24)width=24;
+   if(width>cols-40)width=cols-40;
+   int available=rows-3,used=0,total=0;size_t visible=0;
+   for(;visible<n;visible++){
+      int m=minimum[visible]<6?6:minimum[visible];
+      if(m>available-used)break;
+      used+=m;total+=weight[visible]>0&&weight[visible]<=1000?weight[visible]:1;
+   }
+   if(!visible)return cols;
+   int y=2,extra=available-used;
+   for(size_t i=0;i<visible;i++){
+      int w=weight[i]>0&&weight[i]<=1000?weight[i]:1;
+      int add=(int)((long long)extra*w/total);
+      int height=(minimum[i]<6?6:minimum[i])+add;
+      out[i]=(rrui_rect_t){cols-width+1,y,width,height};
+      y+=height;extra-=add;total-=w;
+   }
+   return cols-width;
+}

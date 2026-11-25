@@ -11,9 +11,12 @@ static rrui_form_t *active;
 static size_t scroll;
 typedef struct {size_t field,item;int row;} hit_t;
 static GArray *hits;
-typedef struct {rrui_form_t *form;rrui_rect_t requested,rect;size_t scroll;GArray *hits;} panel_t;
+typedef struct {rrui_form_t *form;rrui_rect_t requested,rect;size_t scroll;GArray *hits;bool tiled;int minimum,weight;unsigned order;} panel_t;
 static panel_t panels[32];
 static size_t npanels;
+static int tile_width=34,chat_width;
+static unsigned tile_order;
+static bool divider_drag;
 static rrui_form_t *focused;
 static int ox=1,oy=0;
 static bool overlay;
@@ -27,6 +30,25 @@ static size_t panel_index(rrui_form_t *f) {for(size_t i=0;i<npanels;i++)if(panel
 static void raise_panel(size_t i) {if(i>=npanels)return;panel_t p=panels[i];memmove(panels+i,panels+i+1,(npanels-i-1)*sizeof(p));panels[npanels-1]=p;focused=p.form;}
 bool rrui_tui_panel_geometry(rrui_form_t *f,rrui_rect_t r) {size_t i=panel_index(f);if(i==SIZE_MAX||r.width<12||r.height<4)return false;panels[i].requested=r;tui_redraw_request();return true;}
 bool rrui_tui_panel_open(rrui_form_t *f,rrui_rect_t r) {if(!f||!tui_is_enabled||active==f||panel_index(f)!=SIZE_MAX||npanels>=32||r.width<12||r.height<4)return false;panels[npanels++]=(panel_t){.form=f,.requested=r,.rect=r};tui_redraw_request();return true;}
+bool rrui_tui_tile_open(rrui_form_t *f,int minimum,int weight) {
+   tui_render_lock();
+   bool ok=rrui_tui_panel_open(f,(rrui_rect_t){1,2,24,6});
+   if(ok){panel_t *p=&panels[npanels-1];p->tiled=true;p->minimum=minimum;p->weight=weight;p->order=++tile_order;}
+   tui_render_unlock();return ok;
+}
+void rrui_tui_tile_width(int width){tile_width=MAX(24,width);tui_redraw_request();}
+bool rrui_tui_panel_focused(const rrui_form_t *f){return focused==f&&!active;}
+int rrui_tui_chat_width(int rows,int cols,bool structured){
+   size_t ids[32],n=0;int minimum[32],weight[32];rrui_rect_t rects[32];
+   workspace_rows=rows;workspace_cols=cols;
+   for(size_t i=0;i<npanels;i++)if(panels[i].tiled){
+      size_t j=n++;while(j&&panels[ids[j-1]].order>panels[i].order){ids[j]=ids[j-1];j--;}ids[j]=i;
+   }
+   for(size_t i=0;i<n;i++){minimum[i]=panels[ids[i]].minimum;weight[i]=panels[ids[i]].weight;}
+   chat_width=rrui_workspace_tiles(structured?0:rows,cols,tile_width,minimum,weight,n,rects);
+   for(size_t i=0;i<n;i++){panel_t *p=&panels[ids[i]];p->rect=rects[i];if(!p->rect.width&&focused==p->form)focused=NULL;}
+   return chat_width;
+}
 void rrui_tui_focus_chat(void){focused=NULL;tui_redraw_request();}
 bool rrui_tui_modal_active(void){return active!=NULL;}
 
@@ -76,7 +98,7 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
       int used=0;
       for(size_t i=scroll;i<focus&&i<count;i++) {
          rrui_field_t x;rrui_form_field(form,i,&x);
-         if(!x.visible||x.widget->kind==RRUI_ROW||x.widget->kind==RRUI_COLUMN)continue;
+         if(!x.visible||x.widget->kind==RRUI_ROW||x.widget->kind==RRUI_COLUMN||(overlay&&i==0))continue;
          used+=x.widget->kind==RRUI_ENTRY?2:1;
          if(x.widget->kind==RRUI_LIST)used+=MIN(x.count,(size_t)MAX(1,MIN((int)x.widget->height_rows,rows/2)));
       }
@@ -87,7 +109,7 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
    for(size_t i=scroll;i<count&&row<rows;i++) {
       rrui_field_t x;rrui_form_field(form,i,&x);
       const rrui_widget_t *w=x.widget;
-      if(!x.visible||w->kind==RRUI_ROW||w->kind==RRUI_COLUMN)continue;
+      if(!x.visible||w->kind==RRUI_ROW||w->kind==RRUI_COLUMN||(overlay&&i==0))continue;
       bool selected=has_focus&&i==focus;
       if(w->kind==RRUI_LIST) {
          line(row++,cols,selected,"  ",w->label);
@@ -121,6 +143,7 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
          }
       } else if(w->kind==RRUI_CHECKBOX)line(row++,cols,selected,x.checked?" [x] ":" [ ] ",w->label);
       else if(w->kind==RRUI_BUTTON)line(row++,cols,selected," [ ] ",w->label);
+      else if(w->kind==RRUI_LABEL&&*x.value)line(row++,cols,false,w->label,x.value);
       else line(row++,cols,false,"  ",w->label);
    }
    if(!overlay)line(rows,cols,false,"","Tab / Shift-Tab  Arrows  Enter  Esc");
@@ -135,9 +158,11 @@ bool rrui_tui_draw(int rows,int cols) {
 void rrui_tui_draw_panels(int rows,int cols) {
    workspace_rows=rows;workspace_cols=cols;
    if(active||rows<8||cols<14)return;
+   fputs("\033[s",stdout);
    overlay=true;
    for(size_t i=0;i<npanels;i++) {
-      panel_t *p=&panels[i];rrui_rect_t r=p->requested;
+      panel_t *p=&panels[i];rrui_rect_t r=p->tiled?p->rect:p->requested;
+      if(p->tiled&&!r.width)continue;
       r.width=MIN(r.width,cols-1);r.height=MIN(r.height,rows-3);
       r.x=CLAMP(r.x,1,cols-r.width+1);r.y=CLAMP(r.y,2,rows-r.height);
       p->rect=r;
@@ -163,14 +188,16 @@ void rrui_tui_draw_panels(int rows,int cols) {
       }
       printf("\033[%d;%dH└",r.y+r.height-1,r.x);
       for(int j=0;j<r.width-5;j++)fputs("─",stdout);
-      fputs("[+]┘",stdout);
+      fputs(p->tiled?"───┘":"[+]┘",stdout);
       rrui_field_t root={0};rrui_form_field(p->form,0,&root);
       printf("\033[%d;%dH ",r.y,r.x+2);
       clipped(root.widget?root.widget->label:"Panel",r.width-5);
       fputs(" \033[0m",stdout);
    }
    overlay=false;ox=1;oy=0;
+   fputs("\033[u",stdout);
    if(focused)fputs("\033[?25l",stdout);
+   else fputs("\033[?25h",stdout);
    fflush(stdout);
 }
 static bool directional(const TermKeyKey *k,int *dx,int *dy,bool *chat) {
@@ -194,7 +221,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
          else {
             rrui_rect_t rects[33];size_t from=panel_index(focused);
             for(size_t j=0;j<npanels;j++)rects[j]=panels[j].rect;
-            rects[npanels]=(rrui_rect_t){1,2,MAX(1,workspace_cols/2),MAX(1,workspace_rows-3)};
+            rects[npanels]=(rrui_rect_t){1,2,MAX(1,chat_width?chat_width:workspace_cols/2),MAX(1,workspace_rows-3)};
             if(from==SIZE_MAX)from=npanels;
             size_t next=rrui_workspace_nearest(rects,npanels+1,from,dx,dy);
             if(next==npanels)rrui_tui_focus_chat();else if(next!=SIZE_MAX)raise_panel(next);
@@ -204,6 +231,11 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
       if(key->type==TERMKEY_TYPE_MOUSE) {
          TermKeyMouseEvent ev;int b,r,c;
          if(termkey_interpret_mouse(tk,key,&ev,&b,&r,&c)!=TERMKEY_RES_KEY)return true;
+         if(divider_drag){
+            if(ev==TERMKEY_MOUSE_RELEASE)divider_drag=false;
+            else if(ev==TERMKEY_MOUSE_DRAG)rrui_tui_tile_width(CLAMP(workspace_cols-c+1,24,MAX(24,workspace_cols-40)));
+            return true;
+         }
          if(dragging) {
             size_t j=panel_index(dragging);
             if(ev==TERMKEY_MOUSE_RELEASE){dragging=NULL;return true;}
@@ -220,10 +252,11 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
          while(j) {j--;rrui_rect_t a=panels[j].rect;
             if(c<a.x||c>=a.x+a.width||r<a.y||r>=a.y+a.height)continue;
             raise_panel(j);panel_t *p=&panels[npanels-1];
-            if(r==a.y||(r==a.y+a.height-1&&c>=a.x+a.width-4)){
+            if(p->tiled&&c==a.x){divider_drag=true;tui_redraw_request();return true;}
+            if(!p->tiled&&(r==a.y||(r==a.y+a.height-1&&c>=a.x+a.width-4))){
                dragging=p->form;resizing=r!=a.y;drag_x=c-a.x;drag_y=r-a.y;tui_redraw_request();return true;
             }
-            if(p->hits)for(guint k=0;k<p->hits->len;k++){
+            if(c>a.x&&c<a.x+a.width-1&&p->hits)for(guint k=0;k<p->hits->len;k++){
                hit_t h=g_array_index(p->hits,hit_t,k);
                if(h.row+a.y!=r)continue;
                if(rrui_form_set_focus(p->form,h.field)){
