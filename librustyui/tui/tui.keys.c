@@ -20,10 +20,8 @@
 #include <termios.h>
 #include <unistd.h>
 #include <librustyaxe/core.h>
-#ifndef LIBRUSTYAXE_STANDALONE
-#include <librrprotocol/rrprotocol.h>
-#endif
-#include <librustyaxe/termkey.h>
+#include <librustyui/tui.h>
+#include <librustyui/termkey.h>
 #include <glib.h>
 #include <glib-unix.h>
 #include <fcntl.h>
@@ -208,7 +206,6 @@ void tui_raw_mode(bool enabled) {
    }
 }
 
-extern bool irc_input_cb(const char *input);
 void handle_enter_key(tui_window_t *win, int cursor) {
    //   Log(LOG_CRIT, "tui.keys", "ENTER: %s", input_buf);
    if (!win) {

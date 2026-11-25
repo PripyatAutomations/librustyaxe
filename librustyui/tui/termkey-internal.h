@@ -14,7 +14,7 @@
 #undef HAVE_TERMIOS
 #endif
 
-#include "termkey.h"
+#include <librustyui/termkey.h>
 
 #include <stdint.h>
 #ifdef HAVE_TERMIOS

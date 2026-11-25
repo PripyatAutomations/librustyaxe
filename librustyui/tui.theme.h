@@ -8,6 +8,9 @@
 #if     !defined(__librustyaxe_tui_theme_h)
 #define __librustyaxe_tui_theme_h
 
+#include <stdbool.h>
+#include <librustyaxe/dict.h>
+
 typedef struct {
    const char *tag;
    const char *code;

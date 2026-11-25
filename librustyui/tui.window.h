@@ -8,6 +8,9 @@
 #if     !defined(__librustyaxe_tui_window_h)
 #define __librustyaxe_tui_window_h
 
+#include <stdbool.h>
+#include <librustyui/tui.theme.h>
+#define LOG_LINES 500
 #define TUI_INPUTLEN 512
 #ifndef TUI_HISTORY_LINES
 #define TUI_HISTORY_LINES 50
@@ -25,7 +28,7 @@ typedef struct tui_window {
    int history_count;
    int history_index;
    char status_line[128];
-   rrconn_t *cptr;
+   void *cptr; /* Borrowed application context; never interpreted by the TUI. */
    /* Optional structured view. Coordinates are 1-based terminal cells. Draw only rows 2..(rows-2); the shell owns the other rows. Returning true from an event
     * handler consumes the event. */
    void (*view_draw)(struct tui_window *win, int rows, int cols, void *data);

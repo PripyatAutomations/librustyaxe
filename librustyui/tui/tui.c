@@ -21,10 +21,8 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <librustyaxe/core.h>
-#include <librustyaxe/tui.internal.h>
-#ifndef LIBRUSTYAXE_STANDALONE
-#include <librrprotocol/rrprotocol.h>
-#endif
+#include <librustyui/tui.h>
+#include "tui.internal.h"
 
 extern void tui_keys_init(void); // tui.keys.c
 extern void tui_keys_fini(void); // tui.keys.c

@@ -19,10 +19,8 @@
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <librustyaxe/core.h>
-#include <librustyaxe/tui.internal.h>
-#ifndef LIBRUSTYAXE_STANDALONE
-#include <librrprotocol/rrprotocol.h>
-#endif
+#include <librustyui/tui.h>
+#include "tui.internal.h"
 
 bool cfg_tui_colors = true;
 

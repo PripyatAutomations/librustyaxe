@@ -18,10 +18,7 @@
 #include <sys/ioctl.h>
 #include <stdbool.h>
 #include <librustyaxe/core.h>
-#include <librustyaxe/tui.h>
-#ifndef LIBRUSTYAXE_STANDALONE
-#include <librrprotocol/rrprotocol.h>
-#endif
+#include <librustyui/tui.h>
 
 // Shared input line state, owned by tui.keys.c
 extern char input_buf[TUI_INPUTLEN];

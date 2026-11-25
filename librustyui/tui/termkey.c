@@ -15,11 +15,9 @@
 
 #include <stdio.h>
 #include <librustyaxe/core.h>
-#ifndef LIBRUSTYAXE_STANDALONE
-#include <librrprotocol/rrprotocol.h>
-#endif
-#include <librustyaxe/termkey.h>
-#include <librustyaxe/termkey-internal.h>
+#include <librustyui/tui.h>
+#include <librustyui/termkey.h>
+#include "termkey-internal.h"
 
 #ifdef _MSC_VER
 #define           strcaseeq(a, b) (_stricmp(a, b) == 0)

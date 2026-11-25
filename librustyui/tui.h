@@ -8,15 +8,17 @@
 #if     !defined(__librustyaxe_tui_h)
 #define __librustyaxe_tui_h
 
+#include <stdbool.h>
+#include <stdarg.h>
+
 #define TUI_STRING_LEN 1024
-#define LOG_LINES 500
 #define STATUS_LINES 1
 #define STATUS_LEN 256
 #define TUI_MAX_WINDOWS 32
 #define HISTORY_LINES 50
 
-#include <librustyaxe/tui.theme.h>
-#include <librustyaxe/tui.window.h>
+#include <librustyui/tui.theme.h>
+#include <librustyui/tui.window.h>
 
 extern bool tui_is_enabled;
 
@@ -83,6 +85,6 @@ extern const char *history_next(void);
 extern void history_add(const char *line);
 extern void tui_set_shared_input_history(bool shared);
 
-#include <librustyaxe/tui.completion.h>
+#include <librustyui/tui.completion.h>
 
 #endif // !defined(__librustyaxe_tui_h)

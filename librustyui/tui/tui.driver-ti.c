@@ -6,12 +6,10 @@
 // Licensed under MIT license, if built without mongoose or GPL if built with.
 #define _XOPEN_SOURCE 600
 #include <librustyaxe/core.h>
-#ifndef LIBRUSTYAXE_STANDALONE
-#include <librrprotocol/rrprotocol.h>
-#endif
+#include <librustyui/tui.h>
 
-#include <librustyaxe/termkey.h>
-#include <librustyaxe/termkey-internal.h>
+#include <librustyui/termkey.h>
+#include "termkey-internal.h"
 
 #ifdef HAVE_UNIBILIUM
 #include <unibilium.h>

@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <librustyaxe/tui.completion.h>
+#include <librustyui/tui.completion.h>
 static void describe(const char *line, const char *word, char *out, size_t capacity) {
    assert(!strcmp(line, "/media subscribe "));
    snprintf(out, capacity, "%s — Main receiver [RX opus]", word);

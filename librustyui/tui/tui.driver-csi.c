@@ -7,11 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <librustyaxe/core.h>
-#ifndef LIBRUSTYAXE_STANDALONE
-#include <librrprotocol/rrprotocol.h>
-#endif
-#include <librustyaxe/termkey.h>
-#include <librustyaxe/termkey-internal.h>
+#include <librustyui/tui.h>
+#include <librustyui/termkey.h>
+#include "termkey-internal.h"
 
 
 // There are 64 codes 0x40 - 0x7F

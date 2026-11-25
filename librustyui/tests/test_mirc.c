@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <librustyaxe/core.h>
+#include <librustyui/tui.h>
 int main(void) {
    cfg_tui_colors = true;
    char *text = tui_colorize_string("\00304123,45\017");
