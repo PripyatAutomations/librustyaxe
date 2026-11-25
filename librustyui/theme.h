@@ -8,7 +8,7 @@ typedef enum {
    RRUI_THEME_BORDER, RRUI_THEME_FOCUS, RRUI_THEME_TEXT,
    RRUI_THEME_ACCENT, RRUI_THEME_INPUT, RRUI_THEME_SELECTION,
    RRUI_THEME_SUCCESS, RRUI_THEME_WARNING, RRUI_THEME_TX,
-   RRUI_THEME_COUNT
+   RRUI_THEME_ACTIVE_HEADER, RRUI_THEME_COUNT
 } rrui_theme_role_t;
 typedef struct { uint32_t rgb[RRUI_THEME_COUNT]; } rrui_theme_t;
 void rrui_theme_default(rrui_theme_t *);

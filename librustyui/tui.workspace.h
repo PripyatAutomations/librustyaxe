@@ -19,6 +19,11 @@ bool rrui_workspace_split(const rrui_rect_t *,const int *minimum,size_t n,
                           size_t upper,int boundary,int *weights);
 bool rrui_tui_tile_open(rrui_form_t *,int minimum_height,int weight);
 void rrui_tui_tile_width(int width);
+int rrui_tui_tile_width_get(void);
+int rrui_tui_tile_weight_get(const rrui_form_t *);
+void rrui_tui_tile_weight_set(rrui_form_t *,int);
+void rrui_tui_tile_visible(rrui_form_t *,bool);
+bool rrui_tui_main_focused(void);
 int rrui_tui_chat_width(int rows,int cols,bool structured);
 bool rrui_tui_panel_focused(const rrui_form_t *);
 #endif

@@ -307,6 +307,7 @@ extern bool rrui_tui_draw(int rows,int cols);
 extern void rrui_tui_draw_panels(int rows,int cols);
 extern bool rrui_tui_modal_active(void);
 extern int rrui_tui_chat_width(int,int,bool);
+extern bool rrui_tui_main_focused(void);
 #include <librustyui/form.h>
 bool tui_fini(void) {
    tui_render_lock();
@@ -603,7 +604,7 @@ void tui_redraw_screen(void) {
    if(framed){
       rrui_tui_theme_style(RRUI_THEME_BORDER,RRUI_THEME_WORKSPACE);
       printf("\033[2;1H┌");
-      rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
+      rrui_tui_theme_style(rrui_tui_main_focused()?RRUI_THEME_WORKSPACE:RRUI_THEME_TEXT,rrui_tui_main_focused()?RRUI_THEME_ACTIVE_HEADER:RRUI_THEME_HEADER);
       fputs(" Main ",stdout);
       for(int j=6;j<chat_cols;j++)putchar(' ');
       rrui_tui_theme_style(RRUI_THEME_BORDER,RRUI_THEME_WORKSPACE);

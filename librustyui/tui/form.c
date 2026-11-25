@@ -12,7 +12,7 @@ static rrui_form_t *active;
 static size_t scroll;
 typedef struct {size_t field,item;int row;} hit_t;
 static GArray *hits;
-typedef struct {rrui_form_t *form;rrui_rect_t requested,rect;size_t scroll;GArray *hits;bool tiled;int minimum,weight;unsigned order;} panel_t;
+typedef struct {rrui_form_t *form;rrui_rect_t requested,rect;size_t scroll;GArray *hits;bool tiled,hidden;int minimum,weight;unsigned order;} panel_t;
 static panel_t panels[32];
 static size_t npanels;
 static int tile_width=34,chat_width;
@@ -40,12 +40,22 @@ bool rrui_tui_tile_open(rrui_form_t *f,int minimum,int weight) {
    if(ok){panel_t *p=&panels[npanels-1];p->tiled=true;p->minimum=minimum;p->weight=weight;p->order=++tile_order;}
    tui_render_unlock();return ok;
 }
-void rrui_tui_tile_width(int width){tile_width=MAX(24,width);tui_redraw_request();}
+void rrui_tui_tile_width(int width){tile_width=CLAMP(width,24,1000);tui_redraw_request();}
+int rrui_tui_tile_width_get(void){return tile_width;}
+int rrui_tui_tile_weight_get(const rrui_form_t *f){for(size_t i=0;i<npanels;i++)if(panels[i].form==f)return panels[i].weight;return 0;}
+void rrui_tui_tile_weight_set(rrui_form_t *f,int w){size_t i=panel_index(f);if(i!=SIZE_MAX&&panels[i].tiled){panels[i].weight=CLAMP(w,1,1000);tui_redraw_request();}}
+void rrui_tui_tile_visible(rrui_form_t *f,bool visible){
+   size_t i=panel_index(f);if(i==SIZE_MAX||!panels[i].tiled||panels[i].hidden==!visible)return;
+   panels[i].hidden=!visible;
+   if(!visible){panels[i].rect=(rrui_rect_t){0};if(focused==f)focused=NULL;if(split_upper==f||split_lower==f)split_upper=split_lower=NULL;}
+   tui_redraw_request();
+}
+bool rrui_tui_main_focused(void){return !focused&&!active;}
 bool rrui_tui_panel_focused(const rrui_form_t *f){return focused==f&&!active;}
 int rrui_tui_chat_width(int rows,int cols,bool structured){
    size_t ids[32],n=0;int minimum[32],weight[32];rrui_rect_t rects[32];
    workspace_rows=rows;workspace_cols=cols;
-   for(size_t i=0;i<npanels;i++)if(panels[i].tiled){
+   for(size_t i=0;i<npanels;i++)if(panels[i].tiled&&!panels[i].hidden){
       size_t j=n++;while(j&&panels[ids[j-1]].order>panels[i].order){ids[j]=ids[j-1];j--;}ids[j]=i;
    }
    for(size_t i=0;i<n;i++){minimum[i]=panels[ids[i]].minimum;weight[i]=panels[ids[i]].weight;}
@@ -171,7 +181,7 @@ void rrui_tui_draw_panels(int rows,int cols) {
    overlay=true;
    for(size_t i=0;i<npanels;i++) {
       panel_t *p=&panels[i];rrui_rect_t r=p->tiled?p->rect:p->requested;
-      if(p->tiled&&!r.width)continue;
+      if(p->hidden||(p->tiled&&!r.width))continue;
       r.width=MIN(r.width,cols-1);r.height=MIN(r.height,rows-3);
       r.x=CLAMP(r.x,1,cols-r.width+1);r.y=CLAMP(r.y,2,rows-r.height);
       p->rect=r;
@@ -200,7 +210,7 @@ void rrui_tui_draw_panels(int rows,int cols) {
       fputs(p->tiled?"───┘":"[+]┘",stdout);
       rrui_field_t root={0};rrui_form_field(p->form,0,&root);
       printf("\033[%d;%dH",r.y,r.x+1);
-      rrui_tui_theme_style(selected?RRUI_THEME_FOCUS:RRUI_THEME_TEXT,RRUI_THEME_HEADER);
+      rrui_tui_theme_style(selected?RRUI_THEME_WORKSPACE:RRUI_THEME_TEXT,selected?RRUI_THEME_ACTIVE_HEADER:RRUI_THEME_HEADER);
       putchar(' ');int used=clipped(root.widget?root.widget->label:"Panel",r.width-4);
       for(int k=used+1;k<r.width-2;k++)putchar(' ');
       fputs("\033[0m",stdout);

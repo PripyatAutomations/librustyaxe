@@ -5,11 +5,11 @@
 static const char *names[RRUI_THEME_COUNT]={
    "workspace.background","panel.background","panel.header","panel.border",
    "panel.focus","text.normal","text.accent","input.background","selection.background",
-   "status.success","status.warning","status.tx"
+   "status.success","status.warning","status.tx","panel.header.active"
 };
 void rrui_theme_default(rrui_theme_t *t) {
    if(t)*t=(rrui_theme_t){{0x111920,0x15252d,0x26434f,0x527b89,
-      0x91d5da,0xc5d6db,0x91d5da,0x20343e,0x385666,0x93ce9b,0xe4c477,0xf07878}};
+      0x91d5da,0xc5d6db,0x91d5da,0x20343e,0x385666,0x93ce9b,0xe4c477,0xf07878,0x91d5da}};
 }
 const char *rrui_theme_name(rrui_theme_role_t r){return (unsigned)r<RRUI_THEME_COUNT?names[r]:NULL;}
 bool rrui_theme_load(rrui_theme_t *t,const char *path) {
