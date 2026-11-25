@@ -203,3 +203,13 @@ remain pending. Test geometry and redraw with real terminal before expanding.
 Room workspace default: call the primary pane Main (not Chat); right column
 user roster above VFO, weighted 2:1 subject to minimum usable heights.
 Roster list fills available tile rows. Keep GTK unchanged.
+
+### Default room workspace integration
+
+RustyRig main 5b592f6 installs userlist.rrs and vfo.rrs and opens the 2:1
+roster/VFO side column automatically. Main retains the original scrollback
+and input. 0d747d4 consolidates layout lookup, logs actual selected paths,
+validates required IDs/kinds and masked password fields, and packages
+/etc/rustyrig/scripts/README.md. Source installs use the same distribution
+path as Debian. User/admin files are independent overrides. New workspace
+build/package and interactive rig testing still pending; GTK unchanged.
