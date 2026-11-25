@@ -41,14 +41,6 @@ else ifeq ($(PLATFORM),posix)
 librustyaxe_objs += transport.wss.o
 endif
 librustyaxe_objs += transport.mongoose.o
-librustyaxe_objs += termkey.o
-librustyaxe_objs += tui.o
-librustyaxe_objs += tui.driver-csi.o
-librustyaxe_objs += tui.driver-ti.o
-librustyaxe_objs += tui.keys.o
-librustyaxe_objs += tui.theme.o
-librustyaxe_objs += tui.window.o
-librustyaxe_objs += tui.completion.o
 librustyaxe_objs += util.file.o
 librustyaxe_objs += util.math.o
 librustyaxe_objs += util.mem.o

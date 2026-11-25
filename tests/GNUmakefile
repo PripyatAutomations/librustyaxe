@@ -6,7 +6,7 @@ INCLUDES = -I$(REPO_ROOT)/build/generated -I$(REPO_ROOT)/build/include $(shell p
 # Link against the independently built RustyAxe shared library.
 LIBS = -L$(REPO_ROOT)/build -lrustyaxe -Wl,-rpath,$(REPO_ROOT)/build
 
-TEST_SOURCES = test_mirc.c test_json.c test_dict.c test_list.c test_maidenhead.c test_ringbuffer.c test_util_time.c test_config_save.c test_config_includes.c test_event_tokens.c test_event_messages.c test_serial_config.c test_completion_labels.c test_runtime_globals.c test_transport_wss.c
+TEST_SOURCES = test_json.c test_dict.c test_list.c test_maidenhead.c test_ringbuffer.c test_util_time.c test_config_save.c test_config_includes.c test_event_tokens.c test_event_messages.c test_serial_config.c test_runtime_globals.c test_transport_wss.c
 
 # Keep test artifacts out of the source directory. The top-level build already
 # owns generated files, so running a test suite must not leave .o files beside

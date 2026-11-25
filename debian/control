@@ -2,7 +2,7 @@ Source: librustyaxe
 Section: libs
 Priority: optional
 Maintainer: Pripyat Automations <dangerousdevices@istabpeople.com>
-Build-Depends: debhelper-compat (= 13), pkg-config, libglib2.0-dev, libncurses-dev, libbsd-dev, libcrypt-dev, libssl-dev, libwslay-dev
+Build-Depends: debhelper-compat (= 13), pkg-config, libglib2.0-dev, libncurses-dev <!pkg.librustyaxe.noui>, libbsd-dev, libcrypt-dev, libssl-dev, libwslay-dev
 Standards-Version: 4.7.2
 Rules-Requires-Root: no
 Homepage: https://github.com/PripyatAutomations/librustyaxe
@@ -59,3 +59,21 @@ Multi-Arch: same
 Depends: librustyscript1 (= ${binary:Version}), librustyaxe-dev, librustyirc-dev, ${misc:Depends}
 Description: Development headers for librustyscript
  Public interpreter and host integration headers and pkg-config metadata.
+
+Package: librustyui1
+Architecture: any
+Multi-Arch: same
+Build-Profiles: <!pkg.librustyaxe.noui>
+Depends: librustyaxe1 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: RustyUI reusable terminal presentation library
+ Terminal windows, input handling, completion and theme rendering.
+ No GTK runtime dependency.
+
+Package: librustyui-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Build-Profiles: <!pkg.librustyaxe.noui>
+Depends: librustyui1 (= ${binary:Version}), librustyaxe-dev, ${misc:Depends}
+Description: Development files for RustyUI
+ Public terminal UI headers, linker symlink and pkg-config metadata.

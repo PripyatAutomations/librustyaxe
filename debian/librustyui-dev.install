@@ -1,0 +1,3 @@
+usr/include/librustyui/*.h
+usr/lib/*/librustyui.so
+usr/lib/*/pkgconfig/librustyui.pc

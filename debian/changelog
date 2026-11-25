@@ -4,8 +4,10 @@ librustyaxe (0.2.0-1) unstable; urgency=medium
   * Rebuild IRC and scripting libraries against the new ABI.
   * Add RustyScript dictionary property-block assignment (.=), with mixed
     separators, nested updates, const protection and rollback.
+  * Extract the terminal UI into independently built librustyui and move
+    its terminal dependencies and tests out of the core library.
 
- -- Pripyat Automations <dangerousdevices@istabpeople.com>  Mon, 23 Nov 2026 23:30:00 -0500
+ -- Pripyat Automations <dangerousdevices@istabpeople.com>  Tue, 24 Nov 2026 22:10:00 -0500
 
 librustyaxe (0.1.1-1) unstable; urgency=medium
 

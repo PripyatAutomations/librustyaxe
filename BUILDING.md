@@ -8,7 +8,7 @@ Install prerequisites:
 ```sh
 sudo apt install build-essential pkg-config libglib2.0-dev libbsd-dev libncurses-dev
 make -j4
-make check
+make test
 make DESTDIR=/tmp/axe-root install
 ```
 
@@ -51,7 +51,18 @@ HTTP 307 redirects are bounded and same-origin by default.
 
 Debian build prerequisites additionally include `libssl-dev` and
 `libwslay-dev`; the pkg-config module is called `libwslay`. The
-`make check` suite includes a local test of WebSocket upgrade followed by
+`make test` suite includes a local test of WebSocket upgrade followed by
 a binary message in the same TCP packet.
 
 The Mongoose adapter remains optional and separate from the native client.
+
+## RustyUI
+
+The terminal engine is now built as `librustyui.so.1` with public headers
+under `<librustyui/>`. Use `pkg-config --cflags --libs librustyui` for
+terminal applications. No GTK dependency is introduced. Build core, IRC and
+RustyScript without the UI using `make WITH_UI=false`; use the same option
+for install and test. Debian's `pkg.librustyaxe.noui` build profile omits
+the UI packages and terminal development dependency.
+
+GTK backends and the declarative widget model are later work.

@@ -43,8 +43,12 @@ ifeq ($(WITH_MONGOOSE),true)
 OBJECTS += $(BUILD_DIR)/objects/mongoose.o
 endif
 PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h build_config.h,$(notdir $(wildcard *.h)))
-TERM_LIB := $(shell $(PKG_CONFIG) --exists tinfo && echo tinfo || echo ncurses)
-DEPS := glib-2.0 gio-2.0 $(TERM_LIB) openssl
+DEPS := glib-2.0 gio-2.0 openssl
+WITH_UI ?= true
+ifeq ($(filter true false,$(WITH_UI)),)
+$(error WITH_UI must be true or false)
+endif
+UI_MAKE = $(MAKE) -C librustyui BUILD_DIR="$(abspath $(BUILD_DIR))/ui" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
 ifeq ($(filter clean distclean uninstall src-deb source-deb,$(MAKECMDGOALS)),)
 ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error Missing development dependencies: $(DEPS))
@@ -61,6 +65,12 @@ PC_FILE := $(BUILD_DIR)/librustyaxe.pc
 
 .PHONY: all clean distclean test tests install uninstall irc-build script-build deb src-deb source-deb
 all: $(BUILD_DIR)/generated/librustyaxe/build_config.h $(REAL_LIB) $(PC_FILE) irc-build script-build
+ifeq ($(WITH_UI),true)
+all: ui-build
+endif
+.PHONY: ui-build
+ui-build: $(REAL_LIB)
+	$(UI_MAKE) all
 
 irc-build: $(REAL_LIB)
 	$(MAKE) -C librustyirc all BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
@@ -108,6 +118,9 @@ $(PC_FILE): GNUmakefile
 	    'Libs: -L$${libdir} -lrustyaxe' 'Cflags: -I$${includedir}' 'Requires.private: glib-2.0 gio-2.0 openssl' 'Libs.private: -lwslay' > $@
 
 test tests: all
+ifeq ($(WITH_UI),true)
+	$(UI_MAKE) test
+endif
 	$(MAKE) -C rustyscript test BUILD_DIR="$(abspath $(BUILD_DIR))/script" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" IRC_BUILD_DIR="$(abspath $(BUILD_DIR))/irc" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
 	$(MAKE) -C librustyirc test BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION)
 	$(MAKE) -C tests test TEST_BUILD_DIR="$(abspath $(BUILD_DIR))/tests" \
@@ -115,6 +128,9 @@ test tests: all
 	    LIBS="-L$(abspath $(BUILD_DIR)) -lrustyaxe -Wl,-rpath,$(abspath $(BUILD_DIR)) $(AXE_LDLIBS)"
 
 install: all
+ifeq ($(WITH_UI),true)
+	$(UI_MAKE) install DESTDIR=$(DESTDIR)
+endif
 	install -Dm755 $(REAL_LIB) "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))"
 	ln -sfn $(notdir $(REAL_LIB)) "$(DESTDIR)$(LIBDIR)/$(SONAME)"
 	ln -sfn $(SONAME) "$(DESTDIR)$(LIBDIR)/librustyaxe.so"
@@ -126,6 +142,7 @@ install: all
 	$(MAKE) -C librustyirc install BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 
 uninstall:
+	$(UI_MAKE) uninstall DESTDIR=$(DESTDIR)
 	$(MAKE) -C rustyscript uninstall BUILD_DIR="$(abspath $(BUILD_DIR))/script" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 	$(MAKE) -C librustyirc uninstall BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR) DESTDIR=$(DESTDIR)
 	rm -f "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))" "$(DESTDIR)$(LIBDIR)/$(SONAME)" "$(DESTDIR)$(LIBDIR)/librustyaxe.so" "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyaxe.pc"
@@ -134,6 +151,7 @@ uninstall:
 	-rmdir "$(DESTDIR)$(INCLUDEDIR)/librustyaxe"
 
 clean:
+	$(UI_MAKE) clean
 	$(MAKE) -C rustyscript clean BUILD_DIR="$(abspath $(BUILD_DIR))/script"
 	$(MAKE) -C librustyirc clean BUILD_DIR="$(abspath $(BUILD_DIR))/irc" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))"
 	rm -rf $(BUILD_DIR)
@@ -147,7 +165,7 @@ deb:
 distclean: clean
 	@if command -v dh_clean >/dev/null 2>&1; then dh_clean; fi
 	rm -rf debian/tmp debian/.debhelper debian/files debian/debhelper-build-stamp
-	rm -rf debian/librustyaxe1 debian/librustyaxe-dev debian/librustyirc1 debian/librustyirc-dev debian/librustyscript1 debian/librustyscript-dev
+	rm -rf debian/librustyaxe1 debian/librustyaxe-dev debian/librustyirc1 debian/librustyirc-dev debian/librustyscript1 debian/librustyscript-dev debian/librustyui1 debian/librustyui-dev
 
 # Debian source packages are optional outputs, separate from normal builds.
 # dpkg-source's quilt format needs an upstream orig tarball. Create it from

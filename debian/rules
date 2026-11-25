@@ -1,13 +1,14 @@
 #!/usr/bin/make -f
 include /usr/share/dpkg/pkg-info.mk
+WITH_UI := $(if $(filter pkg.librustyaxe.noui,$(DEB_BUILD_PROFILES)),false,true)
 %:
 	dh $@
 
 override_dh_auto_build:
-	$(MAKE) all VERSION=$(DEB_VERSION_UPSTREAM) WITH_MONGOOSE=false
+	$(MAKE) all VERSION=$(DEB_VERSION_UPSTREAM) WITH_MONGOOSE=false WITH_UI=$(WITH_UI)
 
 override_dh_auto_install:
-	$(MAKE) install VERSION=$(DEB_VERSION_UPSTREAM) DESTDIR=$(CURDIR)/debian/tmp
+	$(MAKE) install VERSION=$(DEB_VERSION_UPSTREAM) DESTDIR=$(CURDIR)/debian/tmp WITH_UI=$(WITH_UI)
 
 override_dh_auto_clean:
 	$(MAKE) distclean

@@ -21,13 +21,6 @@ module.c:	Loadable modules on posix/win64 machines
 posix.c:	Things only relevant on posix-ish hosts
 ringbuffer.c:	Basic implementation of ring buffer, for audio/video
 subproc.c:	Generic subprocess lifecycle, line pipes and descriptor mappings (subproc.h)
-termkey.c:	libtermkey keyboard processing
-tui.c:		Simple Text User Interface library
-tui.colorpick.c: Future color selector popup for IRC
-tui.completion.c: Future context-sensistive text completion (tab/space/arrows)
-tui.keys.c:	Keyboard interface for TUI, using libtermkey
-tui.theme.c:	TUI IRC color/style rendering
-tui.window.c:	Window manager for the TUI
 util.file.c:	File related utilities
 util.math.c:	Portable implementations of some maths
 util.string.c:	String utilities
@@ -39,3 +32,5 @@ Subprocess API
 Include subproc.h and initialize a subproc_t with SUBPROC_INIT. Use
 subproc_spawn/spawn_fds/read_line/write_line/reap/stop/close. Restart policy belongs to
 the caller. The old rr_subproc names and compiled-out supervisor are removed.
+
+librustyui/: Separate reusable terminal UI and future graphical backends.
