@@ -319,7 +319,41 @@ static void property_blocks(void) {
    assert(rrs_vm_eval(vm,"w .= {}",&v));rrs_value_free(v);
    rrs_vm_free(vm);
 }
+static rrs_value_t *echo_dict(rrs_vm_t *vm,int argc,const rrs_value_t *const argv[],void *user) {
+   (void)vm;(void)user;
+   assert(argc==1&&rrs_value_type(argv[0])==RRS_DICT);
+   return rrs_value_copy(argv[0]);
+}
+static void anonymous_dicts(void) {
+   rrs_vm_t *vm=rrs_vm_new();
+   rrs_value_t *v=NULL;
+   assert(vm&&rrs_vm_register_native(vm,"test.echo",echo_dict,NULL));
+   assert(rrs_vm_eval(vm,"test.echo(dict { kind = \"entry\"; id: \"host\", dict validation { required = true; max_length = 255; }; })",&v));
+   assert(!strcmp(rrs_value_string(rrs_value_field(v,"id")),"host"));
+   assert(rrs_value_bool(rrs_value_field(rrs_value_field(v,"validation"),"required")));
+   assert(rrs_value_int(rrs_value_field(rrs_value_field(v,"validation"),"max_length"))==255);
+   rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"dict { a = 1; nested = dict { b = 2, }; }",&v));
+   assert(rrs_value_int(rrs_value_field(rrs_value_field(v,"nested"),"b"))==2);
+   rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"dict saved = dict { list = [dict {}, dict { n = 3; }]; };",&v));
+   rrs_value_free(v);
+   assert(rrs_vm_eval(vm,"saved",&v));
+   assert(rrs_array_length(rrs_value_field(v,"list"))==2);
+   rrs_value_free(v);
+   assert(!rrs_vm_eval(vm,"dict { a = 1 b = 2; }",&v));
+   assert(!rrs_vm_eval(vm,"dict { dict broken { a = 1; }",&v));
+   assert(!rrs_vm_eval(vm,"dict { a == 1; }",&v));
+   assert(rrs_vm_eval(vm,"dict {}",&v)&&rrs_value_type(v)==RRS_DICT);
+   rrs_value_free(v);
+   assert(rrs_vm_load(vm,"dict make() { return dict { answer = 42; }; }"));
+   assert(rrs_vm_eval(vm,"make()",&v));
+   assert(rrs_value_int(rrs_value_field(v,"answer"))==42);
+   rrs_value_free(v);
+   rrs_vm_free(vm);
+}
 int main(void) {
+   anonymous_dicts();
    property_blocks();
    syntax_and_invocation();
    comment_forms();

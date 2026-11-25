@@ -74,6 +74,7 @@ typedef struct {
    bool returning;
    bool in_function;
    bool property_separators;
+   unsigned dictionary_depth;
    rrs_value_t *return_value;
    int depth;
 } eval_t;
@@ -530,6 +531,8 @@ static bool ident(eval_t *e,char *buf,size_t cap) {
    buf[i]=0;return true;
 }
 static rrs_value_t *expression(eval_t *e);
+static rrs_value_t *typed_dictionary(eval_t *e);
+static bool property_block(eval_t *e,rrs_value_t *target,unsigned depth,bool literal);
 static bool statements(eval_t *e,bool stop_on_brace);
 static rrs_value_t *call_script(eval_t *caller,function_def_t *fn,int argc,
                                  const rrs_value_t *const args[],variable_t *origins[]) {
@@ -637,6 +640,7 @@ static rrs_value_t *memory_value(rrs_vm_t *vm) {
 }
 static rrs_value_t *primary(eval_t *e) {
    ws(e);
+   if(keyword(e,"dict"))return typed_dictionary(e);
    if(match(e,'(')) {
       rrs_value_t *v=expression(e);
       if(!match(e,')'))rrs_vm_raise(e->vm,"expected )");
@@ -928,7 +932,7 @@ static bool execute_block(eval_t *e,bool run) {
 }
 /* Apply to a private copy, publishing only after the entire block succeeds.
  * Expressions use ordinary lexical scope; nested blocks require dictionaries. */
-static bool property_block(eval_t *e,rrs_value_t *target,unsigned depth) {
+static bool property_block(eval_t *e,rrs_value_t *target,unsigned depth,bool literal) {
    if(depth>=64 || !match(e,'{')) {
       rrs_vm_raise(e->vm,"expected property block or maximum depth exceeded");
       return false;
@@ -940,18 +944,21 @@ static bool property_block(eval_t *e,rrs_value_t *target,unsigned depth) {
       }
       ws(e);
       rrs_value_t *value=NULL;
-      if(ep(e)=='.'&&e->text[e->pos+1]=='=') {
+      if(literal&&!strcmp(key,"dict")&&(isalpha((unsigned char)ep(e))||ep(e)=='_')) {
+         if(!ident(e,key,sizeof(key)))return false;
+         value=typed_dictionary(e);
+      } else if(ep(e)=='.'&&e->text[e->pos+1]=='=') {
          advance(e);advance(e);
          const rrs_value_t *old=rrs_value_field(target,key);
          if(!old||old->type!=RRS_DICT) {
             rrs_vm_raise(e->vm,"nested property block requires dictionary");return false;
          }
          value=rrs_value_copy(old);
-         if(!value||!property_block(e,value,depth+1)) {
+         if(!value||!property_block(e,value,depth+1,literal)) {
             rrs_value_free(value);return false;
          }
       } else {
-         if(ep(e)!='='||e->text[e->pos+1]=='=') {
+         if((ep(e)!='='||e->text[e->pos+1]=='=')&&!(literal&&ep(e)==':')) {
             rrs_vm_raise(e->vm,"expected property assignment");return false;
          }
          advance(e);
@@ -969,6 +976,21 @@ static bool property_block(eval_t *e,rrs_value_t *target,unsigned depth) {
    }
    return true;
 }
+static rrs_value_t *typed_dictionary(eval_t *e) {
+   if(e->dictionary_depth>=64) {
+      rrs_vm_raise(e->vm,"maximum dictionary depth exceeded");return NULL;
+   }
+   rrs_value_t *d=rrs_dictionary();
+   if(!d)return NULL;
+   bool previous=e->property_separators;
+   e->property_separators=true;
+   e->dictionary_depth++;
+   bool ok=property_block(e,d,0,true);
+   e->dictionary_depth--;
+   e->property_separators=previous;
+   if(!ok||e->vm->error[0]){rrs_value_free(d);return NULL;}
+   return d;
+}
 static bool update_properties(eval_t *e,const char *name) {
    variable_t *v=find_var(e,name);
    if(!v||v->read_only||v->cell->value->type!=RRS_DICT) {
@@ -979,7 +1001,7 @@ static bool update_properties(eval_t *e,const char *name) {
    if(!copy)return false;
    bool previous=e->property_separators;
    e->property_separators=true;
-   bool ok=property_block(e,copy,0);
+   bool ok=property_block(e,copy,0,false);
    e->property_separators=previous;
    if(ok&&!e->vm->error[0])ok=set_var(e,name,copy,false);
    rrs_value_free(copy);
@@ -1125,6 +1147,32 @@ bool rrs_vm_invoke(rrs_vm_t *vm,rrscript_binding_kind_t kind,
    return found;
 }
 
+/* Semicolons inside literals or function arguments are not statement breaks. */
+static bool console_statements(const char *s) {
+   unsigned depth=0;
+   char quote=0;
+   for(;*s;s++) {
+      if(quote) {
+         if(*s=='\\'&&s[1])s++;
+         else if(*s==quote)quote=0;
+         continue;
+      }
+      if(*s=='"'||*s=='\''){quote=*s;continue;}
+      if(*s=='#'||(*s=='/'&&s[1]=='/')) {
+         while(*s&&*s!='\n')s++;
+         if(!*s)break;
+      } else if(*s=='/'&&s[1]=='*') {
+         s+=2;
+         while(*s&&!(*s=='*'&&s[1]=='/'))s++;
+         if(!*s)break;
+         s++;continue;
+      }
+      if(*s=='{'||*s=='['||*s=='(')depth++;
+      else if(*s=='}'||*s==']'||*s==')'){if(depth)depth--;}
+      else if(!depth&&(*s==';'||*s=='\n'))return true;
+   }
+   return false;
+}
 /* Persistent console scope: statements and expressions share variables, but
  * never inherit a loaded script's handler locals. Each console VM is separate. */
 bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result) {
@@ -1136,7 +1184,7 @@ bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result) {
    vm->active_offset=0;
    vm->active_line=1;
    ws(&e);
-   bool declaration=strchr(source,';')!=NULL || strchr(source,'\n')!=NULL;
+   bool declaration=console_statements(source);
    const char *start=e.text+e.pos;
    if(!strncmp(start,"if",2) &&
       (isspace((unsigned char)start[2])||start[2]=='('))declaration=true;
@@ -1147,6 +1195,12 @@ bool rrs_vm_eval(rrs_vm_t *vm,const char *source,rrs_value_t **result) {
          (isspace((unsigned char)start[n])||start[n]=='[')) {
          declaration=true;break;
       }
+   }
+   /* An anonymous typed dictionary is an expression, not a declaration. */
+   eval_t dict_probe=e;
+   if(keyword(&dict_probe,"dict")) {
+      ws(&dict_probe);
+      if(ep(&dict_probe)=='{')declaration=false;
    }
    /* Assignment is a statement; everything else evaluates to a value. */
    if(!declaration) {
