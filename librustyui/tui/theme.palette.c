@@ -33,3 +33,8 @@ void rrui_tui_theme_style(rrui_theme_role_t fg,rrui_theme_role_t bg){
    if((unsigned)fg<RRUI_THEME_COUNT)rrui_tui_theme_rgb(theme.rgb[fg],false);
    if((unsigned)bg<RRUI_THEME_COUNT)rrui_tui_theme_rgb(theme.rgb[bg],true);
 }
+
+void rrui_tui_theme_role(rrui_theme_role_t role,bool bg){
+   if(!initialized)rrui_tui_theme_set(NULL);
+   if((unsigned)role<RRUI_THEME_COUNT)rrui_tui_theme_rgb(theme.rgb[role],bg);
+}

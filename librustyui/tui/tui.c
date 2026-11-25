@@ -84,6 +84,31 @@ void tui_set_prompt_renderer(const char *(*renderer) (tui_window_t *win)) {
 // Keep the top row on one physical line. Preserve SGR colors, but do not
 // permit embedded controls to move the cursor. Count UTF-8 bytes conservatively
 // against the column budget and never cut a multibyte character in half.
+/* Resolve default SGR colors against the current surface, not the terminal
+ * palette. Explicit foreground/background colors (including IRC art) stay
+ * untouched. Stored scrollback remains independent of the selected theme. */
+static void surface_sgr(const char *s,size_t n,rrui_theme_role_t bg){
+   fwrite(s,1,n,stdout);
+   if((n==4&&!memcmp(s,"\033[0m",4))||(n==3&&!memcmp(s,"\033[m",3))||
+      (n==8&&!memcmp(s,"\033[39;49m",8))){
+      rrui_tui_theme_role(RRUI_THEME_TEXT,false);
+      rrui_tui_theme_role(bg,true);
+   }else if(n==5&&!memcmp(s,"\033[39m",5))rrui_tui_theme_role(RRUI_THEME_TEXT,false);
+   else if(n==5&&!memcmp(s,"\033[49m",5))rrui_tui_theme_role(bg,true);
+}
+static void surface_write(const char *s,size_t n,rrui_theme_role_t bg){
+   const char *end=s+n;
+   while(s<end){
+      if(end-s>=2&&s[0]=='\033'&&s[1]=='['){
+         const char *p=s+2;
+         while(p<end&&!(*p>='@'&&*p<='~'))p++;
+         if(p<end){if(*p=='m')surface_sgr(s,p-s+1,bg);s=p+1;continue;}
+         break;
+      }
+      if((unsigned char)*s>=32&&*s!=127)putchar(*s);
+      s++;
+   }
+}
 static void tui_print_topline(const char *text, int columns) {
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
    const unsigned char *p = (const unsigned char *)text;
@@ -99,7 +124,7 @@ static void tui_print_topline(const char *text, int columns) {
          }
 
          if (*end == 'm') {
-            fwrite(p, 1, end - p + 1, stdout);
+            surface_sgr((const char *)p,end-p+1,RRUI_THEME_HEADER);
          }
          p = end + 1;
          continue;
@@ -570,14 +595,14 @@ void tui_redraw_screen(void) {
 
             // Continuation of a wrapped row: restore the active color first
             if (rows_done > 0 && start_sgr[0]) {
-               fputs(start_sgr, stdout);
+               surface_write(start_sgr,strlen(start_sgr),RRUI_THEME_WORKSPACE);
             }
 
             if (explicit_newline) {
-               fwrite(line_start, 1, p - line_start, stdout);
+               surface_write(line_start,p-line_start,RRUI_THEME_WORKSPACE);
                p++;
             } else {
-               fwrite(line_start, 1, last_break - line_start, stdout);
+               surface_write(line_start,last_break-line_start,RRUI_THEME_WORKSPACE);
             }
 
             // Reset attributes so colors don't bleed into the next line
@@ -621,7 +646,7 @@ draw_footer:
    // --- Bottom status line ---
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
    printf("\033[%d;1H", term_rows - 1);
-   printf("%-*s", term_cols, status_line);
+   tui_print_topline(status_line,MAX(0,term_cols-(tui_over_ssh?7:10)));
    fputs("\033[0m",stdout);
 
    tui_redraw_clock();
@@ -680,7 +705,9 @@ void tui_redraw_statusline(void) {
       return;
    }
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_HEADER);
-   printf("\033[s\033[%d;1H%-*s\033[0m\033[u", term_rows - 1, term_cols, status_line);
+   printf("\033[s\033[%d;1H",term_rows-1);
+   tui_print_topline(status_line,MAX(0,term_cols-(tui_over_ssh?7:10)));
+   fputs("\033[u",stdout);
    tui_redraw_clock();
    fflush(stdout);
    tui_render_unlock();
@@ -707,20 +734,13 @@ void tui_redraw_clock(void) {
    int col = width - clock_visible_len;   // 0-based index for the first char
 
    if (col > 0) {
-      char clock_tagged[128];
-
-      if (tui_over_ssh) {
-         // SSH session: HH:MM only, so we can redraw far less often
-         snprintf(clock_tagged, sizeof(clock_tagged), "\00314[\00310%02d\00314:\00310%02d\00314]\017", tm.tm_hour, tm.tm_min);
-      } else {
-         snprintf(clock_tagged, sizeof(clock_tagged), "\00314[\00310%02d\00314:\00310%02d\00314:\00310%02d\00314]\017", tm.tm_hour, tm.tm_min, tm.tm_sec);
-      }
-      char *clock_colored = tui_colorize_string(clock_tagged);
-
-      printf("\033[s");         // save cursor
-      printf("\033[%d;%dH%s\033[0m", term_rows - 1, col + 1, clock_colored);
-      printf("\033[u");         // restore cursor
-      free(clock_colored);
+      char clock_text[32];
+      strftime(clock_text,sizeof(clock_text),tui_over_ssh?"[%H:%M]":"[%H:%M:%S]",&tm);
+      fputs("\033[s",stdout);
+      printf("\033[%d;%dH",term_rows-1,col+1);
+      rrui_tui_theme_style(RRUI_THEME_ACCENT,RRUI_THEME_HEADER);
+      fputs(clock_text,stdout);
+      fputs("\033[0m\033[u",stdout);
    }
    fflush(stdout);
    tui_render_unlock();
@@ -1087,7 +1107,7 @@ void tui_update_input_line(void) {
    rrui_tui_theme_style(RRUI_THEME_TEXT,RRUI_THEME_INPUT);
    for(int j=0;j<width;j++)putchar(' ');
    printf("\033[%d;%dH",input_row,input_col);
-   if(prompt_len<width)printf("%s%s",color_prompt,slice);
+   if(prompt_len<width){surface_write(color_prompt,strlen(color_prompt),RRUI_THEME_INPUT);surface_write(slice,strlen(slice),RRUI_THEME_INPUT);}
    else fputs("> ",stdout);   // prompt includes space now
 
    // if there's nothing typed by the user, skip forward one character, to leave

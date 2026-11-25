@@ -18,5 +18,6 @@ const char *rrui_theme_name(rrui_theme_role_t);
 bool rrui_theme_load(rrui_theme_t *,const char *path);
 void rrui_tui_theme_set(const rrui_theme_t *);
 void rrui_tui_theme_style(rrui_theme_role_t foreground,rrui_theme_role_t background);
+void rrui_tui_theme_role(rrui_theme_role_t,bool background);
 void rrui_tui_theme_rgb(uint32_t,bool background);
 #endif
