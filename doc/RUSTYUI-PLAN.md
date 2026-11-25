@@ -121,3 +121,39 @@ checkbox state, keyed list selection, and a nonblocking modal terminal renderer
 using the existing input loop. Initial renderer uses vertical stacking (row/grid
 geometry not yet implemented). Tests added; not yet run. Next: verify compile,
 fix redraw and geometry edge cases, integrate actual RustyRig server picker.
+
+## Phase 1b: terminal workspace and floating panels
+
+Goal: functional terminal workspace comparable to the GTK workspace, not a
+pixel-level recreation. Chat remains available alongside VFO, audio and other
+controls. Extend the common RustyUI form model rather than embedding RustyRig
+business logic in the terminal library.
+
+- [ ] Add nonmodal panel instances with stable IDs, cell rectangles, visibility,
+  z-order, focus, minimum dimensions, move/resize and optional collapse.
+- [ ] Draw a clipped character-cell workspace and composite panels back-to-front;
+  preserve the chat viewport and prevent ANSI escapes from untrusted text.
+- [ ] Mouse title-bar dragging, resize edges, raise-on-click and close/collapse
+  controls; keyboard-only panel selection, move and resize as alternatives.
+- [ ] Modal forms take input priority; focused nonmodal panels consume only their
+  own input. Explicit PTT safety: no accidental transmit while editing fields.
+- [ ] Support docked left/right/top/bottom panels, floating panels and a chat
+  center region. On narrow terminals collapse or hide optional panels rather
+  than overlap controls or shrink chat below its minimum useful size.
+- [ ] Persist per-workspace geometry and visibility through host-owned storage;
+  clamp restored positions to current terminal size and recover after resize.
+- [ ] Share scripts, IDs, bindings and actions with GTK. Cell sizes are the TUI
+  backend's interpretation of layout; allow backend-specific overrides.
+- [ ] Add reusable numeric frequency entry, mode/width selector, compact sliders,
+  checkboxes, status indicators and simple signal/level meters. No waterfalls,
+  graphical spectrum, patchbay or video required.
+- [ ] First workspace demonstration: chat + VFO + audio controls + station
+  status, with host mock values; then integrate live RustyRig actions.
+- [ ] Test z-order, clipping, hit testing, focus, resize, persistence and modal
+  priority; verify SSH and keyboard-only use.
+
+Implementation order: stabilize the existing modal form renderer and complete
+server picker integration first, then extract a cell-rectangle compositor and
+introduce nonmodal floating panels. Do not create another terminal input loop.
+The initial modal renderer is commit f516f21; it is not yet compiled/tested by
+this session. Floating panels are planned, not implemented.
