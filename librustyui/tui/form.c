@@ -422,10 +422,19 @@ static size_t list_page(GArray *h,size_t field) {
    }
    return n;
 }
+static void select_user(rrui_form_t *f,size_t field,size_t item,size_t span){
+   rrui_field_t old={0};
+   if(!rrui_form_field(f,field,&old))return;
+   if(rrui_form_select(f,field,item)){
+      rrui_form_list_view(f,field,span,true);
+      rrui_form_selection_changed(f,field,old.selected);
+   }
+}
 static void list_step(rrui_form_t *f,size_t i,int direction,size_t step) {
    rrui_field_t x;
    if(!rrui_form_field(f,i,&x)||x.widget->kind!=RRUI_LIST||!x.count)return;
    rrui_form_list_move(f,i,direction,step,false);
+   rrui_form_selection_changed(f,i,x.selected);
 }
 static bool wheel_list(rrui_form_t *f,GArray *h,int row,int button) {
    if(!h)return false;
@@ -458,7 +467,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             rrui_field_t z;rrui_form_field(f,h.field,&z);
             if(h.slider)rrui_form_slider_position(f,z.widget->vertical?h.slider_pos:(unsigned)(c-h.left),h.slider_span);
             else if(h.minus||h.plus){if(abs(c-h.minus)<=1)rrui_form_adjust(f,-1);else if(abs(c-h.plus)<=1)rrui_form_adjust(f,1);}
-            else if(h.item!=SIZE_MAX){rrui_form_select(f,h.field,h.item);rrui_form_list_view(f,h.field,list_page(tab->hits,h.field),true);}
+            else if(h.item!=SIZE_MAX){select_user(f,h.field,h.item,list_page(tab->hits,h.field));}
             else if(z.widget->kind==RRUI_BUTTON||z.widget->kind==RRUI_CHECKBOX)rrui_form_activate(f);
             break;
          }
@@ -555,7 +564,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
                if(rrui_form_set_focus(p->form,h.field)){
                   if(h.slider){rrui_field_t z;rrui_form_field(p->form,h.field,&z);rrui_form_slider_position(p->form,z.widget->vertical?h.slider_pos:(unsigned)(c-a.x-h.left),h.slider_span);}
                   else if(h.minus||h.plus){int col=c-a.x;if(abs(col-h.minus)<=1)rrui_form_adjust(p->form,-1);else if(abs(col-h.plus)<=1)rrui_form_adjust(p->form,1);}
-                  else if(h.item!=SIZE_MAX){rrui_form_select(p->form,h.field,h.item);rrui_form_list_view(p->form,h.field,list_page(p->hits,h.field),true);}
+                  else if(h.item!=SIZE_MAX){select_user(p->form,h.field,h.item,list_page(p->hits,h.field));}
                   else {rrui_field_t z;if(rrui_form_field(p->form,h.field,&z)&&(z.widget->kind==RRUI_BUTTON||z.widget->kind==RRUI_CHECKBOX))rrui_form_activate(p->form);}
                }
                break;
@@ -583,7 +592,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             if(!rrui_form_set_focus(f,h.field))break;
             if(h.slider){rrui_field_t z;rrui_form_field(f,h.field,&z);rrui_form_slider_position(f,z.widget->vertical?h.slider_pos:(unsigned)(c-h.left),h.slider_span);}
             else if(h.minus||h.plus){if(abs(c-h.minus)<=1)rrui_form_adjust(f,-1);else if(abs(c-h.plus)<=1)rrui_form_adjust(f,1);}
-            else if(h.item!=SIZE_MAX){rrui_form_select(f,h.field,h.item);rrui_form_list_view(f,h.field,list_page(local_hits,h.field),true);}
+            else if(h.item!=SIZE_MAX){select_user(f,h.field,h.item,list_page(local_hits,h.field));}
             else {rrui_field_t y;if(rrui_form_field(f,h.field,&y)&&(y.widget->kind==RRUI_BUTTON||y.widget->kind==RRUI_CHECKBOX))rrui_form_activate(f);}
             break;
          }
@@ -608,7 +617,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
          case TERMKEY_SYM_HOME:
          case TERMKEY_SYM_END:
             if(x.widget&&x.widget->kind==RRUI_LIST&&x.count)
-               {for(size_t k=0;k<x.count;k++)if(rrui_form_select(f,i,key->code.sym==TERMKEY_SYM_HOME?k:x.count-1-k))break;if(list_page(local_hits,i))rrui_form_list_view(f,i,list_page(local_hits,i),true);}
+               {for(size_t k=0;k<x.count;k++)if(rrui_form_list_selectable(f,i,key->code.sym==TERMKEY_SYM_HOME?k:x.count-1-k)){select_user(f,i,key->code.sym==TERMKEY_SYM_HOME?k:x.count-1-k,list_page(local_hits,i));break;}}
             else if(x.widget&&x.widget->kind==RRUI_ENTRY)
                while(rrui_form_edit(f,key->code.sym==TERMKEY_SYM_HOME?-1:1,false)){}
             break;
@@ -623,7 +632,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             if(x.widget&&x.widget->kind==RRUI_LIST&&x.count) {
                rrui_field_t root={0};rrui_form_field(f,0,&root);
                bool wrap=active&&root.widget&&!strcmp(root.widget->id,"servers");
-               rrui_form_list_move(f,i,key->code.sym==TERMKEY_SYM_UP?-1:1,1,wrap);if(list_page(local_hits,i))rrui_form_list_view(f,i,list_page(local_hits,i),true);
+               rrui_form_list_move(f,i,key->code.sym==TERMKEY_SYM_UP?-1:1,1,wrap);if(list_page(local_hits,i))rrui_form_list_view(f,i,list_page(local_hits,i),true);rrui_form_selection_changed(f,i,x.selected);
             } else if(x.widget&&x.widget->kind==RRUI_SLIDER&&x.widget->vertical)rrui_form_adjust(f,key->code.sym==TERMKEY_SYM_UP?1:-1);
             else rrui_form_next(f,key->code.sym==TERMKEY_SYM_UP?-1:1);
             break;

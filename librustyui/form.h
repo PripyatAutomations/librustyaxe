@@ -42,6 +42,10 @@ bool rrui_form_list_move(rrui_form_t *,size_t field,int direction,size_t steps,b
 uint32_t rrui_form_list_color(const rrui_form_t *,size_t,size_t);
 const char *rrui_form_list_label(const rrui_form_t *,size_t field,size_t item);
 bool rrui_form_select(rrui_form_t *,size_t field,size_t item);
+/* Optional user-selection notification; programmatic selection stays silent.
+ * Callback may populate other fields, but must not destroy the form. */
+void rrui_form_on_selection(rrui_form_t *,rrui_action_fn);
+void rrui_form_selection_changed(rrui_form_t *,size_t field,size_t previous);
 size_t rrui_form_list_view(rrui_form_t *,size_t field,size_t span,bool follow_selection);
 bool rrui_form_list_scroll(rrui_form_t *,size_t field,size_t span,int delta);
 /* Entry edits use Unicode code points and byte-offset cursor positions. */

@@ -15,7 +15,7 @@ typedef struct {
 struct rrui_form {
    GPtrArray *fields;
    size_t focus;
-   rrui_action_fn action;
+   rrui_action_fn action,selection;
    void *user;
 };
 static void item_free(gpointer p) {
@@ -184,6 +184,13 @@ const char *rrui_form_list_label(const rrui_form_t *f,size_t i,size_t j) {
 bool rrui_form_select(rrui_form_t *f,size_t i,size_t j) {
    field_t *x=at(f,i);if(!x||!rrui_form_list_selectable(f,i,j))return false;
    item_t *it=g_ptr_array_index(x->items,j);g_free(x->value);x->value=g_strdup(it->key);x->selected=j;x->reveal_selection=true;return true;
+}
+void rrui_form_on_selection(rrui_form_t *f,rrui_action_fn fn){if(f)f->selection=fn;}
+void rrui_form_selection_changed(rrui_form_t *f,size_t field,size_t previous){
+   field_t *x=at(f,field);
+   if(x&&f->selection&&x->w.kind==RRUI_LIST&&x->selected!=previous&&
+      rrui_form_list_selectable(f,field,x->selected))
+      f->selection(f,x->w.id,"selection",f->user);
 }
 /* Keep viewport independent from selection. Only explicit navigation follows
  * the selected row; scrolling an inactive list must not change its value. */
