@@ -199,10 +199,9 @@ bool rrui_render_init(void){
    if(!isatty(STDIN_FILENO)||!isatty(STDOUT_FILENO))return false;
    setlocale(LC_CTYPE,"");
    shell_termios_valid=tcgetattr(STDIN_FILENO,&shell_termios)==0;
-   /* Prefer direct RGB for known xterm-compatible truecolor terminals.
-    * Select the terminfo entry for this SCREEN only: do not change TERM
-    * globally or affect subprocesses/libtermkey. Avoid assuming that a
-    * multiplexer or Linux console passes through direct colors. */
+   /* Match the known working TERM=xterm-direct startup path. ncurses
+    * and its terminfo initialization must agree on the terminal name.
+    * Restore the environment after initialization for child processes. */
    const char *term=g_getenv("TERM"),*ct=g_getenv("COLORTERM");
    const char *override=g_getenv("RUSTYUI_DIRECT_COLOR");
    bool truecolor=ct&&(!g_ascii_strcasecmp(ct,"truecolor")||!g_ascii_strcasecmp(ct,"24bit"));
@@ -210,8 +209,17 @@ bool rrui_render_init(void){
       !strcmp(term,"vte")||!strcmp(term,"vte-256color"));
    bool forced=override&&!strcmp(override,"1");
    bool disabled=override&&!strcmp(override,"0");
-   if(!disabled&&(forced||(truecolor&&compatible)))
-      screen=newterm("xterm-direct",stdout,stdin);
+   if(!disabled&&(forced||(truecolor&&compatible))){
+      char *saved=g_strdup(term);
+      if(g_setenv("TERM","xterm-direct",TRUE)){
+         screen=newterm(NULL,stdout,stdin);
+         if(screen&&(!has_colors()||start_color()==ERR||COLORS<16777216)){
+            endwin();delscreen(screen);screen=NULL;
+         }
+      }
+      if(saved)g_setenv("TERM",saved,TRUE);else g_unsetenv("TERM");
+      g_free(saved);
+   }
    if(!screen)screen=newterm(NULL,stdout,stdin);
    if(!screen){
       if(shell_termios_valid)tcsetattr(STDIN_FILENO,TCSANOW,&shell_termios);
