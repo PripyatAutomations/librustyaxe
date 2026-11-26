@@ -13,6 +13,8 @@
 #include <locale.h>
 #include <ncurses.h>
 static SCREEN *screen;
+static char *saved_term;
+static bool term_promoted;
 static struct termios shell_termios;
 static bool shell_termios_valid;
 static GHashTable *pairs;
@@ -199,9 +201,9 @@ bool rrui_render_init(void){
    if(!isatty(STDIN_FILENO)||!isatty(STDOUT_FILENO))return false;
    setlocale(LC_CTYPE,"");
    shell_termios_valid=tcgetattr(STDIN_FILENO,&shell_termios)==0;
-   /* Match the known working TERM=xterm-direct startup path. ncurses
-    * and its terminfo initialization must agree on the terminal name.
-    * Restore the environment after initialization for child processes. */
+   /* Select direct color before ncurses sees TERM and retain that setting
+    * for the life of its SCREEN. Restoring it during initialization can
+    * leave subsequent terminal capability queries using a different entry. */
    const char *term=g_getenv("TERM"),*ct=g_getenv("COLORTERM");
    const char *override=g_getenv("RUSTYUI_DIRECT_COLOR");
    bool truecolor=ct&&(!g_ascii_strcasecmp(ct,"truecolor")||!g_ascii_strcasecmp(ct,"24bit"));
@@ -209,27 +211,44 @@ bool rrui_render_init(void){
       !strcmp(term,"vte")||!strcmp(term,"vte-256color"));
    bool forced=override&&!strcmp(override,"1");
    bool disabled=override&&!strcmp(override,"0");
-   if(!disabled&&(forced||(truecolor&&compatible))){
-      char *saved=g_strdup(term);
-      if(g_setenv("TERM","xterm-direct",TRUE)){
-         screen=newterm(NULL,stdout,stdin);
-         if(screen&&(!has_colors()||start_color()==ERR||COLORS<16777216)){
-            endwin();delscreen(screen);screen=NULL;
-         }
-      }
-      if(saved)g_setenv("TERM",saved,TRUE);else g_unsetenv("TERM");
-      g_free(saved);
+   char *original=g_strdup(term);
+   char *original_ct=g_strdup(ct);
+   bool promoted=false;
+   if(!disabled&&(forced||(truecolor&&compatible))&&g_strcmp0(term,"xterm-direct")){
+      promoted=g_setenv("TERM","xterm-direct",TRUE);
    }
-   if(!screen)screen=newterm(NULL,stdout,stdin);
+   screen=newterm(NULL,stdout,stdin);
+   if(!screen&&promoted){
+      if(original)g_setenv("TERM",original,TRUE);else g_unsetenv("TERM");
+      promoted=false;
+      screen=newterm(NULL,stdout,stdin);
+   }
    if(!screen){
+      g_free(original);g_free(original_ct);
       if(shell_termios_valid)tcsetattr(STDIN_FILENO,TCSANOW,&shell_termios);
       shell_termios_valid=false;
       return false;
    }
-   if(has_colors()&&start_color()!=ERR){
-      use_default_colors();
+   int color_status=has_colors()?start_color():ERR;
+   int default_status=ERR,probe_status=ERR;
+   if(color_status!=ERR){
+      default_status=use_default_colors();
       pairs=g_hash_table_new_full(g_int64_hash,g_int64_equal,g_free,NULL);
+      if(COLOR_PAIRS>1&&COLORS>=8)
+         probe_status=init_extended_pair(1,COLORS>=16777216?0xff0000:1,COLORS>=16777216?0x111920:0);
    }
+   const char *diagnostic=g_getenv("RUSTYUI_COLOR_DIAG");
+   if(diagnostic&&*diagnostic){
+      FILE *f=fopen(diagnostic,"a");
+      if(f){
+         fprintf(f,"TERM(original)=%s COLORTERM=%s TERM(active)=%s promoted=%d has_colors=%d start_color=%d COLORS=%d COLOR_PAIRS=%d default_colors=%d pair_probe=%d ncurses=%s\n",
+            original?original:"(unset)",original_ct?original_ct:"(unset)",g_getenv("TERM")?g_getenv("TERM"):"(unset)",
+            promoted,has_colors(),color_status,COLORS,COLOR_PAIRS,default_status,probe_status,curses_version());
+         fclose(f);
+      }
+   }
+   if(promoted)saved_term=original;else g_free(original);
+   term_promoted=promoted;g_free(original_ct);
    scrollok(stdscr,FALSE);leaveok(stdscr,FALSE);
    /* A scroll in a side panel must never become a physical terminal-wide
     * insert/delete-line operation. Keep updates local to changed cells.
@@ -260,6 +279,10 @@ void rrui_render_fini(void){
    curs_set(1);
    endwin();delscreen(screen);screen=NULL;
    fflush(stdout);
+   if(term_promoted){
+      if(saved_term)g_setenv("TERM",saved_term,TRUE);else g_unsetenv("TERM");
+      g_clear_pointer(&saved_term,g_free);term_promoted=false;
+   }
    if(shell_termios_valid)tcsetattr(STDIN_FILENO,TCSANOW,&shell_termios);
    shell_termios_valid=false;
    if(pairs){g_hash_table_destroy(pairs);pairs=NULL;}
