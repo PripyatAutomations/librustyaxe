@@ -73,6 +73,10 @@ int main(void) {
       "event test.event { increment(10) }\n",NULL,NULL,&e)==0);
    bad("int missing(int value) return value;");
    bad("event foo.bar { print(1) } garbage");
+   assert(rrscript_parse_registrations("event (irc.privmsg || chat.msg) {}",NULL,NULL,&e)==0);
+   bad("event (foo ||) {}");
+   bad("event (foo && bar) {}");
+   bad("event () {}");
    puts("RustyScript registration syntax tests passed");
    return 0;
 }

@@ -178,3 +178,5 @@ ui.add(dict {
 });
 ```
 `dict { ... }` is an expression usable in arguments, arrays, initializers and returns. Fields accept `=` (or `:`), with comma or semicolon separators, including mixed and trailing separators. `dict name { ... }` inside the literal is shorthand for `name = dict { ... }`. Ordinary `{key: value}` literals remain supported.
+
+Event alternatives: `event (irc.privmsg || talk.msg) { ... }` registers the same body for either exact event name. Duplicate alternatives are coalesced within a declaration. Events are individual occurrences, not simultaneous boolean states.

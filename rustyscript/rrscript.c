@@ -143,6 +143,8 @@ int rrscript_parse_registrations(const char *source, rrscript_register_fn cb,
       if (skip_space(&s)) return -1;
       if (!peek(&s)) return 0;
       rrscript_binding_t b = {.line=s.line};
+      const char *event_names[64];
+      size_t event_lengths[64], event_count=0;
       if (word(&s, "script")) {
          b.kind = RRSCRIPT_COMMAND;
          if (expect(&s,'(') || skip_space(&s)) return -1;
@@ -158,14 +160,39 @@ int rrscript_parse_registrations(const char *source, rrscript_register_fn cb,
       } else if (word(&s, "event")) {
          b.kind = RRSCRIPT_EVENT;
          if (skip_space(&s)) return -1;
-         size_t p = s.pos;
-         if (identifier(&s)) return -1;
-         while (peek(&s) == '.') {
-            next(&s);
-            if (identifier(&s)) return -1;
+         int enclosed=peek(&s)=='(';
+         if (enclosed) { next(&s); }
+         for (;;) {
+            if (skip_space(&s)) { return -1; }
+            size_t p=s.pos;
+            if (identifier(&s)) { return -1; }
+            while (peek(&s)=='.') {
+               next(&s);
+               if (identifier(&s)) { return -1; }
+            }
+            size_t len=s.pos-p;
+            int duplicate=0;
+            for (size_t i=0;i<event_count;i++) {
+               if (event_lengths[i]==len && !strncmp(event_names[i],s.src+p,len)) {
+                  duplicate=1;
+                  break;
+               }
+            }
+            if (!duplicate) {
+               if (event_count==64) { return fail(&s,"too many event alternatives"); }
+               event_names[event_count]=s.src+p;
+               event_lengths[event_count++]=len;
+            }
+            if (!enclosed) { break; }
+            if (skip_space(&s)) { return -1; }
+            if (peek(&s)==')') { next(&s); break; }
+            if (peek(&s)!='|' || s.src[s.pos+1]!='|') {
+               return fail(&s,"expected || or ) in event selector");
+            }
+            next(&s); next(&s);
          }
-         b.name = s.src+p;
-         b.name_length = s.pos-p;
+         b.name=event_names[0];
+         b.name_length=event_lengths[0];
          if (block(&s,&b.body,&b.body_length)) return -1;
       } else {
          /* C-like function declaration: return-type name(type argument, ...) { } */
@@ -203,6 +230,16 @@ int rrscript_parse_registrations(const char *source, rrscript_register_fn cb,
        * including a newline. Never mistake it for a new registration. */
       if (skip_space(&s)) return -1;
       if (peek(&s) == ';') next(&s);
-      if (cb && cb(&b,user)) return fail(&s,"registration callback rejected binding");
+      if (cb) {
+         if (event_count) {
+            for (size_t i=0;i<event_count;i++) {
+               b.name=event_names[i];
+               b.name_length=event_lengths[i];
+               if (cb(&b,user)) { return fail(&s,"registration callback rejected binding"); }
+            }
+         } else if (cb(&b,user)) {
+            return fail(&s,"registration callback rejected binding");
+         }
+      }
    }
 }
