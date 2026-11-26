@@ -210,7 +210,7 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
          for(size_t j=start;j<x.count&&j-start<span&&row<rows;j++) {
             hit_t h={i,j,row};g_array_append_val(hits,h);
             row_color=rrui_form_list_color(form,i,j);
-            line(row++,cols,selected&&j==x.selected,j==x.selected?" > ":"   ",rrui_form_list_label(form,i,j));
+            line(row++,cols,selected&&j==x.selected,j==x.selected?" > ":rrui_form_list_selectable(form,i,j)?"   ":" ",rrui_form_list_label(form,i,j));
             row_color=UINT32_MAX;
          }
          continue;
@@ -370,9 +370,7 @@ static size_t list_page(GArray *h,size_t field) {
 static void list_step(rrui_form_t *f,size_t i,int direction,size_t step) {
    rrui_field_t x;
    if(!rrui_form_field(f,i,&x)||x.widget->kind!=RRUI_LIST||!x.count)return;
-   size_t n=x.selected==SIZE_MAX?0:x.selected;
-   if(x.selected!=SIZE_MAX)n=direction<0?n-MIN(n,step):n+MIN(x.count-1-n,step);
-   rrui_form_select(f,i,n);
+   rrui_form_list_move(f,i,direction,step,false);
 }
 static bool wheel_list(rrui_form_t *f,GArray *h,int row,int button) {
    if(!h)return false;
@@ -559,7 +557,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
          case TERMKEY_SYM_HOME:
          case TERMKEY_SYM_END:
             if(x.widget&&x.widget->kind==RRUI_LIST&&x.count)
-               {rrui_form_select(f,i,key->code.sym==TERMKEY_SYM_HOME?0:x.count-1);rrui_form_list_view(f,i,list_page(local_hits,i),true);}
+               {for(size_t k=0;k<x.count;k++)if(rrui_form_select(f,i,key->code.sym==TERMKEY_SYM_HOME?k:x.count-1-k))break;rrui_form_list_view(f,i,list_page(local_hits,i),true);}
             else if(x.widget&&x.widget->kind==RRUI_ENTRY)
                while(rrui_form_edit(f,key->code.sym==TERMKEY_SYM_HOME?-1:1,false)){}
             break;
@@ -572,14 +570,9 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
          case TERMKEY_SYM_UP:
          case TERMKEY_SYM_DOWN:
             if(x.widget&&x.widget->kind==RRUI_LIST&&x.count) {
-               size_t n=x.selected==SIZE_MAX?0:x.selected;
-               if(x.selected!=SIZE_MAX){
-                  rrui_field_t root={0};rrui_form_field(f,0,&root);
-                  bool wrap=active&&root.widget&&!strcmp(root.widget->id,"servers");
-                  if(key->code.sym==TERMKEY_SYM_UP)n=n?n-1:wrap?x.count-1:0;
-                  else n=n+1<x.count?n+1:wrap?0:n;
-               }
-               rrui_form_select(f,i,n);rrui_form_list_view(f,i,list_page(local_hits,i),true);
+               rrui_field_t root={0};rrui_form_field(f,0,&root);
+               bool wrap=active&&root.widget&&!strcmp(root.widget->id,"servers");
+               rrui_form_list_move(f,i,key->code.sym==TERMKEY_SYM_UP?-1:1,1,wrap);rrui_form_list_view(f,i,list_page(local_hits,i),true);
             } else if(x.widget&&x.widget->kind==RRUI_SLIDER&&x.widget->vertical)rrui_form_adjust(f,key->code.sym==TERMKEY_SYM_UP?1:-1);
             else rrui_form_next(f,key->code.sym==TERMKEY_SYM_UP?-1:1);
             break;

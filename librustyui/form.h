@@ -35,6 +35,10 @@ bool rrui_form_list_clear(rrui_form_t *,const char *id);
 bool rrui_form_list_append(rrui_form_t *,const char *id,const char *key,const char *label);
 /* RGB foreground, 0xRRGGBB; UINT32_MAX uses theme default. */
 bool rrui_form_list_append_color(rrui_form_t *,const char *,const char *,const char *,uint32_t);
+/* Nonselectable section heading; included in viewport row indices. */
+bool rrui_form_list_header(rrui_form_t *,const char *id,const char *key,const char *label);
+bool rrui_form_list_selectable(const rrui_form_t *,size_t field,size_t item);
+bool rrui_form_list_move(rrui_form_t *,size_t field,int direction,size_t steps,bool wrap);
 uint32_t rrui_form_list_color(const rrui_form_t *,size_t,size_t);
 const char *rrui_form_list_label(const rrui_form_t *,size_t field,size_t item);
 bool rrui_form_select(rrui_form_t *,size_t field,size_t item);

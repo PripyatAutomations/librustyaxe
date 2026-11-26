@@ -3,7 +3,7 @@
 #include <glib.h>
 #include <string.h>
 
-typedef struct { char *key,*label; uint32_t color; } item_t;
+typedef struct { char *key,*label; uint32_t color; bool header; } item_t;
 typedef struct {
    rrui_widget_t w;
    char *value;
@@ -152,6 +152,29 @@ bool rrui_form_list_append_color(rrui_form_t *f,const char *id,const char *key,c
 bool rrui_form_list_append(rrui_form_t *f,const char *id,const char *key,const char *label) {
    return rrui_form_list_append_color(f,id,key,label,UINT32_MAX);
 }
+bool rrui_form_list_header(rrui_form_t *f,const char *id,const char *key,const char *label){
+   if(!rrui_form_list_append_color(f,id,key,label,0x8baab8))return false;
+   field_t *x=find(f,id);
+   item_t *it=g_ptr_array_index(x->items,x->items->len-1);it->header=true;
+   if(x->selected==x->items->len-1)x->selected=SIZE_MAX;
+   return true;
+}
+bool rrui_form_list_selectable(const rrui_form_t *f,size_t i,size_t j){
+   field_t *x=at(f,i);
+   return x&&x->w.kind==RRUI_LIST&&j<x->items->len&&!((item_t *)g_ptr_array_index(x->items,j))->header;
+}
+bool rrui_form_list_move(rrui_form_t *f,size_t i,int dir,size_t steps,bool wrap){
+   field_t *x=at(f,i);
+   if(!x||x->w.kind!=RRUI_LIST||!x->items->len||!dir||!steps)return false;
+   size_t count=x->items->len,n=x->selected,chosen=n;
+   for(size_t k=0;k<count && steps;k++){
+      if(n>=count)n=dir>0?0:count-1;
+      else if(dir>0){if(n+1==count&&!wrap)break;n=(n+1)%count;}
+      else {if(!n&&!wrap)break;n=n?n-1:count-1;}
+      if(rrui_form_list_selectable(f,i,n)){chosen=n;steps--;}
+   }
+   return chosen<count&&rrui_form_select(f,i,chosen);
+}
 uint32_t rrui_form_list_color(const rrui_form_t *f,size_t i,size_t j) {
    field_t *x=at(f,i);return x&&j<x->items->len?((item_t *)g_ptr_array_index(x->items,j))->color:UINT32_MAX;
 }
@@ -159,7 +182,7 @@ const char *rrui_form_list_label(const rrui_form_t *f,size_t i,size_t j) {
    field_t *x=at(f,i);return x&&j<x->items->len?((item_t *)g_ptr_array_index(x->items,j))->label:NULL;
 }
 bool rrui_form_select(rrui_form_t *f,size_t i,size_t j) {
-   field_t *x=at(f,i);if(!x||x->w.kind!=RRUI_LIST||j>=x->items->len)return false;
+   field_t *x=at(f,i);if(!x||!rrui_form_list_selectable(f,i,j))return false;
    item_t *it=g_ptr_array_index(x->items,j);g_free(x->value);x->value=g_strdup(it->key);x->selected=j;x->reveal_selection=true;return true;
 }
 /* Keep viewport independent from selection. Only explicit navigation follows
@@ -215,6 +238,7 @@ bool rrui_form_move_word(rrui_form_t *f,int dir) {
 bool rrui_form_activate(rrui_form_t *f) {
    field_t *x=at(f,rrui_form_focus(f));if(!x||!x->interactive)return false;
    if(x->w.kind==RRUI_STEPPER||x->w.kind==RRUI_SLIDER)return false;
+   if(x->w.kind==RRUI_LIST&&!rrui_form_list_selectable(f,f->focus,x->selected))return false;
    if(x->w.kind==RRUI_CHECKBOX)x->checked=!x->checked;
    if(*x->w.action&&f->action)f->action(f,x->w.id,x->w.action,f->user);
    return true;

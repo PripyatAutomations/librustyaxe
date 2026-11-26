@@ -44,6 +44,15 @@ int main(void) {
    assert(rrui_form_list_view(f,3,5,true)==6);
    assert(rrui_form_select(f,3,9));
    assert(rrui_form_list_view(f,3,5,true)==6);
+   assert(rrui_form_list_clear(f,"l"));
+   assert(rrui_form_list_header(f,"l","@group","Group"));
+   assert(rrui_form_list_append(f,"l","a","A"));
+   assert(rrui_form_list_header(f,"l","@other","Other"));
+   assert(rrui_form_list_append(f,"l","b","B"));
+   assert(!rrui_form_select(f,3,0));
+   assert(rrui_form_list_move(f,3,1,1,false)&&!strcmp(rrui_form_value(f,"l"),"a"));
+   assert(rrui_form_list_move(f,3,1,1,false)&&!strcmp(rrui_form_value(f,"l"),"b"));
+   assert(rrui_form_list_move(f,3,1,1,true)&&!strcmp(rrui_form_value(f,"l"),"a"));
    assert(rrui_form_set_focus(f,4));assert(rrui_form_activate(f)&&called==1);
    assert(rrui_form_next(f,1)&&rrui_form_focus(f)==1);
    rrui_form_free(f);
