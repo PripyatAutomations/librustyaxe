@@ -199,7 +199,20 @@ bool rrui_render_init(void){
    if(!isatty(STDIN_FILENO)||!isatty(STDOUT_FILENO))return false;
    setlocale(LC_CTYPE,"");
    shell_termios_valid=tcgetattr(STDIN_FILENO,&shell_termios)==0;
-   screen=newterm(NULL,stdout,stdin);
+   /* Prefer direct RGB for known xterm-compatible truecolor terminals.
+    * Select the terminfo entry for this SCREEN only: do not change TERM
+    * globally or affect subprocesses/libtermkey. Avoid assuming that a
+    * multiplexer or Linux console passes through direct colors. */
+   const char *term=g_getenv("TERM"),*ct=g_getenv("COLORTERM");
+   const char *override=g_getenv("RUSTYUI_DIRECT_COLOR");
+   bool truecolor=ct&&(!g_ascii_strcasecmp(ct,"truecolor")||!g_ascii_strcasecmp(ct,"24bit"));
+   bool compatible=term&&(!strcmp(term,"xterm")||!strcmp(term,"xterm-256color")||
+      !strcmp(term,"vte")||!strcmp(term,"vte-256color"));
+   bool forced=override&&!strcmp(override,"1");
+   bool disabled=override&&!strcmp(override,"0");
+   if(!disabled&&(forced||(truecolor&&compatible)))
+      screen=newterm("xterm-direct",stdout,stdin);
+   if(!screen)screen=newterm(NULL,stdout,stdin);
    if(!screen){
       if(shell_termios_valid)tcsetattr(STDIN_FILENO,TCSANOW,&shell_termios);
       shell_termios_valid=false;
