@@ -14,6 +14,13 @@ typedef enum {
    RRUI_ENTRY, RRUI_CHECKBOX, RRUI_BUTTON, RRUI_LIST, RRUI_STEPPER, RRUI_SLIDER
 } rrui_kind_t;
 
+typedef enum { RRUI_PACK_VERTICAL, RRUI_PACK_HORIZONTAL, RRUI_PACK_FLOW, RRUI_PACK_GRID, RRUI_PACK_FIXED } rrui_pack_mode_t;
+typedef struct {
+   unsigned padding, column, row;
+   int x, y;
+   bool expand, fill;
+} rrui_pack_options_t;
+
 /* Strings are owned by the layout and valid until replacement/free. */
 typedef struct {
    rrui_kind_t kind;
@@ -21,6 +28,9 @@ typedef struct {
    unsigned width_chars, height_rows, max_length, spacing;
    int minimum, maximum, step;
    bool vertical;
+   rrui_pack_mode_t layout;
+   unsigned columns;
+   rrui_pack_options_t pack;
    bool visible, enabled, checked, expand_x, expand_y, masked;
 } rrui_widget_t;
 

@@ -24,6 +24,19 @@ int main(void) {
    assert(!rrui_layout_load(l,"ui.add(dict {kind:\"dialog\",id:\"x\",width_chars:-1});"));
    assert(!rrui_layout_load(l,"ui.add(dict {kind:\"dialog\",id:\"x\"}); missing();"));
    assert(rrui_layout_count(l)==2);
+   assert(rrui_layout_load(l,
+      "ui.add(dict {kind=\"dialog\";id=\"d\";layout=\"flow\";});"
+      "ui.add(dict {kind=\"slider\";id=\"s\";});"
+      "ui.add(dict {kind=\"row\";id=\"r\";parent=\"d\";});"
+      "ui.pack(\"r\",\"s\",dict {padding=1;expand=true;});"
+      "ui.set(\"s\",\"orientation\",\"vertical\");"
+      "ui.add(dict {kind=\"label\";id=\"temp\";parent=\"d\";});ui.remove(\"temp\");"));
+   assert(rrui_layout_count(l)==3);
+   w=rrui_layout_at(l,2);
+   assert(!strcmp(w->id,"s")&&!strcmp(w->parent,"r")&&w->vertical&&w->pack.padding==1&&w->pack.expand);
+   assert(rrui_layout_at(l,0)->layout==RRUI_PACK_FLOW);
+   assert(!rrui_layout_load(l,"ui.add(dict {kind=\"panel\";id=\"a\";});ui.add(dict {kind=\"row\";id=\"b\";parent=\"a\";});ui.pack(\"b\",\"a\");"));
+   assert(rrui_layout_count(l)==3);
    rrui_layout_free(l);
    l=rrui_layout_new(RRUI_GTK3);
    assert(rrui_layout_load(l,source));

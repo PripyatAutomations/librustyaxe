@@ -110,6 +110,28 @@ static bool container(rrui_kind_t kind) {
    return kind == RRUI_DIALOG || kind == RRUI_PANEL ||
           kind == RRUI_ROW || kind == RRUI_COLUMN;
 }
+static const char *const pack_modes[]={"vertical","horizontal","flow","grid","fixed"};
+static bool parse_mode(const char *name,rrui_pack_mode_t *out) {
+   for(unsigned i=0;i<G_N_ELEMENTS(pack_modes);i++)if(!strcmp(name,pack_modes[i])){*out=i;return true;}
+   return false;
+}
+static bool read_pack(const rrs_value_t *d,rrui_pack_options_t *p) {
+   return read_uint(d,"padding",&p->padding,p->padding,64)&&
+      read_uint(d,"column",&p->column,p->column,1023)&&read_uint(d,"row",&p->row,p->row,1023)&&
+      read_int(d,"x",&p->x,p->x)&&read_int(d,"y",&p->y,p->y)&&
+      read_bool(d,"expand",&p->expand,p->expand)&&read_bool(d,"fill",&p->fill,p->fill)&&
+      p->x>=0&&p->x<=4096&&p->y>=0&&p->y<=4096;
+}
+static bool layout_pack(rrui_layout_t *l,rrui_widget_t *child,const char *parent,const rrui_pack_options_t *options) {
+   if(!child||child->kind==RRUI_DIALOG)return false;
+   const rrui_widget_t *p=rrui_layout_find(l,parent);
+   if(!p||!container(p->kind))return false;
+   for(const rrui_widget_t *a=p;a;a=*a->parent?rrui_layout_find(l,a->parent):NULL)
+      if(a==child)return false;
+   char *copy=g_strdup(parent);g_free((void *)child->parent);child->parent=copy;
+   if(options)child->pack=*options;
+   return true;
+}
 static rrs_value_t *native_add(rrs_vm_t *vm, int argc,
                                const rrs_value_t *const argv[], void *user) {
    rrui_layout_t *l = user;
@@ -134,9 +156,8 @@ static rrs_value_t *native_add(rrs_vm_t *vm, int argc,
       const rrui_widget_t *p = rrui_layout_find(l,parent);
       if (!p || !container(p->kind) || k == RRUI_DIALOG)
          return fail(vm, "Invalid widget parent");
-   } else if (k != RRUI_DIALOG && k != RRUI_PANEL)
-      return fail(vm, "A root must be a dialog or panel");
-   rrui_widget_t w = { .kind = (rrui_kind_t)k };
+   }
+   rrui_widget_t w = { .kind = (rrui_kind_t)k, .layout = k==RRUI_ROW?RRUI_PACK_HORIZONTAL:RRUI_PACK_VERTICAL, .columns=2 };
    if (!read_uint(d,"width_chars",&w.width_chars,0,4096) ||
        !read_uint(d,"height_rows",&w.height_rows,0,4096) ||
        !read_uint(d,"max_length",&w.max_length,180,RRUI_MAX_TEXT) ||
@@ -148,6 +169,10 @@ static rrs_value_t *native_add(rrs_vm_t *vm, int argc,
        !read_bool(d,"expand_y",&w.expand_y,false) ||
        !read_bool(d,"masked",&w.masked,false))
       return fail(vm, "Invalid widget property type or range");
+   const char *mode;
+   if(!read_string(d,"layout",&mode)||(*mode&&(!container(w.kind)||!parse_mode(mode,&w.layout)))||
+      !read_uint(d,"columns",&w.columns,2,64)||!w.columns||!read_pack(d,&w.pack))
+      return fail(vm,"Invalid packing properties");
    if (k == RRUI_ENTRY && g_utf8_strlen(value,-1) > (glong)w.max_length)
       return fail(vm, "Entry value exceeds max_length");
    if (k == RRUI_STEPPER || k == RRUI_SLIDER) {
@@ -171,6 +196,94 @@ static rrs_value_t *native_add(rrs_vm_t *vm, int argc,
    g_ptr_array_add(l->widgets,owned);
    return rrs_string(id);
 }
+static const char *string_arg(const rrs_value_t *v) {
+   return rrs_value_type(v)==RRS_STRING?rrs_value_string(v):NULL;
+}
+static rrs_value_t *native_pack(rrs_vm_t *vm,int argc,const rrs_value_t *const argv[],void *user) {
+   rrui_layout_t *l=user;
+   if(argc<2||argc>3)return fail(vm,"ui.pack(container,widget[,options])");
+   const char *parent=string_arg(argv[0]),*id=string_arg(argv[1]);
+   rrui_widget_t *w=(rrui_widget_t *)rrui_layout_find(l,id);
+   if(!parent||!w)return fail(vm,"Unknown packing target");
+   rrui_pack_options_t options=w->pack;
+   if(argc==3&&(rrs_value_type(argv[2])!=RRS_DICT||!read_pack(argv[2],&options)))return fail(vm,"Invalid packing options");
+   if(!layout_pack(l,w,parent,&options))return fail(vm,"Invalid packing parent or cycle");
+   return rrs_boolean(true);
+}
+static rrs_value_t *native_unpack(rrs_vm_t *vm,int argc,const rrs_value_t *const argv[],void *user) {
+   rrui_widget_t *w=argc==1?(rrui_widget_t *)rrui_layout_find(user,string_arg(argv[0])):NULL;
+   if(!w||!*w->parent)return fail(vm,"Widget is not packed");
+   g_free((void *)w->parent);w->parent=g_strdup("");return rrs_boolean(true);
+}
+static rrs_value_t *native_set(rrs_vm_t *vm,int argc,const rrs_value_t *const argv[],void *user) {
+   rrui_widget_t *w=argc==3?(rrui_widget_t *)rrui_layout_find(user,string_arg(argv[0])):NULL;
+   const char *prop=argc==3?string_arg(argv[1]):NULL;
+   if(!w||!prop)return fail(vm,"ui.set(widget,property,value)");
+   const rrs_value_t *v=argv[2];
+   if(!strcmp(prop,"orientation")&&w->kind==RRUI_SLIDER){
+      const char *value=string_arg(v);
+      if(!value||(strcmp(value,"horizontal")&&strcmp(value,"vertical")))return fail(vm,"Invalid orientation");
+      w->vertical=!strcmp(value,"vertical");
+   }else if(!strcmp(prop,"layout")&&container(w->kind)){
+      const char *value=string_arg(v);
+      if(!value||!parse_mode(value,&w->layout))return fail(vm,"Invalid layout mode");
+   }else if(!strcmp(prop,"visible")||!strcmp(prop,"enabled")){
+      if(rrs_value_type(v)!=RRS_BOOL)return fail(vm,"Expected boolean");
+      if(!strcmp(prop,"visible"))w->visible=rrs_value_bool(v);else w->enabled=rrs_value_bool(v);
+   }else if(!strcmp(prop,"width_chars")||!strcmp(prop,"height_rows")||!strcmp(prop,"spacing")||!strcmp(prop,"columns")){
+      if(rrs_value_type(v)!=RRS_INT)return fail(vm,"Expected integer");
+      int64_t n=rrs_value_int(v);
+      if(n<0||n>4096||(!strcmp(prop,"spacing")&&n>64)||(!strcmp(prop,"columns")&&(n<1||n>64)))return fail(vm,"Invalid size");
+      if(!strcmp(prop,"width_chars"))w->width_chars=n;
+      else if(!strcmp(prop,"height_rows"))w->height_rows=n;
+      else if(!strcmp(prop,"spacing"))w->spacing=n;
+      else w->columns=n;
+   }else return fail(vm,"Unsupported property");
+   return rrs_boolean(true);
+}
+static rrs_value_t *native_get(rrs_vm_t *vm,int argc,const rrs_value_t *const argv[],void *user) {
+   const rrui_widget_t *w=argc==2?rrui_layout_find(user,string_arg(argv[0])):NULL;
+   const char *prop=argc==2?string_arg(argv[1]):NULL;
+   if(!w||!prop)return fail(vm,"ui.get(widget,property)");
+   if(!strcmp(prop,"parent"))return rrs_string(w->parent);
+   if(!strcmp(prop,"orientation"))return rrs_string(w->vertical?"vertical":"horizontal");
+   if(!strcmp(prop,"layout"))return rrs_string(pack_modes[w->layout]);
+   if(!strcmp(prop,"visible"))return rrs_boolean(w->visible);
+   if(!strcmp(prop,"enabled"))return rrs_boolean(w->enabled);
+   return fail(vm,"Unsupported property");
+}
+/* Parent-first order is part of the existing form contract. Normalize after
+ * packing, preserving sibling insertion order and discarding detached trees. */
+static void append_tree(GPtrArray *out,GPtrArray *all,rrui_widget_t *w) {
+   g_ptr_array_add(out,w);
+   for(guint i=0;i<all->len;i++){
+      rrui_widget_t *child=g_ptr_array_index(all,i);
+      if(!strcmp(child->parent,w->id))append_tree(out,all,child);
+   }
+}
+static bool normalize(rrui_layout_t *l) {
+   GPtrArray *out=g_ptr_array_new_with_free_func(widget_free);
+   for(guint i=0;i<l->widgets->len;i++){
+      rrui_widget_t *w=g_ptr_array_index(l->widgets,i);
+      if(!*w->parent&&(w->kind==RRUI_DIALOG||w->kind==RRUI_PANEL))append_tree(out,l->widgets,w);
+   }
+   if(!out->len){g_ptr_array_set_free_func(out,NULL);g_ptr_array_unref(out);return false;}
+   for(guint i=0;i<l->widgets->len;i++){
+      rrui_widget_t *w=g_ptr_array_index(l->widgets,i);
+      if(!g_ptr_array_find(out,w,NULL))widget_free(w);
+   }
+   g_ptr_array_set_free_func(l->widgets,NULL);g_ptr_array_unref(l->widgets);l->widgets=out;
+   return true;
+}
+static rrs_value_t *native_remove(rrs_vm_t *vm,int argc,const rrs_value_t *const argv[],void *user) {
+   rrui_layout_t *l=user;
+   rrui_widget_t *w=argc==1?(rrui_widget_t *)rrui_layout_find(l,string_arg(argv[0])):NULL;
+   if(!w)return fail(vm,"Unknown widget");
+   GPtrArray *tree=g_ptr_array_new();
+   append_tree(tree,l->widgets,w);
+   for(guint i=tree->len;i>0;i--)g_ptr_array_remove(l->widgets,g_ptr_array_index(tree,i-1));
+   g_ptr_array_unref(tree);return rrs_boolean(true);
+}
 static rrs_value_t *native_capability(rrs_vm_t *vm, int argc,
                                       const rrs_value_t *const argv[], void *user) {
    rrui_layout_t *l = user;
@@ -185,8 +298,13 @@ bool rrui_layout_load(rrui_layout_t *l, const char *source) {
    rrs_value_t *result = NULL;
    bool ok = vm && rrs_vm_register_native(vm,"ui.add",native_add,stage) &&
       rrs_vm_register_native(vm,"ui.capability",native_capability,stage) &&
+      rrs_vm_register_native(vm,"ui.pack",native_pack,stage) &&
+      rrs_vm_register_native(vm,"ui.unpack",native_unpack,stage) &&
+      rrs_vm_register_native(vm,"ui.set",native_set,stage) &&
+      rrs_vm_register_native(vm,"ui.get",native_get,stage) &&
+      rrs_vm_register_native(vm,"ui.remove",native_remove,stage) &&
       rrs_vm_eval(vm,source,&result);
-   if (ok && !stage->widgets->len) {
+   if (ok && !normalize(stage)) {
       ok = false;
       g_strlcpy(l->error,"Layout has no widgets",sizeof(l->error));
    } else if (!ok) {
