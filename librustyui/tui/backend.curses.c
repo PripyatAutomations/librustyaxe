@@ -210,6 +210,13 @@ bool rrui_render_init(void){
       pairs=g_hash_table_new_full(g_int64_hash,g_int64_equal,g_free,NULL);
    }
    scrollok(stdscr,FALSE);leaveok(stdscr,FALSE);
+   /* A scroll in a side panel must never become a physical terminal-wide
+    * insert/delete-line operation. Keep updates local to changed cells.
+    * libtermkey owns input; ncurses must not interrupt a composed frame
+    * halfway through doupdate merely because more wheel events arrived. */
+   idlok(stdscr,FALSE);
+   idcok(stdscr,FALSE);
+   typeahead(-1);
    last_pair=-1;next_pair=1;fg=bg=-1;attrs=0;frame_depth=0;seq_len=utf_len=0;
    cursor_visibility=1;applied_cursor=-1;dirty=true;wrap_pending=false;
    return true;
