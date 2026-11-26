@@ -2,6 +2,7 @@
 #ifndef RUSTYUI_FORM_H
 #define RUSTYUI_FORM_H
 #include <librustyui/ui.h>
+struct tui_window;
 typedef struct rrui_form rrui_form_t;
 typedef void (*rrui_action_fn)(rrui_form_t *,const char *id,const char *action,void *);
 typedef struct {
@@ -49,4 +50,7 @@ void rrui_form_cancel(rrui_form_t *);
  * before freeing. Actions may close the form. */
 bool rrui_tui_open(rrui_form_t *);
 void rrui_tui_close(rrui_form_t *);
+/* Borrowed form attached to a normal switchable tab. Detach before freeing. */
+bool rrui_tui_tab_attach(struct tui_window *,rrui_form_t *);
+void rrui_tui_tab_detach(struct tui_window *);
 #endif

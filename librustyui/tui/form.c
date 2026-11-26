@@ -32,6 +32,10 @@ static int drag_x,drag_y;
 static bool resizing;
 static size_t modal_scroll;
 static GArray *modal_hits;
+typedef struct {tui_window_t *win;rrui_form_t *form;size_t scroll;GArray *hits;} tab_form_t;
+static tab_form_t tabs[TUI_MAX_WINDOWS];
+static bool tab_dispatch;
+static tab_form_t *tab_find(tui_window_t *w){for(size_t i=0;i<G_N_ELEMENTS(tabs);i++)if(tabs[i].win==w&&w)return &tabs[i];return NULL;}
 static size_t panel_index(rrui_form_t *f) {for(size_t i=0;i<npanels;i++)if(panels[i].form==f)return i;return SIZE_MAX;}
 static void raise_panel(size_t i) {if(i>=npanels)return;panel_t p=panels[i];memmove(panels+i,panels+i+1,(npanels-i-1)*sizeof(p));panels[npanels-1]=p;focused=p.form;}
 bool rrui_tui_panel_geometry(rrui_form_t *f,rrui_rect_t r) {size_t i=panel_index(f);if(i==SIZE_MAX||r.width<12||r.height<4)return false;panels[i].requested=r;tui_redraw_request();return true;}
@@ -238,6 +242,26 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
    if(!overlay)line(rows,cols,false,"","Tab / Shift-Tab  Arrows  Enter  Esc");
    rrui_render_flush();return true;
 }
+static void tab_draw(tui_window_t *w,int rows,int cols,void *unused) {
+   (void)unused;
+   tab_form_t *t=tab_find(w);if(!t)return;
+   overlay=true;ox=1;oy=1;scroll=t->scroll;hits=t->hits;
+   draw_form(t->form,rows-1,cols,true);
+   t->scroll=scroll;t->hits=hits;hits=NULL;overlay=false;ox=1;oy=0;
+}
+bool rrui_tui_tab_attach(tui_window_t *w,rrui_form_t *f){
+   if(!w||!f||w->view_draw||tab_find(w))return false;
+   for(size_t i=0;i<G_N_ELEMENTS(tabs);i++)if(!tabs[i].win){
+      tabs[i]=(tab_form_t){.win=w,.form=f};w->view_draw=tab_draw;w->view_full_height=true;
+      tui_redraw_request();return true;
+   }
+   return false;
+}
+void rrui_tui_tab_detach(tui_window_t *w){
+   tab_form_t *t=tab_find(w);if(!t)return;
+   if(t->hits)g_array_unref(t->hits);
+   *t=(tab_form_t){0};w->view_draw=NULL;w->view_full_height=false;
+}
 bool rrui_tui_draw(int rows,int cols) {
    if(!active)return false;
    overlay=false;ox=1;oy=0;scroll=modal_scroll;hits=modal_hits;
@@ -362,6 +386,39 @@ static bool wheel_list(rrui_form_t *f,GArray *h,int row,int button) {
    return false;
 }
 bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
+   tab_form_t *tab=!active&&!tab_dispatch?tab_find(tui_active_window()):NULL;
+   if(tab){
+      if(key->modifiers&TERMKEY_KEYMOD_ALT)return false;
+      if(key->modifiers&TERMKEY_KEYMOD_CTRL&&key->type==TERMKEY_TYPE_KEYSYM&&key->code.sym==TERMKEY_SYM_TAB)return false;
+      if(key->type==TERMKEY_TYPE_MOUSE){
+         TermKeyMouseEvent ev;int b,r,c;TermKeyKey copy=*key;
+         if(termkey_interpret_mouse(tk,&copy,&ev,&b,&r,&c)!=TERMKEY_RES_KEY)return true;
+         if(ev!=TERMKEY_MOUSE_PRESS||r<2||!tab->hits)return true;
+         r--;
+         if(b==4||b==5){wheel_list(tab->form,tab->hits,r,b);return true;}
+         if(b!=1)return true;
+         for(guint j=0;j<tab->hits->len;j++){
+            hit_t h=g_array_index(tab->hits,hit_t,j);
+            if(h.row!=r||(h.right&&(c<h.left||c>h.right)))continue;
+            rrui_form_t *f=tab->form;
+            if(!rrui_form_set_focus(f,h.field))break;
+            rrui_field_t z;rrui_form_field(f,h.field,&z);
+            if(h.slider)rrui_form_slider_position(f,z.widget->vertical?h.slider_pos:(unsigned)(c-h.left),h.slider_span);
+            else if(h.right){if(abs(c-h.minus)<=1)rrui_form_adjust(f,-1);else if(abs(c-h.plus)<=1)rrui_form_adjust(f,1);}
+            else if(h.item!=SIZE_MAX){rrui_form_select(f,h.field,h.item);rrui_form_list_view(f,h.field,list_page(tab->hits,h.field),true);}
+            else if(z.widget->kind==RRUI_BUTTON||z.widget->kind==RRUI_CHECKBOX)rrui_form_activate(f);
+            break;
+         }
+         tui_redraw_request();return true;
+      }
+      if(key->type==TERMKEY_TYPE_KEYSYM&&key->code.sym==TERMKEY_SYM_ESCAPE){tui_window_focus("Status");tui_redraw_request();return true;}
+      /* Reuse normal form keyboard handling, but keep tab ownership separate. */
+      tab_dispatch=true;active=tab->form;
+      GArray *saved=modal_hits;modal_hits=NULL;
+      bool used=rrui_tui_key(tk,key);
+      active=NULL;modal_hits=saved;tab_dispatch=false;
+      return used;
+   }
    if(!active&&key->type==TERMKEY_TYPE_FUNCTION&&
       (key->code.number==6||key->code.number==18)&&
       !(key->modifiers&(TERMKEY_KEYMOD_CTRL|TERMKEY_KEYMOD_ALT))){

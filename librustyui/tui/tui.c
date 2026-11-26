@@ -485,7 +485,6 @@ void tui_redraw_screen(void) {
       rrui_render_write("\033[0m",strlen("\033[0m"));
 
       if (w->view_full_height) {
-         rrui_tui_draw_panels(term_rows,term_cols);
          rrui_render_end();
          tui_render_unlock();
 
