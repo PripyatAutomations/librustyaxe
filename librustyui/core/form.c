@@ -54,7 +54,7 @@ rrui_form_t *rrui_form_new(const rrui_layout_t *l,rrui_action_fn action,void *us
          x->visible=x->visible&&p->w.visible;enabled=enabled&&p->w.enabled;
       }
       x->interactive=x->visible&&enabled&&(w->kind==RRUI_ENTRY||w->kind==RRUI_CHECKBOX||
-                         w->kind==RRUI_LIST||w->kind==RRUI_BUTTON);
+                         w->kind==RRUI_LIST||w->kind==RRUI_BUTTON||w->kind==RRUI_STEPPER);
       x->items=g_ptr_array_new_with_free_func(item_free);x->selected=SIZE_MAX;
       g_ptr_array_add(f->fields,x);
       if(x->interactive&&f->focus==SIZE_MAX)f->focus=i;
@@ -93,8 +93,23 @@ static bool valid_text(const char *s) {
 }
 bool rrui_form_set_value(rrui_form_t *f,const char *id,const char *v) {
    field_t *x=find(f,id);
-   if(!x||(x->w.kind!=RRUI_ENTRY&&x->w.kind!=RRUI_LABEL)||!valid_text(v)||g_utf8_strlen(v,-1)>(glong)x->w.max_length)return false;
+   if(!x||(x->w.kind!=RRUI_ENTRY&&x->w.kind!=RRUI_LABEL&&x->w.kind!=RRUI_STEPPER)||!valid_text(v)||g_utf8_strlen(v,-1)>(glong)x->w.max_length)return false;
+   if(x->w.kind==RRUI_STEPPER&&*v){
+      char *end=NULL;gint64 n=g_ascii_strtoll(v,&end,10);
+      if(!end||*end||n<x->w.minimum||n>x->w.maximum)return false;
+   }
    char *copy=g_strdup(v);g_free(x->value);x->value=copy;x->cursor=strlen(copy);return true;
+}
+bool rrui_form_adjust(rrui_form_t *f,int direction) {
+   field_t *x=at(f,rrui_form_focus(f));
+   if(!x||!x->interactive||x->w.kind!=RRUI_STEPPER||!*x->value||!direction)return false;
+   gint64 old=g_ascii_strtoll(x->value,NULL,10);
+   gint64 n=CLAMP(old+(direction<0?-(gint64)x->w.step:(gint64)x->w.step),x->w.minimum,x->w.maximum);
+   if(n==old)return false;
+   char *value=g_strdup_printf("%" G_GINT64_FORMAT,n);
+   g_free(x->value);x->value=value;x->cursor=strlen(value);
+   if(*x->w.action&&f->action)f->action(f,x->w.id,x->w.action,f->user);
+   return true;
 }
 bool rrui_form_checked(const rrui_form_t *f,const char *id){field_t *x=find(f,id);return x&&x->checked;}
 bool rrui_form_set_checked(rrui_form_t *f,const char *id,bool b) {
@@ -179,6 +194,7 @@ bool rrui_form_move_word(rrui_form_t *f,int dir) {
 }
 bool rrui_form_activate(rrui_form_t *f) {
    field_t *x=at(f,rrui_form_focus(f));if(!x||!x->interactive)return false;
+   if(x->w.kind==RRUI_STEPPER)return false;
    if(x->w.kind==RRUI_CHECKBOX)x->checked=!x->checked;
    if(*x->w.action&&f->action)f->action(f,x->w.id,x->w.action,f->user);
    return true;

@@ -11,7 +11,7 @@ typedef enum {
 } rrui_backend_t;
 typedef enum {
    RRUI_DIALOG, RRUI_PANEL, RRUI_ROW, RRUI_COLUMN, RRUI_LABEL,
-   RRUI_ENTRY, RRUI_CHECKBOX, RRUI_BUTTON, RRUI_LIST
+   RRUI_ENTRY, RRUI_CHECKBOX, RRUI_BUTTON, RRUI_LIST, RRUI_STEPPER
 } rrui_kind_t;
 
 /* Strings are owned by the layout and valid until replacement/free. */
@@ -19,6 +19,7 @@ typedef struct {
    rrui_kind_t kind;
    const char *id, *parent, *label, *action, *value;
    unsigned width_chars, height_rows, max_length, spacing;
+   int minimum, maximum, step;
    bool visible, enabled, checked, expand_x, expand_y, masked;
 } rrui_widget_t;
 

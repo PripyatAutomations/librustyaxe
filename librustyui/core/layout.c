@@ -59,6 +59,7 @@ bool rrui_capability(rrui_backend_t backend, const char *name) {
    if (!strcmp(name, "tui")) return backend == RRUI_TUI;
    if (!strcmp(name, "gtk3") || !strcmp(name, "graphical"))
       return backend == RRUI_GTK3;
+   if (!strcmp(name, "stepper")) return backend == RRUI_TUI;
    /* Specialized widgets are not advertised until actually implemented. */
    return false;
 }
@@ -84,6 +85,14 @@ static bool read_uint(const rrs_value_t *d, const char *key, unsigned *out,
    *out = (unsigned)n;
    return true;
 }
+static bool read_int(const rrs_value_t *d,const char *key,int *out,int fallback) {
+   const rrs_value_t *v=rrs_value_field(d,key);
+   if(!v){*out=fallback;return true;}
+   if(rrs_value_type(v)!=RRS_INT)return false;
+   int64_t n=rrs_value_int(v);
+   if(n<INT32_MIN||n>INT32_MAX)return false;
+   *out=(int)n;return true;
+}
 static bool read_bool(const rrs_value_t *d, const char *key, bool *out, bool fallback) {
    const rrs_value_t *v = rrs_value_field(d, key);
    if (!v) { *out = fallback; return true; }
@@ -105,7 +114,7 @@ static rrs_value_t *native_add(rrs_vm_t *vm, int argc,
                                const rrs_value_t *const argv[], void *user) {
    rrui_layout_t *l = user;
    static const char *const kinds[] = {
-      "dialog", "panel", "row", "column", "label", "entry", "checkbox", "button", "list"
+      "dialog", "panel", "row", "column", "label", "entry", "checkbox", "button", "list", "stepper"
    };
    if (argc != 1 || rrs_value_type(argv[0]) != RRS_DICT)
       return fail(vm, "ui.add requires a widget dictionary");
@@ -141,6 +150,16 @@ static rrs_value_t *native_add(rrs_vm_t *vm, int argc,
       return fail(vm, "Invalid widget property type or range");
    if (k == RRUI_ENTRY && g_utf8_strlen(value,-1) > (glong)w.max_length)
       return fail(vm, "Entry value exceeds max_length");
+   if (k == RRUI_STEPPER) {
+      if (!read_int(d,"min",&w.minimum,0)||!read_int(d,"max",&w.maximum,100)||
+          !read_int(d,"step",&w.step,1)||w.minimum>w.maximum||w.step<=0)
+         return fail(vm,"Invalid stepper range");
+      if (*value) {
+         char *end=NULL;gint64 n=g_ascii_strtoll(value,&end,10);
+         if (!end||*end||n<w.minimum||n>w.maximum)
+            return fail(vm,"Invalid stepper value");
+      }
+   }
    w.id = g_strdup(id); w.parent = g_strdup(parent); w.label = g_strdup(label);
    w.action = g_strdup(action); w.value = g_strdup(value);
    rrui_widget_t *owned = g_new(rrui_widget_t,1);

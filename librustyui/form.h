@@ -21,6 +21,9 @@ bool rrui_form_next(rrui_form_t *,int direction);
 const char *rrui_form_value(const rrui_form_t *,const char *id);
 /* Set an entry or dynamic display label. */
 bool rrui_form_set_value(rrui_form_t *,const char *id,const char *value);
+/* A stepper has an integer value or an empty (unavailable) value.
+ * Host updates do not invoke actions. User adjustments do. */
+bool rrui_form_adjust(rrui_form_t *,int direction);
 bool rrui_form_checked(const rrui_form_t *,const char *id);
 bool rrui_form_set_checked(rrui_form_t *,const char *id,bool);
 bool rrui_form_list_clear(rrui_form_t *,const char *id);
