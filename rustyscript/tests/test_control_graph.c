@@ -1,0 +1,113 @@
+// SPDX-License-Identifier: MIT
+#include "../control.graph.h"
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+static void test_named_ports(void) {
+   char name[16]={0};
+   bool output=false;
+   unsigned index=999;
+   for(unsigned i=0;i<32;i++) {
+      assert(rr_control_graph_port_name(false,i,name,sizeof(name)));
+      assert(rr_control_graph_port_index(name,&output,&index));
+      assert(!output && index==i);
+   }
+   assert(!rr_control_graph_port_name(false,32,name,sizeof(name)));
+   assert(!rr_control_graph_port_name(true,1,name,sizeof(name)));
+   assert(rr_control_graph_port_name(true,0,name,sizeof(name)));
+   assert(!strcmp(name,"out_a"));
+   assert(rr_control_graph_port_index("out_a",&output,&index));
+   assert(output && !index);
+   assert(!rr_control_graph_port_index("in_", &output,&index));
+   assert(!rr_control_graph_port_index("in_zz", &output,&index));
+   assert(!rr_control_graph_port_index("in_ag", &output,&index));
+   assert(!rr_control_graph_port_index("out_b", &output,&index));
+   assert(!rr_control_graph_port_index("in_A", &output,&index));
+   assert(!rr_control_graph_port_name(false,0,name,2));
+
+   rr_control_graph_t *g=rr_control_graph_new();
+   assert(g);
+   assert(rr_control_graph_source_add(g,"constant.true"));
+   assert(rr_control_graph_source_set(g,"constant.true",true,true));
+   assert(rr_control_graph_gate_add(g,"gate.test",RR_GATE_AND,2));
+   assert(rr_control_graph_connect_ports(g,"constant.true","out_a","gate.test","in_a"));
+   assert(rr_control_graph_connect_ports(g,"constant.true","out_a","gate.test","in_b"));
+   assert(!rr_control_graph_connect_ports(g,"constant.true","in_a","gate.test","in_b"));
+   assert(!rr_control_graph_connect_ports(g,"constant.true","out_a","gate.test","out_a"));
+   assert(!rr_control_graph_connect_ports(g,"constant.true","out_a","gate.test","in_c"));
+   bool valid=false,high=false;
+   assert(rr_control_graph_output(g,"gate.test",&valid,&high) && valid && high);
+   assert(rr_control_graph_disconnect_ports(g,"constant.true","out_a","gate.test","in_a"));
+   assert(!rr_control_graph_disconnect_ports(g,"constant.true","out_a","gate.test","in_a"));
+   assert(rr_control_graph_output(g,"gate.test",&valid,&high) && !valid && !high);
+   rr_control_graph_free(g);
+}
+
+int main(void) { 
+   test_named_ports();
+   rr_control_graph_t *g=rr_control_graph_new();
+   assert(g);
+   assert(rr_control_graph_source_add(g,"local.ptt"));
+   assert(rr_control_graph_source_add(g,"modem.ptt"));
+   assert(rr_control_graph_source_add(g,"tx.enable"));
+   assert(rr_control_graph_gate_add(g,"any",RR_GATE_OR,2));
+   assert(rr_control_graph_gate_add(g,"interlocked",RR_GATE_AND,2));
+   assert(rr_control_graph_gate_add(g,"compare",RR_GATE_XNOR,2));
+   assert(rr_control_graph_connect(g,"local.ptt","any",0));
+   assert(rr_control_graph_connect(g,"modem.ptt","any",0));
+   assert(rr_control_graph_connect(g,"tx.enable","any",1));
+   assert(rr_control_graph_connect(g,"any","interlocked",0));
+   assert(rr_control_graph_connect(g,"tx.enable","interlocked",1));
+   assert(!rr_control_graph_connect(g,"interlocked","any",1));
+   assert(!rr_control_graph_connect(g,"any","any",1));
+   assert(!rr_control_graph_connect(g,"modem.ptt","any",0));
+   assert(rr_control_graph_wire_count(g)==5);
+   bool valid,high;
+   assert(rr_control_graph_output(g,"interlocked",&valid,&high) && !valid && !high);
+   assert(rr_control_graph_source_set(g,"local.ptt",true,true));
+   assert(rr_control_graph_source_set(g,"modem.ptt",true,false));
+   assert(rr_control_graph_source_set(g,"tx.enable",true,true));
+   assert(rr_control_graph_output(g,"interlocked",&valid,&high) && valid && high);
+   assert(rr_control_graph_source_set(g,"tx.enable",true,false));
+   assert(rr_control_graph_output(g,"interlocked",&valid,&high) && valid && !high);
+   assert(rr_control_graph_source_set(g,"tx.enable",false,true));
+   assert(rr_control_graph_output(g,"interlocked",&valid,&high) && !valid && !high);
+   assert(rr_control_graph_source_set(g,"tx.enable",true,true));
+   assert(rr_control_graph_disconnect(g,"local.ptt","any",0));
+   assert(rr_control_graph_output(g,"interlocked",&valid,&high) && valid && !high);
+   assert(rr_control_graph_source_set(g,"modem.ptt",true,true));
+   assert(rr_control_graph_output(g,"interlocked",&valid,&high) && valid && high);
+   assert(!rr_control_graph_gate_configure(g,"any",RR_GATE_NOT,1));
+   assert(rr_control_graph_disconnect(g,"tx.enable","any",1));
+   assert(rr_control_graph_gate_configure(g,"any",RR_GATE_NOT,1));
+   assert(rr_control_graph_output(g,"interlocked",&valid,&high) && valid && !high);
+   assert(rr_control_graph_gate_remove(g,"any"));
+   assert(rr_control_graph_wire_count(g)==1);
+   assert(rr_control_graph_output(g,"interlocked",&valid,&high) && !valid && !high);
+   assert(rr_control_graph_gate_add(g,"any",RR_GATE_NOR,2));
+   assert(rr_control_graph_connect(g,"local.ptt","any",0));
+   assert(rr_control_graph_connect(g,"modem.ptt","any",1));
+   assert(rr_control_graph_output(g,"any",&valid,&high) && valid && !high);
+   /* TRUE/FALSE constants are normal source nodes. Fanout works, and
+    * removing a constant invalidates any dependent gate (fail-low). */
+   assert(rr_control_graph_source_add(g,"constant.true"));
+   assert(rr_control_graph_source_set(g,"constant.true",true,true));
+   assert(rr_control_graph_source_add(g,"constant.false"));
+   assert(rr_control_graph_source_set(g,"constant.false",true,false));
+   assert(rr_control_graph_gate_add(g,"constant.xnor",RR_GATE_XNOR,2));
+   assert(rr_control_graph_connect(g,"constant.true","constant.xnor",0));
+   assert(rr_control_graph_connect(g,"constant.true","constant.xnor",1));
+   assert(rr_control_graph_output(g,"constant.xnor",&valid,&high) && valid && high);
+   assert(rr_control_graph_disconnect(g,"constant.true","constant.xnor",1));
+   assert(rr_control_graph_connect(g,"constant.false","constant.xnor",1));
+   assert(rr_control_graph_output(g,"constant.xnor",&valid,&high) && valid && !high);
+   assert(rr_control_graph_source_remove(g,"constant.false"));
+   assert(rr_control_graph_output(g,"constant.xnor",&valid,&high) && !valid && !high);
+   assert(rr_control_graph_source_add(g,"replacement"));
+   assert(rr_control_graph_output(g,"replacement",&valid,&high) && !valid && !high);
+   assert(rr_control_graph_source_set(g,"replacement",true,true));
+   assert(rr_control_graph_output(g,"replacement",&valid,&high) && valid && high);
+   rr_control_graph_free(g);
+   puts("boolean control graph wired-OR, XNOR, constants, cycles and fail-low passed");
+   return 0;
+}
