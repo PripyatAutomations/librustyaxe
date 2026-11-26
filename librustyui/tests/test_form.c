@@ -46,5 +46,23 @@ int main(void) {
    assert(rrui_form_list_view(f,3,5,true)==6);
    assert(rrui_form_set_focus(f,4));assert(rrui_form_activate(f)&&called==1);
    assert(rrui_form_next(f,1)&&rrui_form_focus(f)==1);
+   rrui_form_free(f);
+   l=rrui_layout_new(RRUI_TUI);
+   assert(rrui_layout_load(l,
+      "ui.add(dict {kind=\"dialog\";id=\"d\";});"
+      "ui.add(dict {kind=\"stepper\";id=\"s\";parent=\"d\";min=0;max=10;step=3;value=\"8\";});"
+      "ui.add(dict {kind=\"slider\";id=\"v\";parent=\"d\";min=0;max=100;step=5;value=\"20\";orientation=\"vertical\";});"));
+   f=rrui_form_new(l,NULL,NULL);rrui_layout_free(l);
+   assert(rrui_form_adjust(f,1)&&!strcmp(rrui_form_value(f,"s"),"10"));
+   assert(!rrui_form_adjust(f,1));assert(rrui_form_adjust(f,-1));
+   assert(!strcmp(rrui_form_value(f,"s"),"7"));
+   assert(rrui_form_set_value(f,"s",""));assert(!rrui_form_adjust(f,1));
+   assert(!rrui_form_set_value(f,"s","11"));
+   assert(rrui_form_set_focus(f,2));
+   assert(rrui_form_field(f,2,&field)&&field.widget->vertical);
+   assert(rrui_form_set_orientation(f,"v",false));
+   assert(rrui_form_field(f,2,&field)&&!field.widget->vertical&&!strcmp(field.value,"20"));
+   assert(rrui_form_slider_position(f,1,3)&&!strcmp(rrui_form_value(f,"v"),"35"));
+   assert(rrui_form_slider_position(f,3,3)&&!strcmp(rrui_form_value(f,"v"),"100"));
    rrui_form_free(f);puts("PASS: form snapshot, UTF-8 editing, focus, keyed lists and actions");return 0;
 }

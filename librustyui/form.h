@@ -24,6 +24,10 @@ bool rrui_form_set_value(rrui_form_t *,const char *id,const char *value);
 /* A stepper has an integer value or an empty (unavailable) value.
  * Host updates do not invoke actions. User adjustments do. */
 bool rrui_form_adjust(rrui_form_t *,int direction);
+/* Change slider orientation without rebuilding or changing its value. */
+bool rrui_form_set_orientation(rrui_form_t *,const char *id,bool vertical);
+/* User gesture: select a position in [0,span], snapped to the step. */
+bool rrui_form_slider_position(rrui_form_t *,unsigned position,unsigned span);
 bool rrui_form_checked(const rrui_form_t *,const char *id);
 bool rrui_form_set_checked(rrui_form_t *,const char *id,bool);
 bool rrui_form_list_clear(rrui_form_t *,const char *id);

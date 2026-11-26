@@ -12,7 +12,7 @@
 
 static rrui_form_t *active;
 static size_t scroll;
-typedef struct {size_t field,item;int row,left,right,minus,plus;} hit_t;
+typedef struct {size_t field,item;int row,left,right,minus,plus;unsigned slider_pos,slider_span;bool slider;} hit_t;
 static GArray *hits;
 typedef struct {rrui_form_t *form;rrui_rect_t requested,rect;size_t scroll;GArray *hits;bool tiled,hidden;int minimum,weight;unsigned order;} panel_t;
 static panel_t panels[32];
@@ -118,7 +118,8 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
       for(size_t i=scroll;i<focus&&i<count;i++) {
          rrui_field_t x;rrui_form_field(form,i,&x);
          if(!x.visible||x.widget->kind==RRUI_ROW||x.widget->kind==RRUI_COLUMN||(overlay&&i==0))continue;
-         used+=x.widget->kind==RRUI_ENTRY?2:1;
+         used+=x.widget->kind==RRUI_ENTRY||(x.widget->kind==RRUI_SLIDER&&!x.widget->vertical)?2:1;
+         if(x.widget->kind==RRUI_SLIDER&&x.widget->vertical)used+=MIN((int)(x.widget->height_rows?x.widget->height_rows:5),MAX(1,rows/2));
          if(x.widget->kind==RRUI_LIST)used+=MIN(x.count,(size_t)MAX(1,MIN((int)x.widget->height_rows,rows/2)));
       }
       if(used<rows-3||scroll>=focus||focus>=count)break;
@@ -130,6 +131,40 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
       const rrui_widget_t *w=x.widget;
       if(!x.visible||w->kind==RRUI_ROW||w->kind==RRUI_COLUMN||(overlay&&i==0))continue;
       bool selected=has_focus&&i==focus;
+      if(w->kind==RRUI_SLIDER) {
+         gint64 range=(gint64)w->maximum-w->minimum;
+         double fraction=*x.value&&range?CLAMP((g_ascii_strtoll(x.value,NULL,10)-(double)w->minimum)/range,0.,1.):0.;
+         char *caption=g_strdup_printf("%s %s",w->label,*x.value?x.value:"--");
+         if(w->vertical){
+            line(row++,cols,selected,"  ",caption);
+            int height=MIN((int)(w->height_rows?w->height_rows:5),MIN(MAX(1,rows/2),rows-row));
+            for(int j=0;j<height;j++){
+               int pos=height-1-j;
+               const char *track=!*x.value?"│":pos==(int)(fraction*(height-1)+0.5)?"●":pos<fraction*(height-1)?"┃":"│";
+               line(row,cols,selected,"    ",track);
+               if(x.interactive&&height>1){
+                  hit_t h={.field=i,.item=SIZE_MAX,.row=row,.left=4,.right=6,.slider=true,.slider_pos=(unsigned)pos,.slider_span=(unsigned)(height-1)};
+                  g_array_append_val(hits,h);
+               }
+               row++;
+            }
+         }else{
+            int width=MIN((int)(w->width_chars?w->width_chars:12),MAX(2,cols-5));
+            line(row++,cols,selected,"  ",caption);
+            if(row<rows){
+               GString *track=g_string_new("");
+               for(int j=0;j<width;j++)g_string_append(track,!*x.value?"─":j==(int)(fraction*(width-1)+0.5)?"●":j<fraction*(width-1)?"━":"─");
+               line(row,cols,selected,"  ",track->str);
+               g_string_free(track,TRUE);
+               if(x.interactive){
+                  hit_t h={.field=i,.item=SIZE_MAX,.row=row,.left=3,.right=width+2,.slider=true,.slider_span=(unsigned)(width-1)};
+                  g_array_append_val(hits,h);
+               }
+               row++;
+            }
+         }
+         g_free(caption);continue;
+      }
       if(w->kind==RRUI_STEPPER) {
          /* Consecutive steppers under the same parent flow horizontally and
           * wrap to the next line when the terminal becomes narrow. */
@@ -412,7 +447,8 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
                hit_t h=g_array_index(p->hits,hit_t,k);
                if(h.row+a.y!=r||(h.right&&(c-a.x<h.left||c-a.x>h.right)))continue;
                if(rrui_form_set_focus(p->form,h.field)){
-                  if(h.right){int col=c-a.x;if(abs(col-h.minus)<=1)rrui_form_adjust(p->form,-1);else if(abs(col-h.plus)<=1)rrui_form_adjust(p->form,1);}
+                  if(h.slider){rrui_field_t z;rrui_form_field(p->form,h.field,&z);rrui_form_slider_position(p->form,z.widget->vertical?h.slider_pos:(unsigned)(c-a.x-h.left),h.slider_span);}
+                  else if(h.right){int col=c-a.x;if(abs(col-h.minus)<=1)rrui_form_adjust(p->form,-1);else if(abs(col-h.plus)<=1)rrui_form_adjust(p->form,1);}
                   else if(h.item!=SIZE_MAX){rrui_form_select(p->form,h.field,h.item);rrui_form_list_view(p->form,h.field,list_page(p->hits,h.field),true);}
                   else {rrui_field_t z;if(rrui_form_field(p->form,h.field,&z)&&(z.widget->kind==RRUI_BUTTON||z.widget->kind==RRUI_CHECKBOX))rrui_form_activate(p->form);}
                }
@@ -439,7 +475,8 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             hit_t h=g_array_index(local_hits,hit_t,j);
             if(h.row!=r||(h.right&&(c<h.left||c>h.right)))continue;
             if(!rrui_form_set_focus(f,h.field))break;
-            if(h.right){if(abs(c-h.minus)<=1)rrui_form_adjust(f,-1);else if(abs(c-h.plus)<=1)rrui_form_adjust(f,1);}
+            if(h.slider){rrui_field_t z;rrui_form_field(f,h.field,&z);rrui_form_slider_position(f,z.widget->vertical?h.slider_pos:(unsigned)(c-h.left),h.slider_span);}
+            else if(h.right){if(abs(c-h.minus)<=1)rrui_form_adjust(f,-1);else if(abs(c-h.plus)<=1)rrui_form_adjust(f,1);}
             else if(h.item!=SIZE_MAX){rrui_form_select(f,h.field,h.item);rrui_form_list_view(f,h.field,list_page(local_hits,h.field),true);}
             else {rrui_field_t y;if(rrui_form_field(f,h.field,&y)&&(y.widget->kind==RRUI_BUTTON||y.widget->kind==RRUI_CHECKBOX))rrui_form_activate(f);}
             break;
@@ -458,7 +495,7 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             if(x.widget&&x.widget->kind==RRUI_ENTRY){
                if(key->modifiers&TERMKEY_KEYMOD_CTRL)rrui_form_move_word(f,dir);
                else rrui_form_edit(f,dir,false);
-            }else if(x.widget&&x.widget->kind==RRUI_STEPPER)rrui_form_adjust(f,dir);
+            }else if(x.widget&&(x.widget->kind==RRUI_STEPPER||x.widget->kind==RRUI_SLIDER))rrui_form_adjust(f,dir);
             else if(!(key->modifiers&TERMKEY_KEYMOD_CTRL))rrui_form_next(f,dir);
             break;
          }
@@ -486,12 +523,13 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
                   else n=n+1<x.count?n+1:wrap?0:n;
                }
                rrui_form_select(f,i,n);rrui_form_list_view(f,i,list_page(local_hits,i),true);
-            } else rrui_form_next(f,key->code.sym==TERMKEY_SYM_UP?-1:1);
+            } else if(x.widget&&x.widget->kind==RRUI_SLIDER&&x.widget->vertical)rrui_form_adjust(f,key->code.sym==TERMKEY_SYM_UP?1:-1);
+            else rrui_form_next(f,key->code.sym==TERMKEY_SYM_UP?-1:1);
             break;
          default:break;
       }
    } else if(key->type==TERMKEY_TYPE_UNICODE&&!(key->modifiers&(TERMKEY_KEYMOD_CTRL|TERMKEY_KEYMOD_ALT))) {
-      if(x.widget&&x.widget->kind==RRUI_STEPPER&&(key->code.codepoint=='+'||key->code.codepoint=='-'))
+      if(x.widget&&(x.widget->kind==RRUI_STEPPER||x.widget->kind==RRUI_SLIDER)&&(key->code.codepoint=='+'||key->code.codepoint=='-'))
          rrui_form_adjust(f,key->code.codepoint=='+'?1:-1);
       else if(key->code.codepoint==' '&&x.widget&&x.widget->kind!=RRUI_ENTRY)rrui_form_activate(f);
       else if(key->code.codepoint=='\t')rrui_form_next(f,key->modifiers&TERMKEY_KEYMOD_SHIFT?-1:1);
