@@ -49,6 +49,7 @@ void rrui_form_cancel(rrui_form_t *);
 /* Nonblocking modal terminal form; caller retains ownership and must close
  * before freeing. Actions may close the form. */
 bool rrui_tui_open(rrui_form_t *);
+bool rrui_tui_modal_active(void);
 void rrui_tui_close(rrui_form_t *);
 /* Borrowed form attached to a normal switchable tab. Detach before freeing. */
 bool rrui_tui_tab_attach(struct tui_window *,rrui_form_t *);
