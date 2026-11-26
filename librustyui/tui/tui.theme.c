@@ -202,14 +202,6 @@ char *irc_to_tui_colors(const char *in) {
    if (!in) {
       return NULL;
    }
-   static const char *foreground[] = {
-      "97", "30", "34", "32", "91", "38;5;94", "35", "38;5;208",
-      "93", "92", "36", "96", "94", "95", "90", "37"
-   };
-   static const char *background[] = {
-      "107", "40", "44", "42", "101", "48;5;94", "45", "48;5;208",
-      "103", "102", "46", "106", "104", "105", "100", "47"
-   };
    size_t len = strlen(in);
 
    if (len > (SIZE_MAX - 64) / 32) {
@@ -242,10 +234,16 @@ char *irc_to_tui_colors(const char *in) {
                   output_cursor += sprintf(output_cursor, "\033[%u;2;%u;%u;%um", prefix, value >> 16, (value >> 8) & 255, value & 255);
                } else if (value == 99) {
                   output_cursor += sprintf(output_cursor, "\033[%um", component ? 49 : 39);
-               } else if (value < 16) {
-                  output_cursor += sprintf(output_cursor, "\033[%sm", component ? background[value] : foreground[value]);
                } else {
-                  output_cursor += sprintf(output_cursor, "\033[%u;5;%um", prefix, irc_color_ansi_extended(value));
+                  /* The IRC palette is not the ANSI palette. Use the same
+                   * exact RGB table as other frontends; only the terminal
+                   * backend may quantize when direct colors are unavailable. */
+                  const char *rgb = irc_color_rgb(value);
+                  if (rgb) {
+                     unsigned v = (unsigned)strtoul(rgb + 1, NULL, 16);
+                     output_cursor += sprintf(output_cursor, "\033[%u;2;%u;%u;%um",
+                        prefix, v >> 16, (v >> 8) & 255, v & 255);
+                  }
                }
             }
          }
