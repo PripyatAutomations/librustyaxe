@@ -2,11 +2,6 @@
 .DEFAULT_GOAL := all
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 CC ?= cc
-RR_C_STD := $(shell if printf 'int x;\n' | $(CC) -std=gnu23 -Werror -x c -fsyntax-only - >/dev/null 2>&1; then echo -std=gnu23; elif printf 'int x;\n' | $(CC) -std=gnu2x -Werror -x c -fsyntax-only - >/dev/null 2>&1; then echo -std=gnu2x; fi)
-ifeq ($(strip $(RR_C_STD)),)
-$(error $(CC) does not support -std=gnu23 or -std=gnu2x; a C23-capable compiler is required)
-endif
-export RR_C_STD
 PKG_CONFIG ?= pkg-config
 PREFIX ?= /usr
 LIBDIR ?= $(PREFIX)/lib/$(shell $(CC) -dumpmachine)
@@ -42,7 +37,7 @@ PC_FILE := $(BUILD_DIR)/librustyui.pc
 CURSES_LIB := $(BUILD_DIR)/librustyui-curses.so.$(SOVERSION).$(VERSION)
 CURSES_SONAME := librustyui-curses.so.$(SOVERSION)
 CURSES_PC := $(BUILD_DIR)/librustyui-curses.pc
-UI_CFLAGS := $(RR_C_STD) -I$(REPO_ROOT) -I$(REPO_ROOT)/rustyscript -I$(CURDIR)/vendor/libtermkey -I$(AXE_BUILD_DIR)/include -I$(AXE_BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))
+UI_CFLAGS := -std=gnu2x -I$(REPO_ROOT) -I$(REPO_ROOT)/rustyscript -I$(CURDIR)/vendor/libtermkey -I$(AXE_BUILD_DIR)/include -I$(AXE_BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))
 UI_LIBS := -L$(SCRIPT_BUILD_DIR) -lrustyscript -L$(AXE_BUILD_DIR) -lrustyaxe $(shell $(PKG_CONFIG) --libs glib-2.0 gio-2.0) -lbsd -pthread -lm
 TESTS := $(addprefix $(BUILD_DIR)/,test_layout test_form test_workspace test_canvas test_shape test_tree)
 ifeq ($(WITH_CURSES),true)
