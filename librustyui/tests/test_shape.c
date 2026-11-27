@@ -38,5 +38,18 @@ int main(void) {
    assert(rrui_shape_path(RRUI_SHAPE_XNOR,bounds,true,path,NULL));
    assert(moves==2 && closes==0 && arcs==1);
    assert(!rrui_shape_path(RRUI_SHAPE_RECT,bounds,false,NULL,NULL));
+   rrui_graph_port_t ports[]={
+      {{"input",1,RRUI_PIN_INPUT,RRUI_PIN_LEFT,.25},0xabcdef,true},
+      {{"disabled",1,RRUI_PIN_INPUT,RRUI_PIN_LEFT,.5},0,false},
+      {{"output",1,RRUI_PIN_OUTPUT,RRUI_PIN_RIGHT,.5},0,true},
+      {{"number",2,RRUI_PIN_INPUT,RRUI_PIN_LEFT,.75},0,true}
+   };
+   assert(rrui_graph_port_find(ports,4,"output")==&ports[2]);
+   assert(!rrui_graph_port_find(ports,4,"missing"));
+   assert(rrui_graph_port_hit(ports,4,RRUI_SHAPE_RECT,bounds,10,40,0)==0);
+   assert(rrui_graph_port_hit(ports,4,RRUI_SHAPE_RECT,bounds,10,60,0)==SIZE_MAX);
+   assert(rrui_graph_port_next(ports,4,0,1,NULL)==2);
+   assert(rrui_graph_port_next(ports,4,2,1,&ports[2].pin)==0);
+   assert(rrui_graph_port_next(ports,4,0,-1,NULL)==3);
    return 0;
 }

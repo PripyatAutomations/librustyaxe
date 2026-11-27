@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include <librustyui/shape.h>
 #include <math.h>
+#include <string.h>
 
 bool rrui_shape_pins_compatible(const rrui_pin_t *a,const rrui_pin_t *b) {
    return a && b && a->type && a->type==b->type &&
@@ -99,4 +100,41 @@ bool rrui_shape_path(rrui_shape_t shape,rrui_shape_bounds_t b,
 #undef A
 #undef Z
    return true;
+}
+
+const rrui_graph_port_t *rrui_graph_port_find(const rrui_graph_port_t *ports,
+                                             size_t count,const char *id) {
+   if (!ports || !id || !*id) { return NULL; }
+   for (size_t i=0;i<count;i++) {
+      if (ports[i].pin.id && !strcmp(ports[i].pin.id,id)) { return &ports[i]; }
+   }
+   return NULL;
+}
+size_t rrui_graph_port_hit(const rrui_graph_port_t *ports,size_t count,
+                           rrui_shape_t shape,rrui_shape_bounds_t bounds,
+                           double x,double y,double radius) {
+   if (!ports || !isfinite(x) || !isfinite(y) ||
+       !isfinite(radius) || radius<0) { return SIZE_MAX; }
+   size_t best=SIZE_MAX;
+   for (size_t i=0;i<count;i++) {
+      double px,py;
+      if (!ports[i].available ||
+          !rrui_shape_pin_position(shape,bounds,&ports[i].pin,&px,&py)) { continue; }
+      double distance=hypot(px-x,py-y);
+      if (distance<=radius && (best==SIZE_MAX || distance<radius)) {
+         best=i; radius=distance;
+      }
+   }
+   return best;
+}
+size_t rrui_graph_port_next(const rrui_graph_port_t *ports,size_t count,
+                            size_t current,int direction,const rrui_pin_t *peer) {
+   if (!ports || !count || !direction) { return SIZE_MAX; }
+   size_t i=current<count?current:(direction>0?count-1:0);
+   for (size_t n=0;n<count;n++) {
+      i=direction>0?(i==count-1?0:i+1):(i?i-1:count-1);
+      if (ports[i].available && ports[i].pin.type &&
+          (!peer || rrui_shape_pins_compatible(peer,&ports[i].pin))) { return i; }
+   }
+   return SIZE_MAX;
 }

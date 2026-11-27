@@ -3,6 +3,7 @@
 #define RRUI_SHAPE_H
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 typedef enum {
    RRUI_SHAPE_RECT, RRUI_SHAPE_ELLIPSE, RRUI_SHAPE_TRIANGLE,
    RRUI_SHAPE_AND, RRUI_SHAPE_OR, RRUI_SHAPE_XOR,
@@ -38,4 +39,20 @@ typedef struct {
 typedef void (*rrui_path_fn)(const rrui_path_command_t *,void *);
 bool rrui_shape_path(rrui_shape_t shape,rrui_shape_bounds_t bounds,
                      bool decorations,rrui_path_fn emit,void *user);
+/* A block exposes an arbitrary borrowed collection of named ports.
+ * A port key is unique within its block; type compatibility is application
+ * defined via nonzero type IDs. Position and hit tests use the same geometry. */
+typedef struct {
+   rrui_pin_t pin;
+   uint32_t color;
+   bool available;
+} rrui_graph_port_t;
+const rrui_graph_port_t *rrui_graph_port_find(const rrui_graph_port_t *ports,
+                                             size_t count,const char *id);
+size_t rrui_graph_port_hit(const rrui_graph_port_t *ports,size_t count,
+                           rrui_shape_t shape,rrui_shape_bounds_t bounds,
+                           double x,double y,double radius);
+size_t rrui_graph_port_next(const rrui_graph_port_t *ports,size_t count,
+                            size_t current,int direction,
+                            const rrui_pin_t *peer);
 #endif
