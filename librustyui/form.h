@@ -14,6 +14,7 @@ typedef struct {
 /* Form owns a snapshot of the layout. Call on the UI thread. */
 rrui_form_t *rrui_form_new(const rrui_layout_t *,rrui_action_fn,void *);
 void rrui_form_free(rrui_form_t *);
+void rrui_form_set_detach_hook(void (*hook)(rrui_form_t *));
 size_t rrui_form_count(const rrui_form_t *);
 bool rrui_form_field(const rrui_form_t *,size_t,rrui_field_t *);
 size_t rrui_form_focus(const rrui_form_t *);

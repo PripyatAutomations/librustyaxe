@@ -68,9 +68,11 @@ rrui_form_t *rrui_form_new(const rrui_layout_t *l,rrui_action_fn action,void *us
    }
    return f;
 }
+static void (*detach_hook)(rrui_form_t *);
+void rrui_form_set_detach_hook(void (*hook)(rrui_form_t *)) { detach_hook=hook; }
 void rrui_form_free(rrui_form_t *f) {
    if(!f)return;
-   rrui_tui_close(f);g_ptr_array_unref(f->fields);g_free(f);
+   if (detach_hook) { detach_hook(f); }g_ptr_array_unref(f->fields);g_free(f);
 }
 bool rrui_form_field(const rrui_form_t *f,size_t i,rrui_field_t *out) {
    field_t *x=at(f,i);if(!x||!out)return false;
@@ -308,6 +310,6 @@ bool rrui_form_activate(rrui_form_t *f) {
 }
 void rrui_form_cancel(rrui_form_t *f) {
    if(!f)return;
-   rrui_tui_close(f);
+   if (detach_hook) { detach_hook(f); }
    if(f->action)f->action(f,"","dialog.close",f->user);
 }

@@ -45,10 +45,11 @@ endif
 PUBLIC_HEADERS := $(filter-out termkey-internal.h tui.internal.h build_config.h,$(notdir $(wildcard *.h)))
 DEPS := glib-2.0 gio-2.0 openssl
 WITH_UI ?= true
+WITH_CURSES ?= true
 ifeq ($(filter true false,$(WITH_UI)),)
 $(error WITH_UI must be true or false)
 endif
-UI_MAKE = $(MAKE) -C librustyui BUILD_DIR="$(abspath $(BUILD_DIR))/ui" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
+UI_MAKE = $(MAKE) -C librustyui WITH_CURSES=$(WITH_CURSES) BUILD_DIR="$(abspath $(BUILD_DIR))/ui" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
 ifeq ($(filter clean distclean uninstall src-deb source-deb,$(MAKECMDGOALS)),)
 ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error Missing development dependencies: $(DEPS))

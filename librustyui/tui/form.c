@@ -42,7 +42,7 @@ static tab_form_t *tab_find(tui_window_t *w){for(size_t i=0;i<G_N_ELEMENTS(tabs)
 static size_t panel_index(rrui_form_t *f) {for(size_t i=0;i<npanels;i++)if(panels[i].form==f)return i;return SIZE_MAX;}
 static void raise_panel(size_t i) {if(i>=npanels)return;panel_t p=panels[i];memmove(panels+i,panels+i+1,(npanels-i-1)*sizeof(p));panels[npanels-1]=p;focused=p.form;}
 bool rrui_tui_panel_geometry(rrui_form_t *f,rrui_rect_t r) {size_t i=panel_index(f);if(i==SIZE_MAX||r.width<12||r.height<4)return false;panels[i].requested=r;tui_redraw_request();return true;}
-bool rrui_tui_panel_open(rrui_form_t *f,rrui_rect_t r) {if(!f||!tui_is_enabled||active==f||panel_index(f)!=SIZE_MAX||npanels>=32||r.width<12||r.height<4)return false;panels[npanels++]=(panel_t){.form=f,.requested=r,.rect=r,.order=++tile_order};tui_redraw_request();return true;}
+bool rrui_tui_panel_open(rrui_form_t *f,rrui_rect_t r) {rrui_form_set_detach_hook(rrui_tui_close);if(!f||!tui_is_enabled||active==f||panel_index(f)!=SIZE_MAX||npanels>=32||r.width<12||r.height<4)return false;panels[npanels++]=(panel_t){.form=f,.requested=r,.rect=r,.order=++tile_order};tui_redraw_request();return true;}
 bool rrui_tui_tile_open(rrui_form_t *f,int minimum,int weight) {
    tui_render_lock();
    bool ok=rrui_tui_panel_open(f,(rrui_rect_t){1,2,24,6});
@@ -84,6 +84,7 @@ bool rrui_tui_modal_active(void){return active!=NULL;}
 
 
 bool rrui_tui_open(rrui_form_t *f) {
+   rrui_form_set_detach_hook(rrui_tui_close);
    if(!f||!tui_is_enabled||active||panel_index(f)!=SIZE_MAX)return false;
    active=f;modal_scroll=0;tui_redraw_request();return true;
 }
