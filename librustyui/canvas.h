@@ -7,6 +7,8 @@ typedef struct rrui_canvas rrui_canvas_t;
 rrui_canvas_t *rrui_canvas_new(int width,int height);
 void rrui_canvas_free(rrui_canvas_t *);
 void rrui_canvas_put(rrui_canvas_t *,int x,int y,uint32_t glyph,uint32_t rgb);
+void rrui_canvas_put_pair(rrui_canvas_t *,int x,int y,uint32_t glyph,uint32_t fg,uint32_t bg);
+uint32_t rrui_canvas_background(const rrui_canvas_t *,int x,int y);
 uint32_t rrui_canvas_get(const rrui_canvas_t *,int x,int y);
 void rrui_canvas_text(rrui_canvas_t *,int x,int y,int width,const char *,uint32_t rgb);
 void rrui_canvas_line(rrui_canvas_t *,int x1,int y1,int x2,int y2,uint32_t rgb);

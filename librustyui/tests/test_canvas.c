@@ -14,5 +14,11 @@ int main(void){
    rrui_canvas_text(c,3,3,4,"Hello",0x123456);
    assert(rrui_canvas_get(c,6,3)=='l'&&rrui_canvas_color(c,6,3)==0x123456);
    rrui_canvas_put(c,0,0,27,0);assert(rrui_canvas_get(c,0,0)=='?');
+   assert(rrui_canvas_background(c,6,3)==UINT32_MAX);
+   rrui_canvas_put_pair(c,6,3,'X',0xffffff,0xcc0000);
+   assert(rrui_canvas_get(c,6,3)=='X' && rrui_canvas_color(c,6,3)==0xffffff);
+   assert(rrui_canvas_background(c,6,3)==0xcc0000);
+   rrui_canvas_put(c,6,3,'Y',0x123456);
+   assert(rrui_canvas_background(c,6,3)==UINT32_MAX);
    rrui_canvas_free(c);puts("PASS: clipped canvas, box drawing, junctions and text");return 0;
 }

@@ -2,7 +2,7 @@
 #include <librustyui/canvas.h>
 #include <glib.h>
 #include <stdlib.h>
-typedef struct {uint32_t glyph,rgb;} cell_t;
+typedef struct {uint32_t glyph,rgb,bg;} cell_t;
 struct rrui_canvas {int width,height;cell_t *cells;};
 rrui_canvas_t *rrui_canvas_new(int w,int h){
    if(w<1||h<1||w>4096||h>4096||(size_t)w*h>1048576)return NULL;
@@ -15,10 +15,16 @@ int rrui_canvas_height(const rrui_canvas_t *c){return c?c->height:0;}
 static cell_t *cell(const rrui_canvas_t *c,int x,int y){
    return c&&x>=0&&y>=0&&x<c->width&&y<c->height?&c->cells[(size_t)y*c->width+x]:NULL;
 }
-void rrui_canvas_put(rrui_canvas_t *c,int x,int y,uint32_t glyph,uint32_t rgb){
+void rrui_canvas_put_pair(rrui_canvas_t *c,int x,int y,uint32_t glyph,uint32_t rgb,uint32_t bg){
    cell_t *p=cell(c,x,y);if(!p)return;
    if(!g_unichar_validate(glyph)||g_unichar_iscntrl(glyph)||g_unichar_iswide(glyph)||g_unichar_iszerowidth(glyph)||g_unichar_type(glyph)==G_UNICODE_FORMAT)glyph='?';
-   *p=(cell_t){glyph,rgb};
+   *p=(cell_t){glyph,rgb,bg};
+}
+void rrui_canvas_put(rrui_canvas_t *c,int x,int y,uint32_t glyph,uint32_t rgb) {
+   rrui_canvas_put_pair(c,x,y,glyph,rgb,UINT32_MAX);
+}
+uint32_t rrui_canvas_background(const rrui_canvas_t *c,int x,int y) {
+   cell_t *p=cell(c,x,y);return p&&p->glyph?p->bg:UINT32_MAX;
 }
 uint32_t rrui_canvas_get(const rrui_canvas_t *c,int x,int y){cell_t *p=cell(c,x,y);return p&&p->glyph?p->glyph:' ';}
 uint32_t rrui_canvas_color(const rrui_canvas_t *c,int x,int y){cell_t *p=cell(c,x,y);return p&&p->glyph?p->rgb:UINT32_MAX;}
