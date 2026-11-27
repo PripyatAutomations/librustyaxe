@@ -18,7 +18,7 @@ ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
 $(error RustyUI TUI requires development packages: $(DEPS))
 endif
 endif
-SOURCES := core/layout.c core/shape.c core/canvas.c core/form.c core/workspace.c core/theme.c tui/theme.palette.c tui/backend.curses.c tui/form.c tui/canvas.c tui/tui.c tui/tui.completion.c tui/tui.keys.c tui/tui.theme.c tui/tui.window.c vendor/libtermkey/termkey.c vendor/libtermkey/driver-csi.c vendor/libtermkey/driver-ti.c
+SOURCES := core/tree.c core/layout.c core/shape.c core/canvas.c core/form.c core/workspace.c core/theme.c tui/theme.palette.c tui/backend.curses.c tui/form.c tui/canvas.c tui/tui.c tui/tui.completion.c tui/tui.keys.c tui/tui.theme.c tui/tui.window.c vendor/libtermkey/termkey.c vendor/libtermkey/driver-csi.c vendor/libtermkey/driver-ti.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
 HEADERS := $(wildcard *.h) vendor/libtermkey/termkey.h
 SCRIPT_BUILD_DIR ?= $(AXE_BUILD_DIR)/script
@@ -29,7 +29,7 @@ SONAME := librustyui.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyui.pc
 UI_CFLAGS := -std=gnu23 -I$(REPO_ROOT) -I$(REPO_ROOT)/rustyscript -I$(CURDIR)/vendor/libtermkey -I$(AXE_BUILD_DIR)/include -I$(AXE_BUILD_DIR)/generated $(shell $(PKG_CONFIG) --cflags $(DEPS))
 UI_LIBS := -L$(SCRIPT_BUILD_DIR) -lrustyscript -L$(AXE_BUILD_DIR) -lrustyaxe $(shell $(PKG_CONFIG) --libs $(DEPS)) -lbsd -pthread -lm
-TESTS := $(addprefix $(BUILD_DIR)/,test_mirc test_completion_labels test_layout test_form test_workspace test_input test_canvas test_shape)
+TESTS := $(addprefix $(BUILD_DIR)/,test_mirc test_completion_labels test_layout test_form test_workspace test_input test_canvas test_shape test_tree)
 .PHONY: all test tests install uninstall clean
 all: $(REAL_LIB) $(PC_FILE)
 
