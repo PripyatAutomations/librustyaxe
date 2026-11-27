@@ -3,6 +3,11 @@
 # Locate the owning librustyaxe checkout, regardless of the invocation cwd.
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 CC ?= cc
+RR_C_STD := $(shell for std in gnu23 gnu2x; do printf 'int x;\n' | $(CC) -std=$std -Werror -x c -fsyntax-only - >/dev/null 2>&1 && { echo -std=$std; break; }; done)
+ifeq ($(strip $(RR_C_STD)),)
+$(error $(CC) does not support -std=gnu23 or -std=gnu2x; a C23-capable compiler is required)
+endif
+export RR_C_STD
 PKG_CONFIG ?= pkg-config
 PREFIX ?= /usr
 LIBDIR ?= $(PREFIX)/lib/$(shell $(CC) -dumpmachine)
@@ -18,7 +23,7 @@ HEADERS := $(filter-out internal.h,$(notdir $(wildcard *.h)))
 REAL_LIB := $(BUILD_DIR)/librustyirc.so.$(SOVERSION).$(VERSION)
 SONAME := librustyirc.so.$(SOVERSION)
 PC_FILE := $(BUILD_DIR)/librustyirc.pc
-IRC_CFLAGS := -I$(AXE_BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags glib-2.0 2>/dev/null) -std=gnu23
+IRC_CFLAGS := -I$(AXE_BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags glib-2.0 2>/dev/null) $(RR_C_STD)
 IRC_LIBS := -L$(AXE_BUILD_DIR) -lrustyaxe -lbsd
 AXE_LIB := $(AXE_BUILD_DIR)/librustyaxe.so.$(SOVERSION).$(VERSION)
 .PHONY: all test tests install uninstall clean distclean

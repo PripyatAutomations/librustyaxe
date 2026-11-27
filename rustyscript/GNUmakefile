@@ -2,6 +2,11 @@
 .DEFAULT_GOAL := all
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 CC ?= cc
+RR_C_STD := $(shell for std in gnu23 gnu2x; do printf 'int x;\n' | $(CC) -std=$std -Werror -x c -fsyntax-only - >/dev/null 2>&1 && { echo -std=$std; break; }; done)
+ifeq ($(strip $(RR_C_STD)),)
+$(error $(CC) does not support -std=gnu23 or -std=gnu2x; a C23-capable compiler is required)
+endif
+export RR_C_STD
 PREFIX ?= /usr
 LIBDIR ?= $(PREFIX)/lib/$(shell $(CC) -dumpmachine)
 INCLUDEDIR ?= $(PREFIX)/include
@@ -10,7 +15,7 @@ BUILD_DIR ?= $(REPO_ROOT)/build/script
 VERSION ?= $(strip $(shell cat $(REPO_ROOT)/.version))
 SOVERSION ?= 1
 AXE_BUILD_DIR ?= $(REPO_ROOT)/build
-CFLAGS += -std=gnu23 -Wall -Wextra -Werror -pedantic
+CFLAGS += $(RR_C_STD) -Wall -Wextra -Werror -pedantic
 SOURCES := rrscript.c runtime.c audio.logic.c control.graph.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
 REAL_LIB := $(BUILD_DIR)/librustyscript.so.$(SOVERSION).$(VERSION)
