@@ -50,6 +50,11 @@ size_t rrui_form_list_view(rrui_form_t *,size_t field,size_t span,bool follow_se
 bool rrui_form_list_scroll(rrui_form_t *,size_t field,size_t span,int delta);
 /* Entry edits use Unicode code points and byte-offset cursor positions. */
 bool rrui_form_insert(rrui_form_t *,uint32_t codepoint);
+/* Fixed decimal digit editing. Adjust adds/subtracts the selected place
+ * value with carry; direct digit entry overwrites and wraps the cursor. */
+bool rrui_form_digit_select(rrui_form_t *,size_t position);
+bool rrui_form_digit_adjust(rrui_form_t *,int direction);
+bool rrui_form_digit_zero(rrui_form_t *);
 bool rrui_form_edit(rrui_form_t *,int direction,bool erase);
 bool rrui_form_move_word(rrui_form_t *,int direction);
 bool rrui_form_activate(rrui_form_t *);

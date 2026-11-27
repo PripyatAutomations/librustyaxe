@@ -73,5 +73,24 @@ int main(void) {
    assert(rrui_form_field(f,2,&field)&&!field.widget->vertical&&!strcmp(field.value,"20"));
    assert(rrui_form_slider_position(f,1,3)&&!strcmp(rrui_form_value(f,"v"),"35"));
    assert(rrui_form_slider_position(f,3,3)&&!strcmp(rrui_form_value(f,"v"),"100"));
+   rrui_form_free(f);
+   l=rrui_layout_new(RRUI_TUI);
+   assert(rrui_layout_load(l,"ui.add(dict {kind=\"panel\";id=\"p\";});"
+      "ui.add(dict {kind=\"digits\";id=\"hz\";parent=\"p\";width_chars=8;value=\"14074000\";});"));
+   f=rrui_form_new(l,NULL,NULL);rrui_layout_free(l);
+   assert(rrui_form_digit_select(f,0));
+   assert(rrui_form_edit(f,-1,false));
+   assert(rrui_form_field(f,1,&field)&&field.cursor==7);
+   assert(rrui_form_edit(f,1,false));
+   assert(rrui_form_field(f,1,&field)&&field.cursor==0);
+   assert(rrui_form_digit_select(f,4));
+   assert(rrui_form_digit_adjust(f,1)&&!strcmp(rrui_form_value(f,"hz"),"14075000"));
+   assert(rrui_form_digit_zero(f)&&!strcmp(rrui_form_value(f,"hz"),"14070000"));
+   assert(rrui_form_insert(f,'9')&&!strcmp(rrui_form_value(f,"hz"),"14079000"));
+   assert(!rrui_form_insert(f,'x'));
+   assert(rrui_form_set_value(f,"hz","123")&&!strcmp(rrui_form_value(f,"hz"),"00000123"));
+   assert(rrui_form_field(f,1,&field)&&field.cursor==5);
+   assert(!rrui_form_set_value(f,"hz","-1"));
+   assert(rrui_form_set_value(f,"hz","")&&!rrui_form_digit_adjust(f,1));
    rrui_form_free(f);puts("PASS: form snapshot, UTF-8 editing, focus, keyed lists and actions");return 0;
 }

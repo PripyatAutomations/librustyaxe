@@ -49,11 +49,18 @@ rrui_form_t *rrui_form_new(const rrui_layout_t *l,rrui_action_fn action,void *us
       x->w.label=g_strdup(w->label);x->w.action=g_strdup(w->action);
       x->w.value=g_strdup(w->value);x->value=g_strdup(w->value);
       x->checked=w->checked;x->visible=w->visible;x->cursor=strlen(x->value);
+      if (w->kind==RRUI_DIGITS) {
+         if (*x->value) {
+            char *padded=g_strdup_printf("%0*" G_GUINT64_FORMAT,(int)w->width_chars,g_ascii_strtoull(x->value,NULL,10));
+            g_free(x->value);x->value=padded;
+         }
+         x->cursor=w->width_chars-1;
+      }
       bool enabled=w->enabled;
       for(field_t *p=find(f,w->parent);p;p=find(f,p->w.parent)) {
          x->visible=x->visible&&p->w.visible;enabled=enabled&&p->w.enabled;
       }
-      x->interactive=x->visible&&enabled&&(w->kind==RRUI_ENTRY||w->kind==RRUI_CHECKBOX||
+      x->interactive=x->visible&&enabled&&(w->kind==RRUI_ENTRY||w->kind==RRUI_DIGITS||w->kind==RRUI_CHECKBOX||
                          w->kind==RRUI_LIST||w->kind==RRUI_BUTTON||w->kind==RRUI_STEPPER||w->kind==RRUI_SLIDER);
       x->items=g_ptr_array_new_with_free_func(item_free);x->selected=SIZE_MAX;
       g_ptr_array_add(f->fields,x);
@@ -93,10 +100,16 @@ static bool valid_text(const char *s) {
 }
 bool rrui_form_set_value(rrui_form_t *f,const char *id,const char *v) {
    field_t *x=find(f,id);
-   if(!x||(x->w.kind!=RRUI_ENTRY&&x->w.kind!=RRUI_LABEL&&x->w.kind!=RRUI_STEPPER&&x->w.kind!=RRUI_SLIDER)||!valid_text(v)||g_utf8_strlen(v,-1)>(glong)x->w.max_length)return false;
+   if(!x||(x->w.kind!=RRUI_ENTRY&&x->w.kind!=RRUI_DIGITS&&x->w.kind!=RRUI_LABEL&&x->w.kind!=RRUI_STEPPER&&x->w.kind!=RRUI_SLIDER)||!valid_text(v)||g_utf8_strlen(v,-1)>(glong)x->w.max_length)return false;
    if((x->w.kind==RRUI_STEPPER||x->w.kind==RRUI_SLIDER)&&*v){
       char *end=NULL;gint64 n=g_ascii_strtoll(v,&end,10);
       if(!end||*end||n<x->w.minimum||n>x->w.maximum)return false;
+   }
+   if (x->w.kind==RRUI_DIGITS) {
+      if (strspn(v,"0123456789")!=strlen(v)) { return false; }
+      char *copy=*v?g_strdup_printf("%0*" G_GUINT64_FORMAT,(int)x->w.width_chars,g_ascii_strtoull(v,NULL,10)):g_strdup("");
+      g_free(x->value);x->value=copy;
+      x->cursor=MIN(x->cursor,x->w.width_chars-1);return true;
    }
    char *copy=g_strdup(v);g_free(x->value);x->value=copy;x->cursor=strlen(copy);return true;
 }
@@ -213,7 +226,44 @@ bool rrui_form_list_scroll(rrui_form_t *f,size_t i,size_t span,int delta) {
    else x->top=top+MIN(limit-top,(size_t)delta);
    return top!=x->top;
 }
+static field_t *digit_field(rrui_form_t *f) {
+   field_t *x=at(f,rrui_form_focus(f));
+   return x && x->interactive && x->w.kind==RRUI_DIGITS && *x->value?x:NULL;
+}
+bool rrui_form_digit_select(rrui_form_t *f,size_t position) {
+   field_t *x=digit_field(f);
+   if (!x || position>=x->w.width_chars) { return false; }
+   x->cursor=position;return true;
+}
+bool rrui_form_digit_zero(rrui_form_t *f) {
+   field_t *x=digit_field(f);
+   if (!x || x->value[x->cursor]=='0') { return false; }
+   x->value[x->cursor]='0';
+   return rrui_form_activate(f);
+}
+bool rrui_form_digit_adjust(rrui_form_t *f,int direction) {
+   field_t *x=digit_field(f);
+   if (!x || !direction) { return false; }
+   guint64 place=1,limit=1;
+   for (unsigned i=0;i<x->w.width_chars;i++) {
+      limit*=10;
+      if (i>x->cursor) { place*=10; }
+   }
+   guint64 old=g_ascii_strtoull(x->value,NULL,10);
+   guint64 next=direction>0?MIN(limit-1,old+place):old>=place?old-place:0;
+   if (next==old) { return false; }
+   char *value=g_strdup_printf("%0*" G_GUINT64_FORMAT,(int)x->w.width_chars,next);
+   g_free(x->value);x->value=value;
+   return rrui_form_activate(f);
+}
 bool rrui_form_insert(rrui_form_t *f,uint32_t c) {
+   field_t *digits=digit_field(f);
+   if (digits) {
+      if (c<'0' || c>'9') { return false; }
+      digits->value[digits->cursor]=(char)c;
+      digits->cursor=(digits->cursor+1)%digits->w.width_chars;
+      return true;
+   }
    field_t *x=at(f,rrui_form_focus(f));
    if(!x||x->w.kind!=RRUI_ENTRY||!x->interactive||!c||!g_unichar_validate(c)||g_unichar_iscntrl(c)||
       g_utf8_strlen(x->value,-1)>=(glong)x->w.max_length)return false;
@@ -222,6 +272,12 @@ bool rrui_form_insert(rrui_form_t *f,uint32_t c) {
    g_free(x->value);x->value=g_string_free(s,FALSE);x->cursor+=n;return true;
 }
 bool rrui_form_edit(rrui_form_t *f,int dir,bool erase) {
+   field_t *digits=digit_field(f);
+   if (digits) {
+      if (erase) { digits->value[digits->cursor]='0';return true; }
+      digits->cursor=(digits->cursor+digits->w.width_chars+(dir<0?-1:1))%digits->w.width_chars;
+      return true;
+   }
    field_t *x=at(f,rrui_form_focus(f));if(!x||x->w.kind!=RRUI_ENTRY||!x->interactive)return false;
    char *p=x->value+x->cursor,*q;
    if(dir<0){if(!x->cursor)return false;q=g_utf8_prev_char(p);}

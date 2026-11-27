@@ -59,7 +59,7 @@ bool rrui_capability(rrui_backend_t backend, const char *name) {
    if (!strcmp(name, "tui")) return backend == RRUI_TUI;
    if (!strcmp(name, "gtk3") || !strcmp(name, "graphical"))
       return backend == RRUI_GTK3;
-   if ((!strcmp(name, "stepper") || !strcmp(name, "slider"))) return backend == RRUI_TUI;
+   if ((!strcmp(name, "stepper") || !strcmp(name, "slider") || !strcmp(name, "digits"))) return backend == RRUI_TUI;
    /* Specialized widgets are not advertised until actually implemented. */
    return false;
 }
@@ -136,7 +136,7 @@ static rrs_value_t *native_add(rrs_vm_t *vm, int argc,
                                const rrs_value_t *const argv[], void *user) {
    rrui_layout_t *l = user;
    static const char *const kinds[] = {
-      "dialog", "panel", "row", "column", "label", "entry", "checkbox", "button", "list", "stepper", "slider"
+      "dialog", "panel", "row", "column", "label", "entry", "checkbox", "button", "list", "stepper", "slider", "digits"
    };
    if (argc != 1 || rrs_value_type(argv[0]) != RRS_DICT)
       return fail(vm, "ui.add requires a widget dictionary");
@@ -175,6 +175,13 @@ static rrs_value_t *native_add(rrs_vm_t *vm, int argc,
       return fail(vm,"Invalid packing properties");
    if (k == RRUI_ENTRY && g_utf8_strlen(value,-1) > (glong)w.max_length)
       return fail(vm, "Entry value exceeds max_length");
+   if (k == RRUI_DIGITS) {
+      if (!w.width_chars || w.width_chars>18 || strlen(value)>w.width_chars ||
+          strspn(value,"0123456789")!=strlen(value)) {
+         return fail(vm,"Invalid fixed decimal digits");
+      }
+      w.max_length=w.width_chars;
+   }
    if (k == RRUI_STEPPER || k == RRUI_SLIDER) {
       if (!read_int(d,"min",&w.minimum,0)||!read_int(d,"max",&w.maximum,100)||
           !read_int(d,"step",&w.step,1)||w.minimum>w.maximum||w.step<=0)
