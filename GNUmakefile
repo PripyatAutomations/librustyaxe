@@ -2,12 +2,7 @@
 # SPDX-License-Identifier: MIT
 .DEFAULT_GOAL := all
 CC ?= cc
-RR_C_STD := $(shell if printf 'int x;\n' | $(CC) -std=gnu23 -Werror -x c -fsyntax-only - >/dev/null 2>&1; then echo -std=gnu23; elif printf 'int x;\n' | $(CC) -std=gnu2x -Werror -x c -fsyntax-only - >/dev/null 2>&1; then echo -std=gnu2x; fi)
-ifeq ($(strip $(RR_C_STD)),)
-$(error $(CC) does not support -std=gnu23 or -std=gnu2x; a C23-capable compiler is required)
-endif
-export RR_C_STD
-CFLAGS += $(RR_C_STD)
+CFLAGS += -std=gnu2x
 PKG_CONFIG ?= pkg-config
 # Derive native distro layouts from the selected toolchain's pkg-config.
 # Explicit PREFIX/LIBDIR remain authoritative (including cross builds).
