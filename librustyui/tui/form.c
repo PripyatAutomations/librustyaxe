@@ -21,6 +21,7 @@ typedef struct {rrui_form_t *form;rrui_rect_t requested,rect;size_t scroll;GArra
 static panel_t panels[32];
 static size_t npanels;
 static int tile_width=34,chat_width;
+static rrui_tui_sidebar_policy_fn sidebar_policy;
 static unsigned tile_order;
 static bool divider_drag;
 static rrui_form_t *split_upper,*split_lower;
@@ -60,7 +61,14 @@ void rrui_tui_tile_visible(rrui_form_t *f,bool visible){
 }
 bool rrui_tui_main_focused(void){return !focused&&!active;}
 bool rrui_tui_panel_focused(const rrui_form_t *f){return focused==f&&!active;}
+void rrui_tui_sidebar_policy(rrui_tui_sidebar_policy_fn policy) {
+   sidebar_policy=policy;
+   tui_redraw_request();
+}
 int rrui_tui_chat_width(int rows,int cols,bool structured){
+   if (!structured && sidebar_policy && !sidebar_policy(tui_active_window())) {
+      structured=true;
+   }
    size_t ids[32],n=0;int minimum[32],weight[32];rrui_rect_t rects[32];
    workspace_rows=rows;workspace_cols=cols;
    for(size_t i=0;i<npanels;i++)if(panels[i].tiled&&!panels[i].hidden){

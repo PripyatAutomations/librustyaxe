@@ -24,6 +24,10 @@ int rrui_tui_tile_weight_get(const rrui_form_t *);
 void rrui_tui_tile_weight_set(rrui_form_t *,int);
 void rrui_tui_tile_visible(rrui_form_t *,bool);
 bool rrui_tui_main_focused(void);
+/* Application policy for plain-text tabs that need the full viewport.
+ * Structured tabs always hide the side column regardless of this policy. */
+typedef bool (*rrui_tui_sidebar_policy_fn)(const struct tui_window *);
+void rrui_tui_sidebar_policy(rrui_tui_sidebar_policy_fn);
 int rrui_tui_chat_width(int rows,int cols,bool structured);
 bool rrui_tui_panel_focused(const rrui_form_t *);
 #endif
