@@ -72,7 +72,7 @@ $(CURSES_LIB): $(CURSES_OBJECTS) $(REAL_LIB)
 
 $(CURSES_PC): GNUmakefile
 	@mkdir -p $(BUILD_DIR)
-	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' 'Name: librustyui-curses' 'Description: RustyUI curses backend' 'Version: $(VERSION)' 'Requires: librustyui' 'Libs: -L${libdir} -lrustyui-curses' 'Cflags: -I${includedir}' > $@
+	@printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' '' 'Name: librustyui-curses' 'Description: RustyUI curses backend' 'Version: $(VERSION)' 'Requires: librustyui' 'Libs: -L$${libdir} -lrustyui-curses' 'Cflags: -I$${includedir}' > $@
 
 $(PC_FILE): GNUmakefile
 	@mkdir -p $(BUILD_DIR)
