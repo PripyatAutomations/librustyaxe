@@ -113,7 +113,8 @@ static void line(int row,int cols,bool focus,const char *prefix,const char *valu
    rrui_render_printf("\033[%d;%dH",row+oy,ox);
    rrui_tui_theme_style(RRUI_THEME_TEXT,focus?RRUI_THEME_SELECTION:RRUI_THEME_PANEL);
    if(focus&&!cfg_tui_colors)rrui_render_write("\033[7m",strlen("\033[7m"));
-   if(!overlay)rrui_render_write("\033[2K",strlen("\033[2K"));
+   /* Modal frames are cleared once at entry to draw_form(). Erasing the
+    * entire row here destroys controls already painted in a flow row. */
    if(!focus&&row_color<=0xffffff)rrui_tui_theme_rgb(row_color,false);
    int remain=cols-1-clipped(prefix,cols-1);
    if(remain>0)remain-=clipped(value,remain);
