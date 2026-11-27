@@ -1,0 +1,10 @@
+prefix=/usr
+libdir=/usr/lib/x86_64-linux-gnu
+includedir=/usr/include
+
+Name: librustyscript
+Description: RustyScript scripting runtime
+Version: 0.2.0
+Requires: librustyaxe
+Libs: -L${libdir} -lrustyscript
+Cflags: -I${includedir}

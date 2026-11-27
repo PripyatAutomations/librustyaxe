@@ -1,0 +1,272 @@
+//      This is part of rustyrig-fw. https://github.com/pripyatautomations/rustyrig-fw
+//
+// Do not pay money for this, except donations to the project, if you wish to.
+// The software is not for sale. It is freely available, always.
+//
+// Licensed under MIT license, if built without mongoose or GPL if built with.
+#if     !defined(__librustyaxe_struct_h)
+#define __librustyaxe_struct_h
+
+#include <sys/types.h>
+#include <stdint.h>
+#include <time.h>
+
+// XXX:ASAP Move these to build time config file
+// Maximum number of subscribed channels for users
+#define MAX_RX_CHANNELS 64      // User RX channels
+#define MAX_TX_CHANNELS 16      // User TX channels
+
+// HTTP Basic-auth user
+#define HTTP_MAX_USERS 64       // How many users are allowed in
+                                // http.users?
+#define HTTP_USER_LEN 16        // username length (16 char)
+#define HTTP_PASS_LEN 40        // sha1: 40, sha256: 64
+#define HTTP_HASH_LEN 40        // sha1
+#define HTTP_TOKEN_LEN 14       // session-id / nonce length,
+                                // longer moar secure
+#define HTTP_UA_LEN 512         // allow 128 bytes
+#define USER_PRIV_LEN 4096      // maximum privilege-list bytes (excluding NUL)
+#define USER_EMAIL_LEN 128      // email address
+
+#define HTTP_MAX_SESSIONS 32    // max sessions total
+#define HTTP_MAX_ELMERS 8       // how many elmers can accept
+                                // elevate request from the
+                                // user?
+#define HTTP_MAX_NOOBS 8        // how many noobs can an elmer
+#define HTTP_MAX_USERS 64       // How many users are allowed in
+#define HTTP_MAX_ROUTES 64
+
+#define LOGINLEN 240            // an email address
+#define IRC_MSGLEN 1024         // extended for IRCv3
+#define CHANLEN 64              // channel name length
+#define NICKLEN 40              // nick name length
+#define TOPICLEN 256
+#define PASSLEN 128
+#define USERLEN 16
+#define HOSTLEN 256
+#define NETLEN 64
+#define RECVQLEN 16384          // read, but unprocessed data from the
+// server
+#define SENDQLEN 16384          // data waiting to be sent to the server
+#define AUTOJOIN_LEN 1024       // auto-join channels
+#define USER_HASHSZ 127         // prime number
+
+typedef struct rrconn rrconn_t;
+typedef struct irc_command irc_command_t;
+
+/* IRC wire and channel layouts are owned by librustyirc. */
+typedef struct irc_message irc_message_t;
+// XXX: we need to merge this into irc_command_cb
+typedef struct irc_callback {
+   char *cmd;                   // IRC command
+   int numeric;                 // IRC numeric
+   char *desc;
+   int min_args_client;         // Minimum args from a client
+   int min_args_server;         // Minimum args from a server
+   int max_args_client;         // Maximum args from a client
+   int max_args_server;         // Maximum args from a server
+//   irc_command_cb cb;
+   char *event_key;             // event callback key
+   bool relayed;                // is this message to be sent
+   // to
+   // other links?
+   bool unidle;                 // does this clear idle on the
+   // user?
+   struct irc_callback *next;
+} irc_callback_t;
+
+
+typedef void (*event_cb_t)(const char *event, const char *data, rrconn_t *cptr, void *user);
+
+struct irc_command_t {
+   const char *name;
+   const char *desc;
+   bool relayed;                // is this message to be sent
+   // to
+   // other links?
+   bool unidle;                 // clears idle for the user
+   char *event_key;             // event callback key
+   event_cb_t event_cb;         // event callback function
+//   irc_command_cb cb;
+};
+
+typedef struct {
+   int code;
+   const char *name;
+   const char *desc;
+//   irc_command_cb cb;
+   char *event_key;
+   event_cb_t event_cb;
+   bool unidle;                 // clears idle for the user
+} irc_numeric_t;
+
+
+
+typedef struct server_cfg {
+   char host[HOSTLEN + 1];
+   char network[NETLEN + 1];
+   char nick[NICKLEN + 1];
+   char ident[USERLEN + 1];
+   char account[LOGINLEN + 1];
+   char pass[PASSLEN + 1];
+   char sasl_user[LOGINLEN + 1], sasl_pass[PASSLEN + 1], sasl_mechanism[16];
+   char autojoin[AUTOJOIN_LEN + 1];
+   int port;
+   int priority;
+   bool tls;
+   struct server_cfg *next;
+} server_cfg_t;
+
+// http.users entry
+struct http_user {
+   int uid;
+   char name[HTTP_USER_LEN + 1]; // Username
+   char pass[HTTP_PASS_LEN + 1]; // Password hash
+   char email[USER_EMAIL_LEN + 1];  // Email address
+   char privs[USER_PRIV_LEN + 1];   // privileges string?
+   bool enabled;                // Is the user enabled?
+   int max_sessions;            // maximum allowed
+   // sessions
+   int sessions;                // active logins
+   int is_muted;                // is this user muted?
+   time_t password_set;         // password creation time
+   time_t password_expires;     // zero means no expiry
+   bool password_change_required;   // force a reset at login
+};
+typedef struct http_user http_user_t;
+
+/* Application payload accounting, independent of TCP/TLS overhead. */
+struct rr_traffic {
+   uint64_t tx_text_bytes, tx_text_frames, tx_binary_bytes, tx_binary_frames;
+   uint64_t rx_text_bytes, rx_text_frames, rx_binary_bytes, rx_binary_frames;
+};
+
+/* Bounded per-connection media observations; protocol helpers own semantics. */
+#define RR_MEDIA_FLOW_SLOTS 8
+struct rr_media_flow {
+   uint8_t stream, direction;
+   char codec[4];
+   uint32_t sequence, gaps;
+   uint64_t used_at;
+   uint64_t source_origin, arrival_origin, last_source, last_arrival;
+   uint64_t report_at, rx_bad_since, last_bad, tx_bad_since, healthy_since, hint_at;
+   uint64_t remote_at;
+   unsigned quality, remote_quality;
+};
+
+/* IRC state is library-owned; transport stays with the client. */
+typedef struct rustyirc_connection irc_conn_t;
+struct rr_transport;
+
+struct rrconn {
+   struct rr_transport *native_transport; /* Borrowed server-side transport. */
+   /* Stable shared ABI: never depend on application-only USE_RUSTYIRC. */
+   irc_conn_t *irc_conn;
+   bool active;                 // Is this slot actually used or is it
+   // free-listed?
+   bool authenticated;          // Is the user fully logged in?
+   bool ghost;                  // Is the session a ghost?
+   bool is_ws;                  // Flag to indicate if it's a WebSocket client
+   bool is_ptt;                 // Is the user keying up ANY attached rig?
+   char ptt_vfo;                // VFO letter ('A'...) they keyed, 0 if none
+   char ptt_room[128];          // Authoritative TX control room for this session
+   bool sent_login;             // have we sent login?
+   bool is_server;              // is this a server? If so, we'll send
+   // relayed commands to it
+   int fd;                      // socket fd
+   int guest_id;                // 4 digit unique id for guest users in
+   // chat/etc
+   // for comfort
+   int ping_attempts;           // How many times have we tried to ping the
+   // client without answer?
+   int latency_ms;              // Last measured RTT to this client (ms)
+   int ptt_session;             // Set when PTT has been raised
+   u_int32_t user_flags;        // Bit flags for user features, permissions,
+   // etc.
+   time_t connected;            // when was the socket connected?
+   time_t session_expiry;       // When does the session expire?
+   time_t session_start;        // When did they login?
+   time_t last_cat;             // Last rigctl message acted on
+   time_t last_chat;            // Last chat message received
+   time_t last_heard;           // when a last valid message was heard from client
+   time_t last_ping;            // If client is pending timeout, this will
+   // contain the time a ping was sent to check
+   // for dead connection
+   time_t last_cat_update;      // Last time we sent a cat message
+   time_t noob_cooldown;        // Noobs can't TX until this time (noob.cool-down)
+   http_user_t *user;           // pointer to http user, once login is sent. DO
+   // NOT TRUST IF authenticated != true!
+   char nonce[HTTP_TOKEN_LEN + 1];  // Authentication nonce - only used between
+   // challenge & pass stages
+   char chatname[HTTP_USER_LEN + 1];   // username to show in chat (GUESTxxxx or
+   // USER)
+   char account[LOGINLEN + 1];  // Account
+   char nick[NICKLEN + 1];      // Nickname (if not account)
+   char username[USERLEN + 1];  // Username ('ident')
+   char hostname[HOSTLEN + 1];  // hostname/servername
+   char token[HTTP_TOKEN_LEN + 1];  // Session token
+   char *user_agent;            // User-agent
+   char user_ip[256];           // string containing the user's IP
+   int user_port;               // the local port of the tcp connection
+   char *cli_version;           // Client version
+/* Public ABI must not change with a consumer's USE_MONGOOSE setting:
+ * independently packaged librrprotocol/librustyaxe share this structure. */
+   struct mg_connection *conn;  // Optional legacy Mongoose HTTP/WebSocket pointer
+   time_t ghost_time;           // When did the session become a ghost?
+
+   // These contain arrays of audio channel IDs
+   u_int32_t rx_channels[MAX_RX_CHANNELS];
+   u_int32_t tx_channels[MAX_RX_CHANNELS];
+   // This is for connections between instances (NYI)
+   enum {
+      CONN_NONE = 0,
+      CONN_RIGUI,               // User-interface (chat and CAT)
+      CONN_AUDIO_RX,            // RX audio
+      CONN_AUDIO_TX             // TX audio
+   } connection_type;
+   time_t media_quality_changed, queue_warned;
+   unsigned media_quality;      // 0 means initial/full quality, otherwise percent
+   uint64_t media_rtt_base_us, media_rtt_smoothed_us;
+   struct rr_traffic traffic, usage_checkpoint;
+   uint64_t traffic_started_us, usage_seconds_checkpoint, session_tx_seconds;
+   bool bandwidth_warned;
+   struct rr_media_flow media_flows[RR_MEDIA_FLOW_SLOTS];
+   /* Wire stream IDs are bytes. Sequence state must survive health-slot eviction. */
+   uint32_t media_tx_sequences[256];
+   char latency_request[65];
+   uint64_t latency_sent_us, response_rtt_us;
+   long long ping_rtt_ms;       // per-peer RTT; never use another peer's latency
+   char codec_rx[5], codec_tx[5];   // 4 byte ID of the codec for
+   // each audio direction
+   // Codecs advertised by this connection in media.cmd=capab.  The server
+   // uses this when validating shared media-channel selections.
+   char media_codecs[256];
+   // Comma-separated WebSocket chat rooms this session has joined.
+   char rooms[AUTOJOIN_LEN];
+   char chat_vfo;               // Session-local !vfo selection (letter)
+   char chat_vfo_room[128];     // Room for that selection
+
+   // This is a little ugly, but this stores pointers to the users associated with
+   // elmer/noob system
+   union {
+      rrconn_t *elmers[HTTP_MAX_ELMERS];  // pointer(s) to elmers who have accepted
+      // to babysit noob user
+      rrconn_t *noobs[HTTP_MAX_NOOBS]; // pointer(s) to noobs this user is
+      // babysitting
+   } en_data;
+   rrconn_t *next;              // pointer to next client in list
+   server_cfg_t *server;        // server config data (if a client)
+   char recvq[RECVQLEN + 1];    // Stuff pending processing from the
+   // socket
+   char sendq[SENDQLEN + 1];    // Stuff pending being sent on the socket
+   size_t tx_bytes,             // Bytes we've sent
+      tx_packets;               // Packets we've sent
+   size_t rx_bytes,             // Bytes we've received
+      rx_packets;               // Packets we've received
+   struct mg_connection *mg;   // Optional legacy Mongoose association
+};
+typedef struct rrconn rrconn_t;
+
+//typedef bool (*irc_command_cb)(rrconn_t *cptr, irc_message_t *mp);
+
+#endif // !defined(__librustyaxe_struct_h)

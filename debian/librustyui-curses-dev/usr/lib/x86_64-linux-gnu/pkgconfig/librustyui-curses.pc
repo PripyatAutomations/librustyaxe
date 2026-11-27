@@ -1,0 +1,10 @@
+prefix=/usr
+libdir=/usr/lib/x86_64-linux-gnu
+includedir=/usr/include
+
+Name: librustyui-curses
+Description: RustyUI curses backend
+Version: 0.2.0
+Requires: librustyui
+Libs: -L${libdir} -lrustyui-curses
+Cflags: -I${includedir}

@@ -1,0 +1,10 @@
+prefix=/usr
+libdir=/usr/lib/x86_64-linux-gnu
+includedir=/usr/include
+
+Name: librustyui
+Description: RustyUI backend-neutral presentation model
+Version: 0.2.0
+Requires: librustyaxe librustyscript
+Libs: -L${libdir} -lrustyui
+Cflags: -I${includedir}

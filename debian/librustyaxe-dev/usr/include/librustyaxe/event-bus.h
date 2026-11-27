@@ -1,0 +1,208 @@
+// librustyaxe/event-bus.h:
+//      This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
+//
+// Do not pay money for this, except donations to the project, if you wish to.
+// The software is not for sale. It is freely available, always.
+//
+// Licensed under MIT license, if built without mongoose or GPL if built with.
+#if     !defined(__librustyaxe_event_bus_h)
+#define __librustyaxe_event_bus_h
+
+#include <stddef.h>
+#include <stdbool.h>
+#include <librustyaxe/struct.h> /* rrconn_t */
+#include <librustyaxe/dict.h>   /* dict */
+
+/*
+ * Normal event callbacks.
+ *
+ * Synchronous callbacks are called directly from event_emit() in the emitter's thread.
+ * event/data are owned by the emitter and are valid only for the duration of the callback.
+ */
+typedef void (*event_cb_t)(const char *event, const char *data, rrconn_t *cptr, void *user);
+
+/*
+ * Binary payload event callback.
+ *
+ * For synchronous listeners, data is owned by the emitter and is only valid for the duration of the callback.
+ *
+ * Dispatched listeners receive an internally-owned copy which remains valid for the duration of the callback.
+ */
+typedef void (*event_binary_cb_t)(const char *event, const void *data, size_t len, rrconn_t *cptr, void *user);
+
+/*
+ * Generic asynchronous dispatcher.
+ *
+ * The event bus calls:
+ *
+ *    dispatch(fn, arg, dispatch_user);
+ *
+ * The dispatcher must arrange for fn(arg) to eventually be called. Once dispatch() has accepted the request, ownership of arg belongs to fn().
+ *
+ * This deliberately has no GLib dependency. A GTK frontend can wrap g_main_context_invoke() here.
+ */
+typedef void (*event_dispatch_fn_t)(void *arg);
+
+typedef void (*event_dispatch_t)(event_dispatch_fn_t fn, void *arg, void *user);
+
+/*
+ * Listener structures.
+ *
+ * dispatch == NULL means that the listener is synchronous and is called directly from the thread which emitted the event.
+ */
+typedef struct event_listener {
+   event_cb_t cb;
+   void *user;
+
+   event_dispatch_t dispatch;
+   void *dispatch_user;
+   bool domain_delivery;        /* cross-domain: connection pointer must not escape */
+} event_listener_t;
+
+typedef struct event_binary_listener {
+   event_binary_cb_t cb;
+   void *user;
+
+   event_dispatch_t dispatch;
+   void *dispatch_user;
+} event_binary_listener_t;
+
+
+/*
+ * Event bus lifetime.
+ */
+extern void event_init(void);
+extern void event_shutdown(void);
+
+/* Emit the accumulated event dispatch counters when profiling is enabled. Applications with a main loop may call this periodically; the profiler rate-limits
+* dumps internally so callers do not need their own wall clock. Logging uses an owned snapshot outside the registry lock so log callbacks may emit events. */
+extern void event_profile_dump(void);
+
+/* Lock-safe snapshot for diagnostics, not a subscription or live event. Handler time excludes queue wait and the caller's dispatch overhead. */
+typedef struct event_profile_summary {
+   uint64_t emits, payload_bytes, inline_calls, inline_us, max_inline_us;
+   uint64_t queued, completed, deferred_us, max_deferred_us, queue_wait_us;
+   char slowest_event[96];
+} event_profile_summary_t;
+/* Returns false when USE_PROFILING is disabled. */
+extern bool event_profile_summary(event_profile_summary_t *summary);
+
+
+/*
+ * Register synchronous listeners.
+ *
+ * These callbacks execute immediately in the thread calling event_emit() or event_emit_binary().
+ */
+extern void event_on(const char *event, event_cb_t cb, void *user);
+
+extern void event_on_binary(const char *event, event_binary_cb_t cb, void *user);
+
+
+/*
+ * Compatibility alias for event_on_binary().
+ */
+extern void event_register_binary(const char *event, event_binary_cb_t cb, void *user);
+
+
+/*
+ * Register dispatched listeners.
+ *
+ * Instead of executing the callback directly, the event bus makes an owned copy of the event/payload and hands execution to dispatch().
+ *
+ * This allows callers to marshal callbacks onto another event loop or thread without making librustyaxe depend on that event-loop library.
+ *
+ * rrconn_t *cptr is NOT copied or reference counted. If a dispatched callback needs to dereference cptr, its lifetime must be guaranteed separately.
+ */
+extern void event_on_dispatch(const char *event, event_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user);
+
+extern void event_on_binary_dispatch(const char *event, event_binary_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user);
+
+
+/*
+ * Opaque registration tokens.
+ *
+ * A token represents ownership of one listener registration. Modules must register with the token API so teardown can remove exactly their own listeners
+ * without reconstructing callback/user tuples:
+ *
+ *    rr_event_token_t tok = event_on_token("foo", cb, user);
+ *    ...
+ *    event_off_token(tok);   // safe to call repeatedly; clears the token
+ *
+ * A token is a pointer to an internal registration record and remains meaningful (but inactive) after unregistration. Tokens must be unregistered before the
+ * module owning their callback is unloaded.
+ */
+typedef struct rr_event_token *rr_event_token_t;
+
+extern rr_event_token_t event_on_token(const char *event, event_cb_t cb, void *user);
+
+extern rr_event_token_t event_on_binary_token(const char *event, event_binary_cb_t cb, void *user);
+
+extern rr_event_token_t event_on_token_dispatch(const char *event, event_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user);
+
+extern rr_event_token_t event_on_binary_token_dispatch(const char *event, event_binary_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user);
+
+/*
+ * Unregister the listener a token owns.
+ *
+ * Semantics:
+ * - Passing NULL is a no-op.
+ * - Unregistering an already-unregistered token is a no-op (no error).
+ * - The token is cleared and cannot be reused; callers should drop it.
+ * - Safe from within a callback: dispatch iterates a snapshot, so a callback may unregister itself or other listeners mid-emit.
+ */
+extern void event_off_token(rr_event_token_t token);
+
+
+/*
+ * Owned cross-domain event envelope. Never embeds rrconn_t or a borrowed pointer: sender is a stable identity and payload is copied byte-for-byte. Applications
+ * may use JSON/CBOR or other versioned formats in payload.
+ */
+typedef struct rr_event_message {
+   const char *name;
+   const char *sender;
+   const void *payload;
+   size_t length;
+   unsigned flags;
+} rr_event_message_t;
+
+typedef void (*rr_event_message_cb_t)(const rr_event_message_t *message, void *user);
+/* A message listener uses the same dispatch trampoline as legacy events. Pending callbacks must be drained before unloading their owning module. */
+extern rr_event_token_t event_on_message_token(const char *name, rr_event_message_cb_t cb, void *user, event_dispatch_t dispatch, void *dispatch_user);
+extern void event_emit_message(const rr_event_message_t *message);
+/* After event_off_token(), wait for callbacks already running. Do not call from the callback itself or from a dispatcher it needs to make progress. */
+extern void event_message_token_drain(rr_event_token_t token);
+
+/* Named execution domains. The host supplies a dispatcher for each loop. Register domains before listeners; drain queued work before unregistering a domain or
+ * unloading modules containing message callbacks. */
+extern bool event_domain_register(const char *name, event_dispatch_t dispatch, void *user);
+extern bool event_domain_unregister(const char *name);
+/* Subscribe to an existing text event in a named execution domain. Data is copied; rrconn_t * is always NULL on the receiving thread. */
+extern rr_event_token_t event_on_domain_token(const char *event, event_cb_t cb, void *user, const char *domain);
+
+extern rr_event_token_t event_on_binary_domain_token(const char *event, event_binary_cb_t cb, void *user, const char *domain);
+
+extern rr_event_token_t event_on_message_domain_token(const char *event, rr_event_message_cb_t cb, void *user, const char *domain);
+
+
+
+/*
+ * Emit events.
+ */
+extern void event_emit(const char *event, rrconn_t *cptr, const char *data);
+
+extern void event_emit_binary(const char *event, rrconn_t *cptr, const void *data, size_t len);
+
+extern void event_emit_dict(const char *event, rrconn_t *cptr, dict *data);
+
+
+/*
+ * Remove listeners.
+ *
+ * cb == NULL and/or user == NULL act as wildcards, preserving the behavior of the original event_off().
+ */
+extern void event_off(const char *event, event_cb_t cb, void *user);
+
+extern void event_off_binary(const char *event, event_binary_cb_t cb, void *user);
+
+#endif // !defined(__librustyaxe_event_bus_h)

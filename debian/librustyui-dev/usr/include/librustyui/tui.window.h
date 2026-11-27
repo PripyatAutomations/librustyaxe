@@ -1,0 +1,58 @@
+//      This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
+//
+// Do not pay money for this, except donations to the project, if you wish to.
+// The software is not for sale. It is freely available, always.
+//
+// Licensed under MIT license, if built without mongoose or GPL if built with.
+#if     !defined(__librustyaxe_tui_window_h)
+#define __librustyaxe_tui_window_h
+
+#include <stdbool.h>
+#include <librustyui/tui.theme.h>
+#define LOG_LINES 500
+#define TUI_INPUTLEN 512
+#ifndef TUI_HISTORY_LINES
+#define TUI_HISTORY_LINES 50
+#endif
+
+typedef struct tui_window {
+   ansi_entry_t *default_bg, *default_fg;
+   char *buffer[LOG_LINES];
+   int log_head;
+   int scroll_offset;
+   int log_count;
+   char title[64];
+   char input_buf[TUI_INPUTLEN];
+   char *input_history[TUI_HISTORY_LINES];
+   int history_count;
+   int history_index;
+   char status_line[128];
+   void *cptr; /* Borrowed application context; never interpreted by the TUI. */
+   /* Optional structured view. Coordinates are 1-based terminal cells. Draw only rows 2..(rows-2); the shell owns the other rows. Returning true from an event
+    * handler consumes the event. */
+   void (*view_draw)(struct tui_window *win, int rows, int cols, void *data);
+   bool (*view_key)(struct tui_window *win, unsigned key, unsigned modifiers, void *data);
+   bool (*view_mouse)(struct tui_window *win, int row, int col, int button, int action, unsigned modifiers, void *data);
+   void *view_data;
+   bool view_full_height;       /* Widget owns the last two terminal rows. */
+} tui_window_t;
+
+extern tui_window_t *tui_window_find(const char *title);
+extern tui_window_t *tui_window_create(const char *title);
+extern tui_window_t *tui_active_window(void);
+extern tui_window_t *tui_window_focus_id(int id);
+extern tui_window_t *tui_window_focus(const char *title);
+extern bool tui_window_destroy(tui_window_t *w);
+extern bool tui_window_destroy_id(int id);
+extern const char *tui_window_get_active_title(void);
+extern void tui_window_init(void);
+extern void tui_window_fini(void);
+extern int tui_window_swap(int c, int key);
+extern int handle_alt_left(int c, int key);
+extern int handle_alt_right(int c, int key);
+extern void tui_window_update_topline(const char *line);
+extern bool tui_clear_scrollback(tui_window_t *w);
+
+
+#endif // !defined(__librustyaxe_tui_window_h)

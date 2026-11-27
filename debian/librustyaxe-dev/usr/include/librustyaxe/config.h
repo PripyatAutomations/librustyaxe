@@ -1,0 +1,172 @@
+//
+// inc/librustyaxe/config.h
+//    This is part of rustyrig-fw.
+// https://github.com/pripyatautomations/rustyrig-fw
+//
+// Do not pay money for this, except donations to the project, if you wish to.
+// The software is not for sale. It is freely available, always.
+//
+// Licensed under MIT license, if built without mongoose or GPL if built with.
+#if     !defined(__inc_config_h)
+#define __inc_config_h
+#include <stdbool.h>
+#include <stdint.h>
+#include <librustyaxe/dict.h>
+/* RustyAxe's SDK features must not come from an application's build_config.h. */
+#include <librustyaxe/build_config.h>
+
+// Maximum length of an expanded string, XXX: Move to header file
+// librustyaxe/config.h
+#define MAX_CFG_EXP_STRLEN 65535
+// Maximum depth to recurse when expanding strings (cfg_get_exp)
+#define MAX_CFG_EXP_RECURSION 6
+// Section callbacks are dynamically allocated; registration has no fixed count limit.
+
+typedef enum defconfig_type {
+   DEFCONFIG_STRING = 0,
+   DEFCONFIG_BOOL,
+   DEFCONFIG_INT,
+   DEFCONFIG_UINT,
+   DEFCONFIG_FLOAT,
+   DEFCONFIG_PATH,
+   DEFCONFIG_PASSWORD,
+   DEFCONFIG_ENUM
+} defconfig_type_t;
+
+// Used to store hard coded defaults for kv items.  Existing three-field
+// initializers remain string-typed for compatibility; new definitions should
+// provide type (and choices for DEFCONFIG_ENUM) explicitly.
+struct defconfig {
+   const char *key;
+   const char *val;
+   const char *help;            // Description of the config item for when we
+   // someday
+   // have a config editor
+   defconfig_type_t type;
+   const char *choices;         // Optional pipe-separated values for ENUM
+};
+typedef struct defconfig defconfig_t;
+
+typedef bool (*cfg_section_cb_t)(const char *path, int line, const char *section, const char *buf);
+
+typedef struct cfg_cb_list {
+   const char *section;
+   const char *path;
+   cfg_section_cb_t callback;
+   struct cfg_cb_list *next;
+} cfg_cb_list_t;
+
+// This handles stuff like restarting audio pipelines, etc
+typedef bool (*cfg_reload_cb_t)(const char *key);
+
+struct reload_event {
+   char *key;
+   cfg_reload_cb_t callback;
+   char *note;
+   struct reload_event *next;
+};
+typedef struct reload_event reload_event_t;
+
+// Config save callbacks:
+//    Modules that own non-dict config data (parsed [server:*], [network:*]
+//    sections, runtime state, etc.) register a save callback.  When the
+//    config is saved, each callback is invoked with the output FILE * and
+//    writes its own sections.  Return true on success, false on error.
+typedef bool (*cfg_save_cb_t)(FILE *fp, const char *path);
+
+struct cfg_save_cb_entry {
+   const char *name;            // Module name for logging
+   cfg_save_cb_t callback;
+   bool (*owns_key)(const char *key);
+   struct cfg_save_cb_entry *next;
+};
+typedef struct cfg_save_cb_entry cfg_save_cb_entry_t;
+
+extern cfg_save_cb_entry_t *cfg_save_callbacks;
+
+// Data storage dicts
+extern dict *cfg;               // Main configuration
+extern const char *config_file; // Path of the currently loaded config file
+extern dict *default_cfg;       // Default configuration
+extern dict *pipelines;         // fwdsp/rrgtk pipelines
+
+// Events to run on config reload
+extern reload_event_t *reload_events;
+
+// Functions
+extern bool cfg_set_default(dict *d, const char *key, const char *val);
+extern bool cfg_set_defaults(dict *d, defconfig_t *defaults);
+extern const defconfig_t *cfg_defconfig_find(const char *key);
+extern bool cfg_set_value(const char *key, const char *value);
+extern dict *cfg_load(const char *path);
+/* For helpers reading a shared config: ignore sections without handlers. */
+extern void cfg_set_ignore_unknown_sections(bool ignore);
+
+// Boolean API contract: configuration operations return true on success and false on
+// failure.
+// Apply new configuration to the oldcfg dict
+extern bool cfg_apply_new(dict *oldcfg, dict *newcfg);
+
+// Reload a config file (or the last-loaded one if filename is NULL) into the global cfg
+// dict.
+extern bool cfg_reload(const char *filename);
+
+/* Release process-wide configuration dictionaries, callbacks, and reload registrations during application shutdown. Safe to call more than once. */
+extern void cfg_fini(void);
+
+// Save the dict into a file
+extern bool cfg_save(dict *d, const char *path);
+// Save only supplied values, without defaults or module save callbacks.
+extern bool cfg_save_overrides(dict *d, const char *path);
+
+// Register a callback to emit module-owned config sections during cfg_save.
+// These registration/removal functions and cfg_run_save_callbacks return true on success.
+extern bool cfg_add_save_callback(const char *name, cfg_save_cb_t callback);
+/* For custom dictionary representations: omit owned keys from generic output, then let the callback serialize its sections. Caller supplies a pure filter. */
+extern bool cfg_add_owned_save_callback(const char *name, cfg_save_cb_t callback, bool (*owns_key) (const char *key));
+extern bool cfg_remove_save_callback(cfg_save_cb_t callback);
+extern bool cfg_run_save_callbacks(FILE *fp, const char *path);
+
+// Locate and load a config (or defaults if none exists); true means completed.
+extern bool cfg_detect_and_load(const char *configs[], int num_configs);
+
+// Typed lookups
+extern const char *cfg_get(const char *key);
+extern const char *cfg_get_exp(const char *key);
+// Return an allocated filesystem path with ${config} expansion plus ~/$HOME
+// expansion. The caller owns the result and must free it.
+extern char *cfg_get_path(const char *key);
+extern bool cfg_get_bool(const char *key, bool def);
+extern int cfg_get_int(const char *key, int def);
+//extern float cfg_get_float(const char *key, float def);
+//extern long cfg_get_long(const char *key, long def );
+extern unsigned int cfg_get_uint(const char *key, unsigned int def);
+
+///////////
+// Register a section parser; true means registered, false means invalid input.
+// Section callbacks return true when the line was handled successfully and
+// false on a malformed entry or failure. Multiple matching callbacks must succeed.
+extern bool cfg_add_callback(const char *path, const char *section, cfg_section_cb_t cb);
+
+/////////////
+extern reload_event_t *reload_events;
+// Run events for a changed key
+extern bool run_reload_events(const char *key);
+
+// Find an event in the linked list
+extern reload_event_t *reload_event_find(const char *key, cfg_reload_cb_t callback);
+
+// Add a reload event to the list.  A NULL key is invoked once after a
+// complete cfg_apply_new() reload, after all individual key events.
+extern reload_event_t *reload_event_add(const char *key, cfg_reload_cb_t callback, const char *note);
+
+// Remove a reload event from the list
+extern bool reload_event_remove(reload_event_t *evt);
+
+// Dump the list
+extern bool reload_event_list(const char *key);
+
+// Run the reload events for a key; NULL runs complete-reload callbacks.
+extern bool reload_event_run(const char *key);
+
+#endif // !defined(__inc_config_h)

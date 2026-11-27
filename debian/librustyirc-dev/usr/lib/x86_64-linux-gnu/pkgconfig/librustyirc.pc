@@ -1,0 +1,10 @@
+prefix=/usr
+libdir=/usr/lib/x86_64-linux-gnu
+includedir=/usr/include
+
+Name: librustyirc
+Description: MIT IRC protocol library built with RustyAxe
+Version: 0.2.0
+Requires: librustyaxe
+Libs: -L${libdir} -lrustyirc
+Cflags: -I${includedir}

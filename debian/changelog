@@ -1,3 +1,9 @@
+librustyaxe (0.2.1-1) unstable; urgency=medium
+
+  * Release upstream version 0.2.1.
+
+ -- Pripyat Automations <dangerousdevices@istabpeople.com>  Fri, 27 Nov 2026 15:30:49 -0500
+
 librustyaxe (0.2.0-1) unstable; urgency=medium
 
   * Bump shared ABI to 1 for the expanded account privilege structure.
