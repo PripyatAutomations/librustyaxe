@@ -291,12 +291,17 @@ static bool draw_form(rrui_form_t *form,int rows,int cols,bool has_focus) {
                hit_t h={.field=i,.item=SIZE_MAX,.row=row,.left=5,
                   .right=MIN(cols-1,4+(int)w->width_chars),.digits=true};
                g_array_append_val(hits,h);
-               if (selected && x.cursor<(size_t)MAX(0,cols-5)) {
-                  rrui_render_printf("\033[%d;%dH",row+oy,ox+4+(int)x.cursor);
-                  rrui_tui_theme_style(RRUI_THEME_SELECTION,RRUI_THEME_TEXT);
-                  rrui_render_char(x.value[x.cursor]);
-                  rrui_render_write("\033[0m",4);
+               size_t length=strlen(x.value);
+               for (size_t digit=0;digit<length && digit<(size_t)MAX(0,cols-5);digit++) {
+                  rrui_render_printf("\033[%d;%dH",row+oy,ox+4+(int)digit);
+                  if (selected && digit==x.cursor) {
+                     rrui_tui_theme_style(RRUI_THEME_SELECTION,RRUI_THEME_TEXT);
+                  } else {
+                     rrui_tui_theme_style(RRUI_THEME_TEXT,((length-1-digit)/3)%2?RRUI_THEME_HEADER:RRUI_THEME_PANEL);
+                  }
+                  rrui_render_char(x.value[digit]);
                }
+               rrui_render_write("\033[0m",4);
             }
             row++;
          }
