@@ -54,11 +54,11 @@ install: all
 	ln -sfn $(notdir $(REAL_LIB)) "$(DESTDIR)$(LIBDIR)/$(SONAME)"
 	ln -sfn $(SONAME) "$(DESTDIR)$(LIBDIR)/librustyscript.so"
 	install -d "$(DESTDIR)$(INCLUDEDIR)/librustyscript"
-	install -m644 rrscript.h runtime.h audio.logic.h control.graph.h patchbay.h "$(DESTDIR)$(INCLUDEDIR)/librustyscript/"
+	install -m644 rrscript.h runtime.h audio.logic.h control.graph.h patchbay.h signal.gate.h "$(DESTDIR)$(INCLUDEDIR)/librustyscript/"
 	install -Dm644 $(PC_FILE) "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyscript.pc"
 uninstall:
 	rm -f "$(DESTDIR)$(LIBDIR)/$(notdir $(REAL_LIB))" "$(DESTDIR)$(LIBDIR)/$(SONAME)" "$(DESTDIR)$(LIBDIR)/librustyscript.so" "$(DESTDIR)$(LIBDIR)/pkgconfig/librustyscript.pc"
-	rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyscript/rrscript.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/runtime.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/audio.logic.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/control.graph.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/patchbay.h"
+	rm -f "$(DESTDIR)$(INCLUDEDIR)/librustyscript/rrscript.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/runtime.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/audio.logic.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/control.graph.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/patchbay.h" "$(DESTDIR)$(INCLUDEDIR)/librustyscript/signal.gate.h"
 	-rmdir "$(DESTDIR)$(INCLUDEDIR)/librustyscript"
 clean:
 	rm -rf "$(BUILD_DIR)"
