@@ -7,6 +7,13 @@ static int called;
 static void action(rrui_form_t *f,const char *id,const char *name,void *user) {
    (void)f;(void)user;assert(!strcmp(id,"save"));assert(!strcmp(name,"save"));called++;
 }
+static unsigned digit_commits;
+static void digit_action(rrui_form_t *form,const char *id,const char *name,void *unused) {
+   (void)unused;
+   assert(!strcmp(id,"hz") && !strcmp(name,"tune"));
+   assert(rrui_form_value(form,"hz"));
+   digit_commits++;
+}
 int main(void) {
    rrui_layout_t *l=rrui_layout_new(RRUI_TUI);
    assert(rrui_layout_load(l,
@@ -92,5 +99,21 @@ int main(void) {
    assert(rrui_form_field(f,1,&field)&&field.cursor==5);
    assert(!rrui_form_set_value(f,"hz","-1"));
    assert(rrui_form_set_value(f,"hz","")&&!rrui_form_digit_adjust(f,1));
-   rrui_form_free(f);puts("PASS: form snapshot, UTF-8 editing, focus, keyed lists and actions");return 0;
+   rrui_form_free(f);
+   l=rrui_layout_new(RRUI_TUI);
+   assert(rrui_layout_load(l,"ui.add(dict {kind=\"panel\";id=\"p\";});"
+      "ui.add(dict {kind=\"digits\";id=\"hz\";parent=\"p\";width_chars=8;value=\"14074000\";action=\"tune\";});"));
+   f=rrui_form_new(l,digit_action,NULL);rrui_layout_free(l);
+   assert(rrui_form_set_focus(f,1));
+   assert(rrui_form_digit_select(f,4));
+   assert(rrui_form_insert(f,'9'));
+   assert(digit_commits==1 && !strcmp(rrui_form_value(f,"hz"),"14079000"));
+   assert(rrui_form_digit_select(f,4));
+   assert(rrui_form_edit(f,-1,true));
+   assert(digit_commits==2 && !strcmp(rrui_form_value(f,"hz"),"14070000"));
+   assert(rrui_form_digit_select(f,3));
+   assert(rrui_form_digit_zero(f));
+   assert(digit_commits==3 && !strcmp(rrui_form_value(f,"hz"),"14000000"));
+   rrui_form_free(f);
+   puts("PASS: form snapshot, UTF-8 editing, focus, keyed lists and live VFO digit actions");return 0;
 }
