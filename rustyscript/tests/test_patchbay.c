@@ -4,6 +4,15 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+typedef struct { unsigned count; int value; } delivery_t;
+static bool receive_value(const rrs_patch_link_t *link,rrs_patch_value_t v,void *userdata) {
+   delivery_t *d=userdata;
+   assert(link && d && v.type==1 && v.valid && v.bytes==sizeof(int));
+   assert(v.data);
+   d->value=*(const int *)v.data;
+   d->count++;
+   return true;
+}
 int main(void) {
    rrs_patch_graph_t *g=rrs_patch_graph_new();
    assert(g);
@@ -21,7 +30,18 @@ int main(void) {
    assert(!rrs_patch_connect(g,"source","out","gate","out"));
    assert(rrs_patch_connect(g,"source","out","gate","in"));
    assert(rrs_patch_connect(g,"gate","out","sink","in"));
+   assert(rrs_patch_revision(g)>0);
+   uint64_t revision=rrs_patch_revision(g);
+   int sample=17;
+   delivery_t delivery={0};
+   rrs_patch_value_t v={.type=1,.valid=true,.data=&sample,.bytes=sizeof(sample)};
+   assert(rrs_patch_emit(g,"gate","out",v,receive_value,&delivery)==1);
+   assert(delivery.count==1 && delivery.value==17);
+   assert(rrs_patch_emit(g,"gate","in",v,receive_value,&delivery)==0);
+   assert(rrs_patch_emit(g,"gate","out",(rrs_patch_value_t){.type=2,.valid=true,.data=&sample,.bytes=sizeof(sample)},receive_value,&delivery)==0);
+   assert(rrs_patch_revision(g)==revision);
    assert(!rrs_patch_connect(g,"gate","out","sink","in"));
+   assert(rrs_patch_revision(g)==revision);
    assert(!rrs_patch_connect(g,"sink","in","gate","in"));
    assert(!rrs_patch_connect(g,"gate","out","gate","in"));
    assert(rrs_patch_node_move(g,"gate",333,444));
