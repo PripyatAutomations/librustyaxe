@@ -26,6 +26,16 @@ typedef struct {
    char from[RRS_PATCH_NAME_MAX],out[RRS_PATCH_NAME_MAX];
    char to[RRS_PATCH_NAME_MAX],in[RRS_PATCH_NAME_MAX];
 } rrs_patch_link_t;
+/* Delivery is synchronous and borrowed: consumers copy or consume data
+ * before returning. Execution stays in C and never depends on a GUI. */
+typedef struct {
+   uint32_t type;
+   bool valid;
+   const void *data;
+   size_t bytes;
+} rrs_patch_value_t;
+typedef bool (*rrs_patch_receive_fn)(const rrs_patch_link_t *link,
+                                     rrs_patch_value_t value,void *user);
 typedef struct rrs_patch_graph rrs_patch_graph_t;
 rrs_patch_graph_t *rrs_patch_graph_new(void);
 void rrs_patch_graph_free(rrs_patch_graph_t *graph);
@@ -44,4 +54,12 @@ size_t rrs_patch_link_count(const rrs_patch_graph_t *graph);
 const rrs_patch_node_t *rrs_patch_node_at(const rrs_patch_graph_t *graph,size_t index);
 const rrs_patch_node_t *rrs_patch_node_find(const rrs_patch_graph_t *graph,const char *id);
 const rrs_patch_link_t *rrs_patch_link_at(const rrs_patch_graph_t *graph,size_t index);
+/* Revision increments only on successful structural or placement edits. */
+uint64_t rrs_patch_revision(const rrs_patch_graph_t *graph);
+/* Deliver a typed value across the fanout of a real connected output pin.
+ * Returns the number of successful recipients; failures stop delivery.
+ * A source value's type must match its declared port, even if invalid. */
+size_t rrs_patch_emit(const rrs_patch_graph_t *graph,const char *from,
+                      const char *out,rrs_patch_value_t value,
+                      rrs_patch_receive_fn receive,void *user);
 #endif
