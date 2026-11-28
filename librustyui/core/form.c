@@ -262,11 +262,12 @@ bool rrui_form_insert(rrui_form_t *f,uint32_t c) {
    field_t *digits=digit_field(f);
    if (digits) {
       if (c<'0' || c>'9') { return false; }
-      if (digits->value[digits->cursor]!=(char)c) {
-         digits->value[digits->cursor]=(char)c;
-         rrui_form_activate(f);
-      }
+      bool changed=digits->value[digits->cursor]!=(char)c;
+      digits->value[digits->cursor]=(char)c;
       digits->cursor=(digits->cursor+1)%digits->w.width_chars;
+      /* A host callback may refresh or replace the form; do not access
+       * the field after invoking it. */
+      if (changed) { rrui_form_activate(f); }
       return true;
    }
    field_t *x=at(f,rrui_form_focus(f));
