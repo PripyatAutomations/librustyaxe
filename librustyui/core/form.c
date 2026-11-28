@@ -262,7 +262,10 @@ bool rrui_form_insert(rrui_form_t *f,uint32_t c) {
    field_t *digits=digit_field(f);
    if (digits) {
       if (c<'0' || c>'9') { return false; }
-      digits->value[digits->cursor]=(char)c;
+      if (digits->value[digits->cursor]!=(char)c) {
+         digits->value[digits->cursor]=(char)c;
+         rrui_form_activate(f);
+      }
       digits->cursor=(digits->cursor+1)%digits->w.width_chars;
       return true;
    }
@@ -276,7 +279,13 @@ bool rrui_form_insert(rrui_form_t *f,uint32_t c) {
 bool rrui_form_edit(rrui_form_t *f,int dir,bool erase) {
    field_t *digits=digit_field(f);
    if (digits) {
-      if (erase) { digits->value[digits->cursor]='0';return true; }
+      if (erase) {
+         if (digits->value[digits->cursor]!='0') {
+            digits->value[digits->cursor]='0';
+            rrui_form_activate(f);
+         }
+         return true;
+      }
       digits->cursor=(digits->cursor+digits->w.width_chars+(dir<0?-1:1))%digits->w.width_chars;
       return true;
    }
