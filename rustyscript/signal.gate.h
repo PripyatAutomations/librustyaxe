@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef RRCLIENT_SIGNAL_GATE_H
 #define RRCLIENT_SIGNAL_GATE_H
 #include <stdbool.h>
