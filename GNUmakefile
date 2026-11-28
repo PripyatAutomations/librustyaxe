@@ -4,6 +4,13 @@
 CC ?= cc
 CFLAGS += -std=gnu2x
 PKG_CONFIG ?= pkg-config
+# Diagnose a missing executable before probing installed development libraries.
+# Pure maintenance targets must remain usable without the build toolchain.
+ifneq ($(strip $(if $(MAKECMDGOALS),$(filter-out clean distclean uninstall gmatrix-clean src-deb source-deb,$(MAKECMDGOALS)),all)),)
+ifeq ($(shell $(PKG_CONFIG) --version >/dev/null 2>&1 && echo yes),)
+$(error Required build tool '$(PKG_CONFIG)' is missing or not executable. Install pkg-config (Debian/Devuan: apt install pkg-config; Fedora: dnf install pkgconf-pkg-config; Arch: pacman -S pkgconf))
+endif
+endif
 # Derive native distro layouts from the selected toolchain's pkg-config.
 # Explicit PREFIX/LIBDIR remain authoritative (including cross builds).
 BUILD_PC_PREFIX := $(shell $(PKG_CONFIG) --variable=prefix glib-2.0 2>/dev/null)
@@ -51,8 +58,9 @@ $(error WITH_UI must be true or false)
 endif
 UI_MAKE = $(MAKE) -C librustyui WITH_CURSES=$(WITH_CURSES) BUILD_DIR="$(abspath $(BUILD_DIR))/ui" AXE_BUILD_DIR="$(abspath $(BUILD_DIR))" VERSION=$(VERSION) SOVERSION=$(SOVERSION) PREFIX=$(PREFIX) LIBDIR=$(LIBDIR) INCLUDEDIR=$(INCLUDEDIR)
 ifeq ($(filter clean distclean uninstall src-deb source-deb,$(MAKECMDGOALS)),)
-ifeq ($(shell $(PKG_CONFIG) --exists $(DEPS) && echo yes),)
-$(error Missing development dependencies: $(DEPS))
+MISSING_PC_PACKAGES := $(strip $(foreach pkg,$(DEPS),$(if $(shell $(PKG_CONFIG) --exists $(pkg) 2>/dev/null && echo yes),,$(pkg))))
+ifneq ($(MISSING_PC_PACKAGES),)
+$(error Missing pkg-config development dependencies: $(MISSING_PC_PACKAGES). Install the corresponding development packages or check PKG_CONFIG_PATH)
 endif
 endif
 AXE_CPPFLAGS := -I$(BUILD_DIR)/generated -I$(BUILD_DIR)/include $(shell $(PKG_CONFIG) --cflags $(DEPS)) $(shell $(PKG_CONFIG) --cflags libwslay 2>/dev/null) -DLIBRUSTYAXE_STANDALONE=1 -DHOST_POSIX=1
