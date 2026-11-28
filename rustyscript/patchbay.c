@@ -5,6 +5,7 @@
 #include <string.h>
 struct rrs_patch_graph {
    size_t nodes,links;
+   uint64_t revision;
    rrs_patch_node_t node[RRS_PATCH_MAX_NODES];
    rrs_patch_link_t link[RRS_PATCH_MAX_LINKS];
 };
@@ -33,6 +34,7 @@ static size_t port_index(const rrs_patch_node_t *n,const char *id) {
 }
 rrs_patch_graph_t *rrs_patch_graph_new(void) { return calloc(1,sizeof(rrs_patch_graph_t)); }
 void rrs_patch_graph_free(rrs_patch_graph_t *g) { free(g); }
+uint64_t rrs_patch_revision(const rrs_patch_graph_t *g) { return g?g->revision:0; }
 size_t rrs_patch_node_count(const rrs_patch_graph_t *g) { return g?g->nodes:0; }
 size_t rrs_patch_link_count(const rrs_patch_graph_t *g) { return g?g->links:0; }
 const rrs_patch_node_t *rrs_patch_node_at(const rrs_patch_graph_t *g,size_t i) {
@@ -51,12 +53,14 @@ bool rrs_patch_node_add(rrs_patch_graph_t *g,const char *id,double x,double y) {
    rrs_patch_node_t *n=&g->node[g->nodes++];
    *n=(rrs_patch_node_t){.x=x,.y=y};
    strcpy(n->id,id);
+   g->revision++;
    return true;
 }
 bool rrs_patch_node_move(rrs_patch_graph_t *g,const char *id,double x,double y) {
    size_t i=node_index(g,id);
    if (i==SIZE_MAX || !isfinite(x) || !isfinite(y)) { return false; }
    g->node[i].x=x; g->node[i].y=y;
+   g->revision++;
    return true;
 }
 static bool link_has(const rrs_patch_link_t *w,const char *from,const char *out,
@@ -71,6 +75,7 @@ bool rrs_patch_disconnect(rrs_patch_graph_t *g,const char *from,const char *out,
       if (!link_has(&g->link[i],from,out,to,in)) { continue; }
       memmove(&g->link[i],&g->link[i+1],(g->links-i-1)*sizeof(g->link[0]));
       g->links--;
+      g->revision++;
       return true;
    }
    return false;
@@ -87,6 +92,7 @@ bool rrs_patch_node_remove(rrs_patch_graph_t *g,const char *id) {
    g->links=keep;
    memmove(&g->node[i],&g->node[i+1],(g->nodes-i-1)*sizeof(g->node[0]));
    g->nodes--;
+   g->revision++;
    return true;
 }
 bool rrs_patch_port_add(rrs_patch_graph_t *g,const char *id,const char *port,
@@ -98,6 +104,7 @@ bool rrs_patch_port_add(rrs_patch_graph_t *g,const char *id,const char *port,
    rrs_patch_port_t *p=&n->ports[n->port_count++];
    *p=(rrs_patch_port_t){.type=type,.direction=direction};
    strcpy(p->id,port);
+   g->revision++;
    return true;
 }
 bool rrs_patch_port_remove(rrs_patch_graph_t *g,const char *id,const char *port) {
@@ -116,6 +123,7 @@ bool rrs_patch_port_remove(rrs_patch_graph_t *g,const char *id,const char *port)
    g->links=keep;
    memmove(&n->ports[p],&n->ports[p+1],(n->port_count-p-1)*sizeof(n->ports[0]));
    n->port_count--;
+   g->revision++;
    return true;
 }
 static bool reaches(const rrs_patch_graph_t *g,const char *at,const char *target,
@@ -150,5 +158,29 @@ bool rrs_patch_connect(rrs_patch_graph_t *g,const char *from,const char *out,
    *w=(rrs_patch_link_t){0};
    strcpy(w->from,from); strcpy(w->out,out);
    strcpy(w->to,to); strcpy(w->in,in);
+   g->revision++;
    return true;
+}
+
+/* One-hop synchronous fanout; the host owns scheduling, DSP and permission
+ * checks. No receiver runs for an invalid port or incompatible payload. */
+size_t rrs_patch_emit(const rrs_patch_graph_t *g,const char *from,
+                      const char *out,rrs_patch_value_t value,
+                      rrs_patch_receive_fn receive,void *user) {
+   if (!receive || !g || !out || !from) { return 0; }
+   size_t node=node_index(g,from);
+   if (node==SIZE_MAX) { return 0; }
+   size_t port=port_index(&g->node[node],out);
+   if (port==SIZE_MAX ||
+       g->node[node].ports[port].direction!=RRS_PATCH_OUTPUT ||
+       g->node[node].ports[port].type!=value.type ||
+       (value.valid && (!value.data || !value.bytes))) { return 0; }
+   size_t delivered=0;
+   for (size_t i=0;i<g->links;i++) {
+      const rrs_patch_link_t *link=&g->link[i];
+      if (strcmp(link->from,from) || strcmp(link->out,out)) { continue; }
+      if (!receive(link,value,user)) { break; }
+      delivered++;
+   }
+   return delivered;
 }
