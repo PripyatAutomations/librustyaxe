@@ -659,7 +659,8 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
             if(x.widget&&x.widget->kind==RRUI_ENTRY){
                if(key->modifiers&TERMKEY_KEYMOD_CTRL)rrui_form_move_word(f,dir);
                else rrui_form_edit(f,dir,false);
-            }else if(x.widget&&(x.widget->kind==RRUI_STEPPER||x.widget->kind==RRUI_SLIDER))rrui_form_adjust(f,dir);
+            }else if(x.widget&&x.widget->kind==RRUI_DIGITS)rrui_form_edit(f,dir,false);
+            else if(x.widget&&(x.widget->kind==RRUI_STEPPER||x.widget->kind==RRUI_SLIDER))rrui_form_adjust(f,dir);
             else if(!(key->modifiers&TERMKEY_KEYMOD_CTRL))rrui_form_next(f,dir);
             break;
          }
@@ -682,7 +683,9 @@ bool rrui_tui_key(TermKey *tk,const TermKeyKey *key) {
                rrui_field_t root={0};rrui_form_field(f,0,&root);
                bool wrap=active&&root.widget&&!strcmp(root.widget->id,"servers");
                rrui_form_list_move(f,i,key->code.sym==TERMKEY_SYM_UP?-1:1,1,wrap);if(list_page(local_hits,i))rrui_form_list_view(f,i,list_page(local_hits,i),true);rrui_form_selection_changed(f,i,x.selected);
-            } else if(x.widget&&x.widget->kind==RRUI_SLIDER&&x.widget->vertical)rrui_form_adjust(f,key->code.sym==TERMKEY_SYM_UP?1:-1);
+            } else if(x.widget&&x.widget->kind==RRUI_DIGITS)
+               rrui_form_digit_adjust(f,key->code.sym==TERMKEY_SYM_UP?1:-1);
+            else if(x.widget&&x.widget->kind==RRUI_SLIDER&&x.widget->vertical)rrui_form_adjust(f,key->code.sym==TERMKEY_SYM_UP?1:-1);
             else rrui_form_next(f,key->code.sym==TERMKEY_SYM_UP?-1:1);
             break;
          default:break;
